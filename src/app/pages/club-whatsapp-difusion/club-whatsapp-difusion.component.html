@@ -1,0 +1,207 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+    activePage="club-whatsapp-difusion">
+  </app-sidebar>
+
+  <main class="main-content">
+
+    <!-- CLUB TABS NAV -->
+    <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 1">
+      <div class="tabs-scroll-container">
+        <button *ngFor="let club of clubes" class="club-tab-btn" [class.active]="selectedClubId === club.club_id"
+          (click)="selectClub(club)">
+          <span class="tab-icon">🏢</span>
+          <span class="tab-name">{{ club.club_nombre }}</span>
+          <span class="tab-badge" *ngIf="selectedClubId === club.club_id">Activo</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="difusion-container">
+
+      <!-- Header Section -->
+      <div class="page-header">
+        <div class="header-titles">
+          <h1>📲 Difusión de Canchas por WhatsApp</h1>
+          <p>Genera o programa envíos automáticos ilimitados con la disponibilidad de tus canchas calculada en tiempo real al momento de cada envío.</p>
+        </div>
+      </div>
+
+      <div class="difusion-grid">
+        
+        <!-- LEFT COLUMN: CONTROLS, CUSTOMIZATION & UNLIMITED SCHEDULES -->
+        <div class="left-column">
+
+          <!-- 1. CONFIG CARD -->
+          <div class="config-card">
+            <div class="card-section">
+              <h3>📅 1. Seleccionar Fecha de Disponibilidad</h3>
+              <div class="quick-dates">
+                <button type="button" class="btn-quick-date" (click)="seleccionarFechaAcceso('today')">Hoy</button>
+                <button type="button" class="btn-quick-date" (click)="seleccionarFechaAcceso('tomorrow')">Mañana</button>
+                <button type="button" class="btn-quick-date" (click)="seleccionarFechaAcceso('weekend')">Fin de Semana</button>
+              </div>
+              <div class="date-input-wrap">
+                <input type="date" [(ngModel)]="selectedDate" (change)="cargarDisponibilidad()" class="date-picker-input">
+              </div>
+            </div>
+
+            <div class="card-section">
+              <h3>✍️ 2. Personalizar Contenido del Mensaje</h3>
+              
+              <div class="form-group">
+                <label>Encabezado Destacado</label>
+                <input type="text" [(ngModel)]="tituloPersonalizado" (input)="generarMensajeTexto()" placeholder="Ej: 🚨 ¡CANCHAS DISPONIBLES!">
+              </div>
+
+              <div class="form-group">
+                <label>Mensaje Promocional / Nota Corta</label>
+                <input type="text" [(ngModel)]="mensajePromocional" (input)="generarMensajeTexto()" placeholder="Ej: ⚡ ¡Reserva antes de que se agoten!">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Teléfono de Contacto</label>
+                  <input type="text" [(ngModel)]="telefonoContacto" (input)="generarMensajeTexto()" placeholder="+56969083124">
+                </div>
+                <div class="form-group">
+                  <label>Link Directo de Reserva</label>
+                  <input type="text" [(ngModel)]="linkReservas" (input)="generarMensajeTexto()" placeholder="https://padelmanager.cl/#/clubes-reservar">
+                </div>
+              </div>
+            </div>
+
+            <div class="card-section stats-summary">
+              <div class="summary-item">
+                <span class="lbl">Canchas con Libres:</span>
+                <strong class="val">{{ canchasDisponibles.length }}</strong>
+              </div>
+              <div class="summary-item">
+                <span class="lbl">Turnos Libres Totales:</span>
+                <strong class="val highlight-val">{{ totalSlotsLibres }}</strong>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button type="button" class="btn-action-primary wa-btn" (click)="abrirWhatsAppWeb()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="wa-svg">
+                  <path fill="currentColor" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.6-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+                <span>Enviar a Grupo de WhatsApp</span>
+              </button>
+              <button type="button" class="btn-action-secondary" (click)="copiarMensaje()">
+                <span>📋 Copiar Texto</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. AUTOMATED UNLIMITED SCHEDULES CARD -->
+          <div class="schedules-card">
+            <div class="card-header-flex">
+              <div>
+                <h3>⏰ Programador de Envíos Ilimitados</h3>
+                <p>Programa las horas y días que desees. Cada envío consultará en vivo la disponibilidad exacta del momento.</p>
+              </div>
+            </div>
+
+            <!-- Days Selector Strip -->
+            <div class="days-selector-group">
+              <label>Días de la semana para el envío:</label>
+              <div class="days-pills">
+                <button type="button" class="day-pill" 
+                        *ngFor="let key of ['1','2','3','4','5','6','0']" 
+                        [class.active]="diasSemanaSeleccionados[key]" 
+                        (click)="toggleDiaSemana(key)">
+                  {{ diasNombreMap[key] }}
+                </button>
+              </div>
+            </div>
+
+            <div class="add-schedule-bar">
+              <div class="input-time-wrap">
+                <label>Hora de Envío</label>
+                <input type="time" [(ngModel)]="nuevaHoraEnvio" class="time-input">
+              </div>
+
+              <div class="input-limit-wrap">
+                <label>Límite de Envíos</label>
+                <select [(ngModel)]="nuevoMaxEnvios" class="limit-select">
+                  <option [ngValue]="0">🔄 Ilimitado (Recurrente)</option>
+                  <option [ngValue]="1">1 vez (Solo hoy)</option>
+                  <option [ngValue]="3">3 veces</option>
+                  <option [ngValue]="5">5 veces</option>
+                  <option [ngValue]="10">10 veces</option>
+                </select>
+              </div>
+
+              <div class="input-webhook-wrap">
+                <label>API Gateway / Webhook (Opcional)</label>
+                <input type="text" [(ngModel)]="nuevoWebhookUrl" placeholder="Ej: https://api.ultramsg.com/..." class="webhook-input">
+              </div>
+
+              <button type="button" class="btn-add-schedule" (click)="agregarProgramacion()" [disabled]="isSavingSchedule">
+                + Agregar Programación
+              </button>
+            </div>
+
+            <div class="schedules-list">
+              <div *ngIf="programaciones.length === 0" class="empty-schedules">
+                <span>🔕 No tienes horarios programados. Agrega los horarios que desees arriba (ej. 08:30 AM, 14:00 PM, 19:00 PM).</span>
+              </div>
+
+              <div *ngFor="let p of programaciones" class="schedule-item" [class.inactive]="!p.activo">
+                <div class="item-time">
+                  <span class="icon">⏰</span>
+                  <div class="time-info">
+                    <span class="time-val">{{ p.hora_envio }}</span>
+                    <span class="time-sub">
+                      {{ (p.max_envios > 0) ? ('Límite: ' + p.envios_realizados + '/' + p.max_envios) : 'Recurrente ilimitado' }}
+                    </span>
+                  </div>
+                  <span class="tag-status" [class.on]="p.activo">{{ p.activo ? 'ACTIVO' : 'PAUSADO' }}</span>
+                </div>
+                <div class="item-actions">
+                  <button type="button" class="btn-toggle" (click)="toggleEstadoProgramacion(p)">
+                    {{ p.activo ? 'Pausar' : 'Activar' }}
+                  </button>
+                  <button type="button" class="btn-delete" (click)="eliminarProgramacion(p)">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: LIVE WHATSAPP PREVIEW -->
+        <div class="preview-card">
+          <div class="wa-chat-header">
+            <div class="wa-avatar">
+              <span class="avatar-icon">🏢</span>
+            </div>
+            <div class="wa-info">
+              <span class="chat-name">Grupo de Pádel - {{ selectedClubNombre }}</span>
+              <span class="chat-status">difusión en vivo activa</span>
+            </div>
+          </div>
+
+          <div class="wa-chat-body">
+            <div class="wa-bubble">
+              <pre class="wa-text">{{ mensajeGenerado }}</pre>
+              <div class="wa-time-meta">
+                <span>Ahora</span>
+                <span class="wa-checks">✓✓</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-footer">
+            <span>👁️ Muestra la disponibilidad exacta calculada al momento del envío.</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,294 @@
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <app-sidebar [userId]="userId" [jugadorNombre]="coachNombre" [jugadorFoto]="coachFoto" [role]="'entrenador'"
+    activePage="inicio">
+  </app-sidebar>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Skeleton Loading -->
+    <div class="dashboard-grid" *ngIf="isLoading">
+      <h3 class="section-title skeleton text" style="width: 200px; height: 32px;">Loading...</h3>
+      <div class="actions-grid">
+        <div class="action-card skeleton card" *ngFor="let i of [1,2,3,4]"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-grid fade-in" *ngIf="!isLoading">
+
+      <!-- Top Welcome Header -->
+      <header class="dashboard-header">
+        <div class="welcome-text">
+          <h1>Hola, <span class="coach-name-blue">{{ coachNombre }}</span></h1>
+          <p>Gestiona tus clases y alumnos para el día de hoy.</p>
+        </div>
+        <div class="date-widget">
+          <span class="icon">📅</span>
+          <div class="date-info">
+            <span class="day">{{ hoyNombre }}</span>
+            <span class="full-date">{{ fechaHoyFormatted }}</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 🚀 TACTICAL HUD v8: COCKPIT LAYOUT (UX Optimized) -->
+      <section class="onboarding-tactical-hud cockpit-theme fade-in" *ngIf="showOnboarding">
+        
+        <div class="hud-cockpit-container">
+          
+          <!-- OVERLAY WIDGET: STRATEGIC INFO (Top Left) -->
+          <div class="hud-widget floating-left animate-up">
+            <div class="hud-tag">TACTICAL ASSISTANT</div>
+            <h2 class="hud-title">Plan de Juego</h2>
+            <div class="hud-reward-badge animate-pulse">
+              <span class="gift-icon">🎁</span>
+              <span class="reward-text">+30 DÍAS GRATIS</span>
+            </div>
+          </div>
+
+          <!-- OVERLAY WIDGET: MASCOT (Top Right) -->
+          <div class="hud-widget floating-right animate-up">
+             <div class="mascot-cockpit">
+               <div class="boli-head-v8 shadow-2xl">
+                  <div class="boli-headband">PADELBLOX</div>
+                  <div class="boli-eyes">
+                     <div class="eye"><div class="pupil"></div></div>
+                     <div class="eye"><div class="pupil"></div></div>
+                  </div>
+               </div>
+             </div>
+             <div class="hud-summary-stats">
+                <div class="h-stat">
+                  <span class="h-label">PROGRESO</span>
+                  <span class="h-value">{{ onboardingProgress }}%</span>
+                </div>
+                <div class="h-stat">
+                  <span class="h-label">FASE</span>
+                  <span class="h-value">SET 1</span>
+                </div>
+             </div>
+          </div>
+
+          <!-- CENTRAL PIECE: NEON TACTICAL COURT -->
+          <div class="hud-court-view">
+             <div class="hud-neon-court shadow-2xl">
+                <!-- Court Markers -->
+                <div class="court-label top">ZONA DE ATAQUE</div>
+                <div class="court-label bottom">ZONA DE DEFENSA</div>
+
+                <div class="h-line center-v"></div>
+                <div class="h-line center-h"></div>
+                <div class="h-line service-l"></div>
+                <div class="h-line service-r"></div>
+
+                <!-- Tactical Nodes -->
+                <div class="hud-node" *ngFor="let step of steps"
+                     [class.active]="isNextStep(step)"
+                     [class.done]="step.done"
+                     [class]="'hud-p-' + step.id"
+                     (click)="navigate(step.route)">
+                  
+                  <div class="hud-marker">
+                    <span *ngIf="!step.done">{{ step.id }}</span>
+                    <span *ngIf="step.done">✓</span>
+                    <div class="hud-glow" *ngIf="isNextStep(step)"></div>
+                  </div>
+
+                  <!-- Tooltip (Only for active) -->
+                  <div class="hud-tooltip shadow-2xl" *ngIf="isNextStep(step)"
+                       [class.hud-down]="step.id === 2 || step.id === 3">
+                    <div class="tooltip-badge">¡COMIENZA AQUÍ!</div>
+                    <span class="tooltip-stroke">{{ getStepStroke(step.id) }}</span>
+                    <h4 class="tooltip-title">{{ step.label }}</h4>
+                    <div class="tooltip-status">PENDIENTE</div>
+                  </div>
+                </div>
+             </div>
+          </div>
+
+          <!-- BOTTOM CAPTION -->
+          <div class="hud-bottom-caption">
+            <p>Completa tu configuración para <strong>activar tus estadísticas</strong> y agenda.</p>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- Stats Summary Widgets (LOCKED BEHIND ONBOARDING) -->
+      <div class="stats-row" *ngIf="onboardingDone">
+        <div class="stat-widget dark">
+          <div class="widget-icon">⏳</div>
+          <div class="widget-data">
+            <span class="widget-val">{{ quickStats.clasesPendientes }}</span>
+            <span class="widget-label">Pendientes</span>
+          </div>
+        </div>
+        <div class="stat-widget">
+          <div class="widget-icon" style="background: rgba(37, 99, 235, 0.1); color: #2563eb;">👤</div>
+          <div class="widget-data">
+            <span class="widget-val">{{ quickStats.totalAlumnos }}</span>
+            <span class="widget-label">Alumnos</span>
+          </div>
+        </div>
+        <div class="stat-widget">
+          <div class="widget-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">🎾</div>
+          <div class="widget-data">
+            <span class="widget-val">{{ quickStats.clasesMes }}</span>
+            <span class="widget-label">Clases Mes</span>
+          </div>
+        </div>
+        <div class="stat-widget highlight" [class.has-today]="quickStats.clasesHoy > 0">
+          <div class="widget-icon" style="background: #111; color: #ccff00;">⚡</div>
+          <div class="widget-data">
+            <span class="widget-val">{{ quickStats.clasesHoy }}</span>
+            <span class="widget-label">Hoy</span>
+          </div>
+        </div>
+
+        <!-- Reopen HUD Button -->
+        <div class="stat-widget clickable" (click)="reopenOnboarding()" *ngIf="onboardingDone && !showOnboarding" title="Ver Guía Táctica">
+          <div class="widget-icon" style="background: rgba(0,0,0,0.05); color: #000;">🎯</div>
+          <div class="widget-data">
+            <span class="widget-val">Guía</span>
+            <span class="widget-label">Táctica</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Operational Area (LOCKED BEHIND ONBOARDING) -->
+      <div class="main-dashboard-content stack-layout" *ngIf="onboardingDone">
+        
+        <!-- TOP ROW: AGENDA (Compact Cards) -->
+        <div class="top-agenda-section">
+          <h3 class="column-title">Agenda Ejecutiva</h3>
+
+          <div class="agenda-grid" *ngIf="clasesHoyList.length > 0">
+            <div class="class-card-compact animate-up" *ngFor="let clase of clasesHoyList; let i = index" (click)="irACalendario()"
+              [style.animation-delay]="i * 0.05 + 's'">
+              <div class="cc-header">
+                <span class="day-badge" [class.tomorrow]="clase.diaLabel === 'Mañana'">{{ clase.diaLabel }}</span>
+                <span class="badge" [ngClass]="clase.tipo === 'Grupal' ? 'badge-grupal' : 'badge-indiv'">{{ clase.tipo }}</span>
+              </div>
+              <div class="cc-time">{{ clase.hora }}</div>
+              <div class="cc-title">{{ clase.titulo }}</div>
+              <div class="cc-subtitle">{{ clase.subtitulo }}</div>
+            </div>
+          </div>
+
+          <div class="empty-classes" *ngIf="clasesHoyList.length === 0">
+            <span class="empty-icon">🎾</span>
+            <p>No tienes clases programadas para hoy ni mañana.</p>
+            <button class="btn-outline-small" (click)="irACalendario()">Ver mi Agenda Completa</button>
+          </div>
+        </div>
+
+        <!-- BOTTOM ROW: FINANZAS (Side by Side) -->
+        <div class="bottom-finanzas-section">
+          <h3 class="column-title">Reporte Financiero</h3>
+          
+          <div class="finanzas-grid">
+            <!-- Daily Chart -->
+            <div class="finanzas-widget fade-in slide-up clickable" (click)="openSalesDetail()">
+              <div class="finanzas-header">
+                <h4>Total Recaudado (Mes)</h4>
+                <h2>${{ totalRecaudado | number }}</h2>
+              </div>
+              
+              <div class="chart-container" *ngIf="ventasPorDia.length > 0">
+                <div class="chart-bar" *ngFor="let dia of ventasPorDia" [style.height.%]="dia.heightPercent" (click)="openSalesDetail(undefined, dia.fecha, 'Ventas del ' + dia.fecha); $event.stopPropagation()">
+                  <span class="tooltip-val">${{ dia.total | number }}</span>
+                  <span class="day-label">{{ dia.dayString }}</span>
+                </div>
+              </div>
+              
+              <div *ngIf="ventasPorDia.length === 0" style="text-align: center; color: #999; font-size: 13px; padding: 20px 0;">
+                No hay ventas registradas este mes.
+              </div>
+            </div>
+
+            <!-- Monthly Chart -->
+            <div class="finanzas-widget fade-in slide-up clickable" style="animation-delay: 0.1s;" (click)="openSalesDetail()">
+              <div class="finanzas-header">
+                <h4>Total Recaudado (Año)</h4>
+                <h2>${{ totalRecaudadoAnio | number }}</h2>
+              </div>
+              
+              <div class="chart-container" *ngIf="ventasPorMes.length > 0">
+                <div class="chart-bar" style="background: rgba(37, 99, 235, 0.4);" *ngFor="let mes of ventasPorMes" [style.height.%]="mes.heightPercent" (click)="openSalesDetail(mes.mes, undefined, 'Ventas de ' + mes.monthString); $event.stopPropagation()">
+                  <span class="tooltip-val" style="background: #2563eb;">${{ mes.total | number }}</span>
+                  <span class="day-label">{{ mes.monthString }}</span>
+                </div>
+              </div>
+              
+              <div *ngIf="ventasPorMes.length === 0" style="text-align: center; color: #999; font-size: 13px; padding: 20px 0;">
+                No hay ventas registradas este año.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </main>
+  <app-hard-gate></app-hard-gate>
+
+  <!-- Sales Detail Modal -->
+  <div class="modal-overlay" *ngIf="showSalesModal" (click)="closeSalesModal()">
+    <div class="modal-content sales-detail-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="header-info">
+          <h3>{{ selectedSalesPeriod }}</h3>
+          <p>{{ selectedSalesDetails.length }} transacciones encontradas</p>
+        </div>
+        <button class="close-btn" (click)="closeSalesModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="loading-spinner" *ngIf="isLoadingSales">
+          <div class="spinner"></div>
+          <p>Cargando detalles...</p>
+        </div>
+
+        <div class="sales-list" *ngIf="!isLoadingSales && selectedSalesDetails.length > 0">
+          <div class="sale-item" *ngFor="let sale of selectedSalesDetails">
+            <div class="sale-main">
+              <div class="student-info">
+                <div class="student-avatar">
+                   <img *ngIf="sale.alumno_foto" [src]="sale.alumno_foto" alt="Alumno">
+                   <span *ngIf="!sale.alumno_foto">👤</span>
+                </div>
+                <div class="sale-text">
+                  <span class="student-name">{{ sale.alumno_nombre }}</span>
+                  <span class="pack-name">{{ sale.pack_nombre }} <small>({{ sale.pack_tipo }})</small></span>
+                </div>
+              </div>
+              <div class="sale-value">
+                <span class="amount">+${{ sale.precio | number }}</span>
+                <span class="method">{{ sale.metodo_pago }}</span>
+              </div>
+            </div>
+            <div class="sale-footer">
+              <span class="date">{{ sale.fecha | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-sales" *ngIf="!isLoadingSales && selectedSalesDetails.length === 0">
+          <p>No se encontraron detalles para este periodo.</p>
+        </div>
+      </div>
+
+      <div class="modal-footer" *ngIf="!isLoadingSales">
+        <div class="total-summary">
+          <span class="label">Total Recaudado</span>
+          <span class="value">${{ selectedSalesTotal | number }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

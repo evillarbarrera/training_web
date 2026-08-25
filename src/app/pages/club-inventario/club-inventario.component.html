@@ -1,0 +1,247 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="club-inventario">
+    </app-sidebar>
+    
+    <main class="main-content">
+        <!-- CLUB TABS NAV (Reservas Style) -->
+        <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 0">
+            <div class="tabs-scroll-container">
+                <!-- Global Tab only for multi-club users -->
+                <button class="club-tab-btn" 
+                        [class.active]="selectedClubId === 0" 
+                        (click)="selectClub(0)"
+                        *ngIf="clubes.length > 1 && !isStaff">
+                    <span class="tab-icon">🌐</span>
+                    <span class="tab-name">Vista Global</span>
+                    <span class="tab-badge" *ngIf="selectedClubId === 0">Activo</span>
+                </button>
+                
+                <button *ngFor="let club of clubes" 
+                        class="club-tab-btn" 
+                        [class.active]="selectedClubId === club.club_id"
+                        (click)="selectClub(club.club_id)">
+                    <span class="tab-icon">🏢</span>
+                    <span class="tab-name">{{club.club_nombre}}</span>
+                    <span class="tab-badge" *ngIf="selectedClubId === club.club_id">Activo</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="inventory-container">
+            <!-- Hero Stats -->
+    <div class="stats-grid">
+        <div class="stat-card highlight">
+            <div class="icon-box"><i class="fas fa-box"></i></div>
+            <div class="data">
+                <label>Total Productos</label>
+                <span>{{ selectedClubId === 0 ? globalStats.total : productos.length}}</span>
+            </div>
+        </div>
+        <div class="stat-card low-stock-card" [class.active-filter]="onlyLowStock" (click)="toggleLowStockFilter()" style="cursor: pointer;" title="Haz clic para filtrar productos con stock bajo">
+            <div class="icon-box"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="data">
+                <label>Stock Bajo {{ onlyLowStock ? '(Filtrando)' : '' }}</label>
+                <span>{{ selectedClubId === 0 ? globalStats.lowStock : lowStockCount}}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="icon-box" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="fas fa-wallet"></i></div>
+            <div class="data">
+                <label>Total Costo</label>
+                <span>$ {{ (selectedClubId === 0 ? globalStats.totalCost : totalInventoryCost) | number:'1.0-0'}}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="icon-box" style="background-color: rgba(14, 165, 233, 0.1); color: #0ea5e9;"><i class="fas fa-dollar-sign"></i></div>
+            <div class="data">
+                <label>Valor Inventario (Venta)</label>
+                <span>$ {{ (selectedClubId === 0 ? globalStats.totalValue : totalInventoryValue) | number:'1.0-0'}}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="icon-box" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="fas fa-chart-line"></i></div>
+            <div class="data">
+                <label>Total Ganancia</label>
+                <span>$ {{ (selectedClubId === 0 ? globalStats.totalProfit : totalInventoryProfit) | number:'1.0-0'}}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="icon-box" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7;"><i class="fas fa-percent"></i></div>
+            <div class="data">
+                <label>Total Impuesto (19% IVA)</label>
+                <span>$ {{ (selectedClubId === 0 ? globalStats.totalTax : totalInventoryTax) | number:'1.0-0'}}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls (Only if NOT Global) -->
+    <div class="controls-row" *ngIf="selectedClubId !== 0">
+        <div class="search-input">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Buscar producto por nombre..." [(ngModel)]="searchTerm" (ngModelChange)="currentPage = 1">
+        </div>
+        <div class="actions">
+            <button class="btn-add" (click)="openAddModal()">
+                <i class="fas fa-plus"></i> Nuevo Producto/Servicio
+            </button>
+        </div>
+    </div>
+
+    <!-- Category Filters (UX Design) -->
+    <div class="category-filter-strip animate-in" *ngIf="selectedClubId !== 0">
+        <button class="cat-filter-btn" 
+                [class.active]="selectedCategory === 'Todas' && !onlyLowStock"
+                (click)="selectedCategory = 'Todas'; onlyLowStock = false; currentPage = 1">
+            📦 Todas
+        </button>
+        <button class="cat-filter-btn low-stock-btn" 
+                [class.active]="onlyLowStock"
+                (click)="toggleLowStockFilter()">
+            ⚠️ Stock Bajo ({{ selectedClubId === 0 ? globalStats.lowStock : lowStockCount }})
+        </button>
+        <button *ngFor="let cat of categories" 
+                class="cat-filter-btn"
+                [class.active]="selectedCategory === cat && !onlyLowStock"
+                (click)="selectedCategory = cat; onlyLowStock = false; currentPage = 1">
+            {{ getCategoryEmoji(cat) }} {{ cat }}
+        </button>
+    </div>
+
+    <!-- Products List -->
+    <div class="products-card" *ngIf="selectedClubId !== 0">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Stock</th>
+                    <th>Precio Costo</th>
+                    <th>Precio Venta</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let p of paginatedProductos">
+                    <td>
+                        <div class="prod-info">
+                            <span class="name">{{p.nombre}}</span>
+                        </div>
+                    </td>
+                    <td><span class="cat-pill">{{p.categoria}}</span></td>
+                    <td>
+                        <span class="service-tag-badge" *ngIf="p.tipo === 'servicio'">🛠️ Servicio</span>
+                        <div class="stock-badge" *ngIf="p.tipo !== 'servicio'" [class.low]="p.stock_actual <= p.stock_minimo" [class.ok]="p.stock_actual > p.stock_minimo">
+                            {{p.stock_actual}} / {{p.stock_minimo}}
+                        </div>
+                    </td>
+                    <td><span class="price" style="color: #64748b;">$ {{p.precio_costo | number:'1.0-0'}}</span></td>
+                    <td><span class="price" style="font-weight: 700;">$ {{p.precio_venta | number:'1.0-0'}}</span></td>
+                    <td class="actions-cell">
+                        <button class="btn-edit" (click)="editarProducto(p)" style="margin-right: 5px;" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-edit btn-delete-row" (click)="eliminarProducto(p)" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredProductos.length === 0">
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+                        <i class="fas fa-box-open" style="font-size: 32px; display: block; margin-bottom: 10px;"></i>
+                        No se encontraron productos en el inventario.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Controles de Paginación -->
+        <div class="pagination-container" *ngIf="filteredProductos.length > 0">
+            <div class="pagination-info">
+                <span>{{ pageRangeText }}</span>
+                <div class="page-size-selector">
+                    <label for="pageSize">Mostrar:</label>
+                    <select id="pageSize" [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1">
+                        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pagination-controls">
+                <button class="btn-page" [disabled]="currentPage === 1" (click)="currentPage = currentPage - 1">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button *ngFor="let page of pagesArray" 
+                        class="btn-page-number" 
+                        [class.active]="currentPage === page" 
+                        (click)="currentPage = page">
+                    {{ page }}
+                </button>
+                <button class="btn-page" [disabled]="currentPage === totalPages" (click)="currentPage = currentPage + 1">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Agregar/Editar Producto -->
+<div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>{{isEditing ? 'Editar' : 'Nuevo'}} Item</h2>
+            <button class="btn-close" (click)="closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form>
+                <div class="row-inputs">
+                    <div class="input-group">
+                        <label>Tipo de Registro</label>
+                        <select [(ngModel)]="editingProd.tipo" name="tipo">
+                            <option value="producto">📦 Producto (Físico)</option>
+                            <option value="servicio">🛠️ Servicio (Sin Stock)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre del Item</label>
+                        <input type="text" [(ngModel)]="editingProd.nombre" name="nombre" placeholder="Ej: Coca Cola, Grip, Clase, etc.">
+                    </div>
+                </div>
+                <div class="row-inputs">
+                    <div class="input-group">
+                        <label>Categoría</label>
+                        <select [(ngModel)]="editingProd.categoria" name="categoria">
+                            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Precio Costo</label>
+                        <input type="number" [(ngModel)]="editingProd.precio_costo" name="precio_costo">
+                    </div>
+                    <div class="input-group">
+                        <label>Precio Venta</label>
+                        <input type="number" [(ngModel)]="editingProd.precio_venta" name="precio_venta">
+                    </div>
+                </div>
+                <!-- Mostrar stock solo si es PRODUCTO -->
+                <div class="row-inputs" *ngIf="editingProd.tipo !== 'servicio'">
+                    <div class="input-group">
+                        <label>Stock Actual</label>
+                        <input type="number" [(ngModel)]="editingProd.stock_actual" name="stock_actual">
+                    </div>
+                    <div class="input-group">
+                        <label>Stock Mínimo</label>
+                        <input type="number" [(ngModel)]="editingProd.stock_minimo" name="stock_minimo">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeModal()">Cancelar</button>
+            <button class="btn-save" (click)="saveProducto()" [disabled]="isLoading">
+                {{isLoading ? 'Guardando...' : 'Guardar Item'}}
+            </button>
+        </div>
+    </div>
+</div>
+    </main>
+</div>

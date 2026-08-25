@@ -1,0 +1,231 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole" [activePage]="'club-landing-config'"></app-sidebar>
+
+    <main class="main-content">
+        <div class="dashboard-grid">
+            <!-- Header section -->
+            <div class="page-header-flex">
+                <div>
+                    <h1 class="section-title">🌐 Configuración de Landing Page del Club</h1>
+                    <p class="section-subtitle">Crea, personaliza, previsualiza y publica la página web pública de tu club para tus jugadores y clientes.</p>
+                </div>
+
+                <div class="header-actions" *ngIf="selectedClub">
+                    <button class="btn-ai-sparkle" (click)="generarConIA()" [disabled]="isGeneratingAI">
+                        <i class="fas" [class.fa-magic]="!isGeneratingAI" [class.fa-spinner]="isGeneratingAI" [class.fa-spin]="isGeneratingAI"></i>
+                        {{ isGeneratingAI ? 'Diseñando con IA...' : '✨ Generar Landing con IA (Experto UX)' }}
+                    </button>
+                    <button class="btn-preview" (click)="previsualizar()">
+                        <i class="fas fa-eye"></i> Previsualizar ("Mirarlo")
+                    </button>
+                    <button class="btn-publish" [class.is-published]="publicado" (click)="togglePublicar()">
+                        <i class="fas" [class.fa-globe]="!publicado" [class.fa-pause]="publicado"></i>
+                        {{ publicado ? 'Pausar Publicación' : '🚀 Publicar Landing Page' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loader -->
+            <div *ngIf="isLoading" class="loading-state">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Cargando datos del club...</p>
+            </div>
+
+            <div *ngIf="!isLoading && clubes.length === 0" class="empty-state">
+                <i class="fas fa-building fa-3x"></i>
+                <h3>No tienes clubes asignados</h3>
+                <p>Crea o asigna un club primero para configurar su Landing Page.</p>
+            </div>
+
+            <!-- Main Config Form -->
+            <div *ngIf="!isLoading && selectedClub" class="landing-config-container animate-in">
+                
+                <!-- Status Banner -->
+                <div class="status-banner" [class.published]="publicado">
+                    <div class="status-info">
+                        <span class="status-badge" [class.online]="publicado">
+                            {{ publicado ? 'ONLINE - PUBLICADO' : 'BORRADOR - EN PAUSA' }}
+                        </span>
+                        <h2>{{ selectedClub.nombre }}</h2>
+                        <p class="slug-url" *ngIf="slug">
+                            Enlace público: <strong>{{ origin }}/#/c/{{ slug }}</strong>
+                        </p>
+                    </div>
+                    <div class="status-actions">
+                        <button class="btn-ai-banner" (click)="generarConIA()" [disabled]="isGeneratingAI">
+                            <i class="fas fa-sparkles"></i> Auto-Diseñar con IA (Experto UX)
+                        </button>
+                        <button class="btn-copy" (click)="copiarEnlace()">
+                            <i class="fas fa-copy"></i> Copiar Enlace
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Grid -->
+                <div class="config-grid">
+                    
+                    <!-- Columna Izquierda: Información Principal -->
+                    <div class="card-box">
+                        <div class="card-header">
+                            <h3><i class="fas fa-link"></i> Enlace Personalizado & Presentación</h3>
+                        </div>
+                        <div class="card-body">
+                            
+                            <!-- Selector de Club (si maneja más de uno) -->
+                            <div class="form-group" *ngIf="clubes.length > 1">
+                                <label>Seleccionar Club:</label>
+                                <select [(ngModel)]="clubId" (change)="onClubSelect()" class="form-control">
+                                    <option *ngFor="let c of clubes" [value]="c.id">{{ c.nombre }}</option>
+                                </select>
+                            </div>
+
+                            <!-- Slug Personalizado -->
+                            <div class="form-group">
+                                <label>Enlace / Slug personalizado (URL público):</label>
+                                <div class="input-prefix-group">
+                                    <span class="prefix">/#/c/</span>
+                                    <input type="text" [(ngModel)]="slug" placeholder="mi-club-padel" class="form-control">
+                                </div>
+                                <small class="help-text">Los usuarios podrán acceder directamente entrando a <code>/#/c/{{ slug || 'mi-club' }}</code></small>
+                            </div>
+
+                            <!-- Descripción de la Landing -->
+                            <div class="form-group">
+                                <label>Descripción del Club en la Landing:</label>
+                                <textarea [(ngModel)]="descripcion" rows="4" placeholder="Escribe un mensaje de bienvenida, historia del club o detalles de tus instalaciones..." class="form-control"></textarea>
+                            </div>
+
+                            <!-- Banner URL -->
+                            <div class="form-group">
+                                <label>Imagen de Portada / Banner (URL):</label>
+                                <input type="text" [(ngModel)]="bannerUrl" placeholder="https://..." class="form-control">
+                                <small class="help-text">Imagen principal de fondo para el encabezado de tu Landing Page.</small>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <!-- Tema & Colores por Experto UX -->
+                            <h4>🎨 Paleta de Colores & Tema UX</h4>
+                            <div class="colors-flex">
+                                <div class="color-picker-item">
+                                    <label>Color Principal (Fondo Header):</label>
+                                    <div class="picker-row">
+                                        <input type="color" [(ngModel)]="colorPrimary" class="color-input">
+                                        <span class="color-hex">{{ colorPrimary }}</span>
+                                    </div>
+                                </div>
+                                <div class="color-picker-item">
+                                    <label>Color Acento (Botones & Destacados):</label>
+                                    <div class="picker-row">
+                                        <input type="color" [(ngModel)]="colorAccent" class="color-input">
+                                        <span class="color-hex">{{ colorAccent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Presets Paletas Experto UX -->
+                            <div class="presets-row">
+                                <label>Paletas UX Sugeridas:</label>
+                                <div class="preset-pills">
+                                    <button class="preset-btn" (click)="aplicarPaletaPreset('#0f172a', '#ccff00')" [style.border-color]="'#ccff00'">
+                                        <span class="dot" style="background:#0f172a"></span>
+                                        <span class="dot" style="background:#ccff00"></span> Neon Slate
+                                    </button>
+                                    <button class="preset-btn" (click)="aplicarPaletaPreset('#0b132b', '#06b6d4')" [style.border-color]="'#06b6d4'">
+                                        <span class="dot" style="background:#0b132b"></span>
+                                        <span class="dot" style="background:#06b6d4"></span> Midnight Cyan
+                                    </button>
+                                    <button class="preset-btn" (click)="aplicarPaletaPreset('#18181b', '#f59e0b')" [style.border-color]="'#f59e0b'">
+                                        <span class="dot" style="background:#18181b"></span>
+                                        <span class="dot" style="background:#f59e0b"></span> Obsidian Gold
+                                    </button>
+                                    <button class="preset-btn" (click)="aplicarPaletaPreset('#064e3b', '#34d399')" [style.border-color]="'#34d399'">
+                                        <span class="dot" style="background:#064e3b"></span>
+                                        <span class="dot" style="background:#34d399"></span> Emerald Luxury
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Redes y Secciones Visibles -->
+                    <div class="card-box">
+                        <div class="card-header">
+                            <h3><i class="fas fa-sliders-h"></i> Secciones Visibles & Contacto</h3>
+                        </div>
+                        <div class="card-body">
+                            
+                            <!-- Contacto & Redes -->
+                            <div class="form-group">
+                                <label><i class="fab fa-whatsapp style-wa"></i> WhatsApp de Contacto:</label>
+                                <input type="text" [(ngModel)]="whatsapp" placeholder="+56 9 1234 5678" class="form-control">
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fab fa-instagram style-ig"></i> Instagram (Usuario):</label>
+                                <input type="text" [(ngModel)]="instagram" placeholder="@mi_club_padel" class="form-control">
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fab fa-facebook style-fb"></i> Facebook (URL o Nombre):</label>
+                                <input type="text" [(ngModel)]="facebook" placeholder="facebook.com/miclubpadel" class="form-control">
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <!-- Módulos Visibles Toggles -->
+                            <h4>Módulos a Mostrar en la Landing Page</h4>
+
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>🎾 Reservas de Canchas</strong>
+                                    <span>Permite a los usuarios elegir fecha, ver disponibilidad y reservar canchas.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" [(ngModel)]="mostrarReservas">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>🏆 Americanos & Torneos</strong>
+                                    <span>Muestra la lista de torneos o americanos abiertos disponibles para inscribirse.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" [(ngModel)]="mostrarAmericanos">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <strong>📊 Ranking por Categoría</strong>
+                                    <span>Muestra la tabla de posiciones y puntos de los jugadores del club por categoría.</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" [(ngModel)]="mostrarRanking">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Actions -->
+                <div class="bottom-bar">
+                    <button class="btn-save-primary" (click)="guardarConfiguracion()" [disabled]="isSaving">
+                        <i class="fas" [class.fa-save]="!isSaving" [class.fa-spinner]="isSaving" [class.fa-spin]="isSaving"></i>
+                        {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
+                    </button>
+                    <button class="btn-preview-secondary" (click)="previsualizar()">
+                        <i class="fas fa-external-link-alt"></i> Ver Landing Page
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>

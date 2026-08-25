@@ -1,0 +1,91 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="header-box">
+      <div class="logo">
+        <img src="assets/images/logo-circular.png" class="logo-img" alt="PadelBlox" />
+        <span class="logo-text">Padel<span class="accent">Blox</span></span>
+      </div>
+      <h2>Crear Cuenta</h2>
+      <p class="subtitle">Únete a la mejor comunidad de pádel.</p>
+    </div>
+
+    <div class="form-box">
+      <div class="input-group">
+        <label>Nombre Completo</label>
+        <div class="input-wrapper">
+          <input type="text" placeholder="Tu nombre" [(ngModel)]="nombre" (keypress)="handleKeyPress($event)">
+          <span class="icon">👤</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Correo Electrónico</label>
+        <div class="input-wrapper">
+          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="email" (keypress)="handleKeyPress($event)">
+          <span class="icon">✉️</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="password"
+            (keypress)="handleKeyPress($event)">
+          <span class="toggle-password" (click)="togglePasswordVisibility()">
+            {{ showPassword ? '👁️' : '🔒' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Confirmar Contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="confirmPassword"
+            (keypress)="handleKeyPress($event)">
+          <span class="icon">🔒</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Perfil</label>
+        <div class="input-wrapper">
+          <select [(ngModel)]="rol" class="form-control">
+            <option value="jugador">Jugador</option>
+            <option value="entrenador">Entrenador</option>
+            <option value="administrador_club">Club</option>
+          </select>
+          <span class="icon">🎓</span>
+        </div>
+      </div>
+
+      <div class="consent-box" style="margin: 15px 0; text-align: left; font-size: 13px; color: #cbd5e1;">
+        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer;">
+          <input type="checkbox" [(ngModel)]="acceptTerms" style="margin-top: 3px; accent-color: #ccff00;">
+          <span>He leído y acepto los <a href="#" style="color: #ccff00; text-decoration: underline;">Términos y Condiciones</a> y la <a href="#" style="color: #ccff00; text-decoration: underline;">Política de Privacidad</a> (Ley N° 19.628). <strong style="color: #ef4444;">*</strong></span>
+        </label>
+        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+          <input type="checkbox" [(ngModel)]="acceptMarketing" style="margin-top: 3px; accent-color: #ccff00;">
+          <span>Acepto recibir notificaciones, novedades de torneos y promociones de PadelBlox (Opcional).</span>
+        </label>
+      </div>
+
+      <button class="btn-login" (click)="register()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Registrarse</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+
+      <div *ngIf="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <div class="register-prompt">
+        ¿Ya tienes cuenta? <a (click)="goToLogin()">Inicia sesión aquí</a>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="#">Privacidad</a>
+      <a href="#">Términos</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,93 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="userName" [role]="userRole" activePage="ligas">
+  </app-sidebar>
+
+  <main class="main-content">
+    <header class="top-header">
+      <div class="breadcrumbs">
+        <span>Competición</span> <span class="separator">/</span> <span class="current">Ligas de Pádel</span>
+      </div>
+      <button class="btn-create-header" (click)="crearLiga()">
+        ➕ Crear Nueva Liga
+      </button>
+    </header>
+
+    <div class="dashboard-grid">
+      <div class="header-banner animate-in">
+        <div>
+          <h1>🏆 Ligas de Pádel</h1>
+          <p>Gestiona campeonatos con formato Round Robin, afiches promocionales, visibilidad móvil y edición completa.</p>
+        </div>
+        <button class="btn-primary-neon" (click)="crearLiga()">
+          ⚡ Nueva Liga
+        </button>
+      </div>
+
+      <!-- Filtro Pestañas: Activas vs Históricas -->
+      <div class="tabs-filter-bar animate-in">
+        <button class="filter-tab" [class.active]="filtroEstado === 'activas'" (click)="cambiarFiltro('activas')">
+          🔥 Ligas Activas
+        </button>
+        <button class="filter-tab" [class.active]="filtroEstado === 'historicas'" (click)="cambiarFiltro('historicas')">
+          📜 Ligas Históricas (Finalizadas)
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="loading-spinner">
+        <p>Cargando ligas de pádel...</p>
+      </div>
+
+      <div *ngIf="!loading && ligas.length === 0" class="empty-card animate-in">
+        <div class="icon">🏆</div>
+        <h3>No hay {{ filtroEstado === 'activas' ? 'ligas activas' : 'ligas históricas' }} registradas</h3>
+        <p>Crea tu primera liga de pádel para comenzar a agendar partidos y tablas de posiciones.</p>
+        <button class="btn-primary-neon" (click)="crearLiga()">Crear Liga Ahora</button>
+      </div>
+
+      <!-- Grid de Ligas -->
+      <div class="ligas-grid animate-in" *ngIf="!loading && ligas.length > 0">
+        <div *ngFor="let l of ligas" class="liga-card" (click)="verLiga(l.id)">
+          <div class="card-banner-img" *ngIf="l.imagen_url">
+            <img [src]="l.imagen_url" alt="Afiche Promocional" />
+          </div>
+
+          <div class="card-header">
+            <span class="status-pill" [class]="l.estado.toLowerCase()">{{ l.estado }}</span>
+            <span class="app-badge" *ngIf="l.visible_app">📱 App Móvil</span>
+          </div>
+
+          <h3 class="liga-title">{{ l.nombre }}</h3>
+          <p class="liga-desc" *ngIf="l.descripcion">{{ l.descripcion }}</p>
+
+          <div class="card-stats">
+            <div class="stat-item">
+              <span class="stat-num">${{ (l.precio || 0) | number:'1.0-0' }}</span>
+              <span class="stat-lbl">Inscripción</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">{{ l.num_categorias || 1 }}</span>
+              <span class="stat-lbl">Categorías</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-num">{{ l.total_parejas || 0 }}</span>
+              <span class="stat-lbl">Parejas</span>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <span class="dates">📅 {{ l.fecha_inicio | date:'dd/MM/yyyy' }}</span>
+            
+            <div class="card-actions">
+              <button class="btn-icon-edit" (click)="editarLiga(l.id, $event)" title="Editar Liga">
+                ✏️ Editar
+              </button>
+              <button class="btn-icon-delete" (click)="eliminarLiga(l, $event)" title="Eliminar Liga">
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

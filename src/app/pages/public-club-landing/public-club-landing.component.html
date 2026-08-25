@@ -1,0 +1,336 @@
+<div class="public-landing-wrapper" [style.--brand-primary]="colorPrimary" [style.--brand-accent]="colorAccent">
+    
+    <!-- Ambient Glow Background Blobs -->
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <!-- Preview Mode Notification Bar -->
+    <div *ngIf="isPreview" class="preview-mode-bar">
+        <i class="fas fa-eye"></i> <strong>MODO VISTA PREVIA:</strong> Así se ve la Landing Page de tu club. (Estado: {{ clubData?.landing_publicado == 1 ? 'Publicada' : 'No Publicada' }})
+    </div>
+
+    <!-- Loader State -->
+    <div *ngIf="isLoading" class="loading-state">
+        <div class="spinner-ring"></div>
+        <p class="loading-text">Cargando la experiencia de pádel...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!isLoading && errorMessage" class="error-state">
+        <div class="error-glass-card">
+            <div class="error-icon-box">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2>Landing Page no disponible</h2>
+            <p>{{ errorMessage }}</p>
+            <a href="/" class="btn-home-cta">
+                <i class="fas fa-arrow-left"></i> Volver al Inicio
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Landing Content -->
+    <div *ngIf="!isLoading && clubData" class="landing-content animate-fade-in">
+        
+        <!-- 1. TOP NAVBAR (Logo a la izquierda, menú a la derecha) -->
+        <nav class="top-navbar">
+            <div class="container navbar-flex">
+                <!-- Izquierda: Logo y Nombre del Club -->
+                <div class="navbar-logo-brand">
+                    <img [src]="clubData.logo_url || 'assets/images/logo-circular.png'" [alt]="clubData.nombre" class="app-logo-img">
+                    <span class="app-brand-name">{{ clubData.nombre }}</span>
+                </div>
+
+                <!-- Derecha: Menú de navegación -->
+                <div class="navbar-menu-links">
+                    <button *ngIf="clubData.landing_mostrar_reservas != 0" class="nav-link-btn" (click)="scrollToSection('canchas')">
+                        <i class="fas fa-calendar-check"></i> Canchas
+                    </button>
+                    <button *ngIf="clubData.landing_mostrar_ranking != 0" class="nav-link-btn" (click)="scrollToSection('ranking')">
+                        <i class="fas fa-chart-line"></i> Ranking
+                    </button>
+                    <button *ngIf="clubData.landing_mostrar_americanos != 0" class="nav-link-btn" (click)="scrollToSection('torneos')">
+                        <i class="fas fa-trophy"></i> Torneos
+                    </button>
+                    <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="nav-link-btn wa-nav" (click)="openWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> Contacto
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 2. CLUB PROFILE HERO (Foto de perfil a la izquierda, Texto e información a la derecha) -->
+        <section class="club-profile-hero" [style.background-image]="'url(' + defaultBannerUrl + ')'">
+            <div class="hero-overlay"></div>
+            
+            <div class="container profile-hero-container">
+                <div class="profile-hero-card">
+                    <!-- Foto de Perfil del Club (Izquierda) -->
+                    <div class="profile-avatar-col">
+                        <div class="avatar-ring-glow">
+                            <img [src]="clubData.logo_url || 'assets/images/logo-circular.png'" [alt]="clubData.nombre" class="club-profile-img">
+                        </div>
+                        <span class="verified-badge-pill">
+                            <i class="fas fa-check-circle"></i> Verificado
+                        </span>
+                    </div>
+
+                    <!-- Texto e Información del Club (Derecha) -->
+                    <div class="profile-text-col">
+                        <div class="location-tag-row" *ngIf="clubData.comuna || clubData.region">
+                            <span class="location-badge">
+                                <i class="fas fa-location-dot"></i> {{ clubData.comuna }}{{ clubData.region ? ', ' + clubData.region : '' }}
+                            </span>
+                        </div>
+
+                        <h1 class="club-name-heading">{{ clubData.nombre }}</h1>
+
+                        <p class="club-address-line" *ngIf="clubData.direccion">
+                            <i class="fas fa-map-marker-alt"></i> {{ clubData.direccion }}
+                        </p>
+
+                        <!-- Descripción del Club -->
+                        <p class="club-description-text" *ngIf="clubData.landing_descripcion || clubData.descripcion">
+                            {{ clubData.landing_descripcion || clubData.descripcion }}
+                        </p>
+
+                        <!-- Botones de Contacto -->
+                        <div class="social-contact-row">
+                            <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="btn-contact-pill wa" (click)="openWhatsApp()">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </button>
+                            <button *ngIf="clubData.landing_instagram" class="btn-contact-pill ig" (click)="openSocial('ig')">
+                                <i class="fab fa-instagram"></i> Instagram
+                            </button>
+                            <button *ngIf="clubData.landing_facebook" class="btn-contact-pill fb" (click)="openSocial('fb')">
+                                <i class="fab fa-facebook"></i> Facebook
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIONES EN ORDEN VERTICAL -->
+        <div class="container sections-vertical-stack">
+            
+            <!-- 3. DISPONIBILIDAD DE CANCHAS (Arriba) -->
+            <section id="canchas" *ngIf="clubData.landing_mostrar_reservas != 0" class="section-pane">
+                <div class="section-pane-header">
+                    <div>
+                        <h2>🎾 Disponibilidad de Canchas</h2>
+                        <p>Selecciona tu día preferido y reserva tu horario en nuestras instalaciones.</p>
+                    </div>
+                </div>
+
+                <!-- Filtro de Fecha Rápido -->
+                <div class="date-selector-bar">
+                    <div class="quick-dates-group">
+                        <button class="date-btn-pill" [class.active]="isFechaSelected(0)" (click)="setFechaQuick(0)">
+                            Hoy
+                        </button>
+                        <button class="date-btn-pill" [class.active]="isFechaSelected(1)" (click)="setFechaQuick(1)">
+                            Mañana
+                        </button>
+                        <button class="date-btn-pill" [class.active]="isFechaSelected(2)" (click)="setFechaQuick(2)">
+                            Pasado Mañana
+                        </button>
+                    </div>
+
+                    <div class="custom-date-picker">
+                        <i class="fas fa-calendar-alt"></i>
+                        <input type="date" [(ngModel)]="fechaSeleccionada" class="date-input-field">
+                    </div>
+                </div>
+
+                <!-- Grid de Canchas -->
+                <div class="courts-grid-layout" *ngIf="canchas.length > 0">
+                    <div class="court-card-item" *ngFor="let c of canchas">
+                        <div class="card-header-flex">
+                            <span class="court-badge-tag" [class.indoor]="c.techada">
+                                <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
+                                {{ c.techada ? 'Techada (Indoor)' : 'Al Aire Libre' }}
+                            </span>
+                            <span class="court-type-lbl" *ngIf="c.tipo">{{ c.tipo }}</span>
+                        </div>
+
+                        <h3 class="court-title">{{ c.nombre }}</h3>
+
+                        <div class="court-specs">
+                            <div class="spec-row" *ngIf="c.superficie">
+                                <i class="fas fa-layer-group"></i> Superficie: <strong>{{ c.superficie }}</strong>
+                            </div>
+                            <div class="spec-row">
+                                <i class="fas fa-bolt"></i> Iluminación LED
+                            </div>
+                            <div class="spec-row">
+                                <i class="fas fa-shield-alt"></i> Cristales Templados
+                            </div>
+                        </div>
+
+                        <div class="court-footer-flex">
+                            <div class="price-info">
+                                <span class="lbl">Precio desde</span>
+                                <span class="amount">$ {{ c.precio_hora | number:'1.0-0' }} <small>/ hr</small></span>
+                            </div>
+
+                            <button class="btn-reserve-cta" (click)="reservarCancha(c)">
+                                <span>Reservar Horario</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado sin canchas -->
+                <div *ngIf="canchas.length === 0" class="empty-state-box">
+                    <div class="empty-icon-wrap">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <h3>No hay canchas disponibles actualmente para esta fecha</h3>
+                    <p>Prueba eligiendo otro día en el calendario o contáctate directamente por WhatsApp.</p>
+                    <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="btn-wa-contact" (click)="openWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
+                    </button>
+                </div>
+            </section>
+
+            <!-- 4. RANKING DEL CLUB POR CATEGORÍA (Medio) -->
+            <section id="ranking" *ngIf="clubData.landing_mostrar_ranking != 0" class="section-pane">
+                <div class="section-pane-header">
+                    <div>
+                        <h2>📊 Ranking del Club por Categoría</h2>
+                        <p>Clasificación oficial de jugadores ordenada por posiciones y puntos acumulados.</p>
+                    </div>
+                </div>
+
+                <!-- Filtro de Categorías -->
+                <div class="category-pills-bar" *ngIf="categoriasDisponibles.length > 1">
+                    <button *ngFor="let cat of categoriasDisponibles" 
+                            class="cat-filter-btn"
+                            [class.active]="categoriaSeleccionada === cat" 
+                            (click)="categoriaSeleccionada = cat; filtrarRanking()">
+                        {{ cat }}
+                    </button>
+                </div>
+
+                <!-- Tabla Leaderboard -->
+                <div class="leaderboard-table-card" *ngIf="rankingFiltrado.length > 0">
+                    <div class="table-responsive">
+                        <table class="ranking-table">
+                            <thead>
+                                <tr>
+                                    <th class="th-pos">Pos</th>
+                                    <th>Jugador</th>
+                                    <th>Categoría</th>
+                                    <th class="text-right">Puntos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let r of rankingFiltrado; let i = index" [class.podium-highlight]="i < 3">
+                                    <td class="td-pos">
+                                        <div class="podium-badge-icon" [class.top1]="i === 0" [class.top2]="i === 1" [class.top3]="i === 2">
+                                            {{ i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : i + 1)) }}
+                                        </div>
+                                    </td>
+                                    <td class="td-player">
+                                        <div class="player-info-flex">
+                                            <img [src]="r.foto || 'assets/images/placeholder_avatar.png'" class="player-photo" alt="Avatar">
+                                            <span class="player-name">{{ r.nombre }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="cat-tag">{{ r.categoria }}</span>
+                                    </td>
+                                    <td class="td-pts text-right">
+                                        <span class="pts-number">{{ r.puntos | number }}</span>
+                                        <span class="pts-lbl">pts</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div *ngIf="rankingFiltrado.length === 0" class="empty-state-box">
+                    <div class="empty-icon-wrap">
+                        <i class="fas fa-list-ol"></i>
+                    </div>
+                    <h3>Sin jugadores en esta categoría</h3>
+                    <p>No se registran clasificaciones en el filtro seleccionado.</p>
+                </div>
+            </section>
+
+            <!-- 5. FUTUROS AMERICANOS O TORNEOS (Abajo) -->
+            <section id="torneos" *ngIf="clubData.landing_mostrar_americanos != 0" class="section-pane">
+                <div class="section-pane-header">
+                    <div>
+                        <h2>🏆 Próximos Torneos y Americanos</h2>
+                        <p>Inscríbete en los eventos oficiales del club, suma puntos y compite.</p>
+                    </div>
+                </div>
+
+                <div class="torneos-grid-layout" *ngIf="americanos.length > 0">
+                    <div class="torneo-card-item" *ngFor="let t of americanos">
+                        <div class="torneo-card-header">
+                            <span class="status-open-pill">
+                                <span class="dot"></span> Inscripciones Abiertas
+                            </span>
+                            <span class="type-name">{{ t.tipo || 'Americano' }}</span>
+                        </div>
+
+                        <h3 class="torneo-name">{{ t.nombre }}</h3>
+
+                        <div class="torneo-meta-list">
+                            <div class="meta-row">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>Fecha Inicio: <strong>{{ t.fecha_inicio | date:'dd/MM/yyyy' }}</strong></span>
+                            </div>
+                            <div class="meta-row" *ngIf="t.precio">
+                                <i class="fas fa-ticket-alt"></i>
+                                <span>Inscripción: <strong>$ {{ t.precio | number:'1.0-0' }}</strong></span>
+                            </div>
+                            <div class="meta-row" *ngIf="t.cupos_maximos">
+                                <i class="fas fa-users"></i>
+                                <span>Cupos: <strong>{{ t.cupos_maximos }} Parejas</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="torneo-card-footer">
+                            <button class="btn-enroll-cta" (click)="inscribirAmericano(t)">
+                                <span>Inscribirme Ahora</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div *ngIf="americanos.length === 0" class="empty-state-box">
+                    <div class="empty-icon-wrap">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>No hay torneos o americanos programados actualmente</h3>
+                    <p>La administración del club publicará nuevos torneos próximamente.</p>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="landing-footer-bar">
+            <div class="container footer-flex-layout">
+                <div class="footer-club-info">
+                    <h4>{{ clubData.nombre }}</h4>
+                    <p *ngIf="clubData.direccion"><i class="fas fa-map-marker-alt"></i> {{ clubData.direccion }} {{ clubData.comuna ? '- ' + clubData.comuna : '' }}</p>
+                </div>
+
+                <div class="footer-credits">
+                    <span>Powered by</span>
+                    <strong class="brand-accent">PadelBlox 🎾</strong>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+</div>

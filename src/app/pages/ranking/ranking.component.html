@@ -1,0 +1,141 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="ranking">
+    </app-sidebar>
+
+    <main class="main-content">
+
+        <div class="content-body">
+            <!-- PODIUM (Top 3) -->
+            @if (ranking.length > 0) {
+            <div class="podium-container">
+                <!-- 2nd Place -->
+                <div class="podium-spot second" [style.visibility]="ranking[1] ? 'visible' : 'hidden'">
+                    <div class="avatar-container">
+                        <img [src]="ranking[1]?.foto || 'assets/images/placeholder_avatar.png'" alt="2nd">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    <div class="player-info">
+                        <span class="name">{{ ranking[1]?.nombre }}</span>
+                        <span class="points">{{ ranking[1]?.puntos_ranking }} pts</span>
+                    </div>
+                </div>
+
+                <!-- 1st Place -->
+                <div class="podium-spot first">
+                    <div class="avatar-container">
+                        <div class="crown">👑</div>
+                        <img [src]="ranking[0]?.foto || 'assets/images/placeholder_avatar.png'" alt="1st">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    <div class="player-info">
+                        <span class="name">{{ ranking[0]?.nombre }}</span>
+                        <span class="points">{{ ranking[0]?.puntos_ranking }} pts</span>
+                    </div>
+                </div>
+
+                <!-- 3rd Place -->
+                <div class="podium-spot third" [style.visibility]="ranking[2] ? 'visible' : 'hidden'">
+                    <div class="avatar-container">
+                        <img [src]="ranking[2]?.foto || 'assets/images/placeholder_avatar.png'" alt="3rd">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    <div class="player-info">
+                        <span class="name">{{ ranking[2]?.nombre }}</span>
+                        <span class="points">{{ ranking[2]?.puntos_ranking }} pts</span>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- RANKING TABLE -->
+            <div class="ranking-card">
+                <div class="card-header">
+                    <h2>Tabla de Clasificación</h2>
+                    <div class="badge-total">{{ ranking.length }} Jugadores</div>
+                </div>
+
+                <div class="table-container">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th class="pos-th">Puesto</th>
+                                <th>Jugador</th>
+                                <th class="text-right">Puntos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (player of paginatedRanking; track player.id; let i = $index) {
+                            <tr [class.top-3]="((currentPage - 1) * pageSize + i) < 3">
+                                <td class="pos-td">
+                                    <span class="rank-circle" [ngClass]="'rank-' + ((currentPage - 1) * pageSize + i + 1)">
+                                        {{ (currentPage - 1) * pageSize + i + 1 }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="player-cell">
+                                        <img [src]="player.foto || 'assets/images/placeholder_avatar.png'"
+                                            class="avatar-mini">
+                                        <div class="name-box">
+                                            <span class="player-name">{{ player.nombre }}</span>
+                                            <span class="player-email">{{ player.usuario }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-right points-cell">
+                                    <strong>{{ player.puntos_ranking }}</strong>
+                                    <span class="pts-label">PTS</span>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    @if (ranking.length === 0 && !loading) {
+                    <div class="empty-state">
+                        <div class="empty-icon">🏆</div>
+                        <h3>No hay ranking disponible</h3>
+                        <p>Los jugadores aparecerán aquí cuando sumen puntos en torneos.</p>
+                    </div>
+                    }
+
+                    @if (loading) {
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Cargando ranking...</p>
+                    </div>
+                    }
+                </div>
+
+                <!-- Controles de Paginación -->
+                <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px; border-radius: 0 0 16px 16px;" *ngIf="ranking.length > 0">
+                    <div class="pagination-info" style="display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 600; color: #64748b;">
+                        <span>{{ pageRangeText }}</span>
+                        <div class="page-size-selector" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 13px; color: #94a3b8; font-weight: 700;">Mostrar:</label>
+                            <select [(ngModel)]="pageSize" (ngModelChange)="currentPage = 1" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; background: #f8fafc;">
+                                <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pagination-controls" style="display: flex; align-items: center; gap: 6px;">
+                        <button [disabled]="currentPage === 1" (click)="currentPage = currentPage - 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button *ngFor="let page of pagesArray" 
+                                (click)="currentPage = page"
+                                [style.background]="currentPage === page ? '#0f172a' : 'transparent'"
+                                [style.color]="currentPage === page ? '#ccff00' : '#64748b'"
+                                [style.border-color]="currentPage === page ? '#0f172a' : 'transparent'"
+                                style="border: 1px solid transparent; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 8px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                            {{ page }}
+                        </button>
+                        <button [disabled]="currentPage === totalPages" (click)="currentPage = currentPage + 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

@@ -1,0 +1,117 @@
+<div class="modal-backdrop">
+  <div class="modal-card animate-in">
+    <div class="modal-header">
+      <div class="header-title-box">
+        <span class="header-icon">{{ parejaToEdit ? '✏️' : '👥' }}</span>
+        <div>
+          <h3>{{ parejaToEdit ? 'Editar Pareja Inscrita' : 'Inscribir Pareja' }}</h3>
+          <span class="category-pill">{{ categoriaNombre }}</span>
+        </div>
+      </div>
+      <button class="btn-close" (click)="cancelar()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
+
+    <div class="form-group">
+      <label>Nombre Personalizado de Pareja <span class="optional-tag">(Opcional)</span></label>
+      <input type="text" [(ngModel)]="nombrePareja" placeholder="Ej: Los Ases del Pádel" class="custom-input" />
+    </div>
+
+    <div class="form-row">
+      <!-- Jugador 1 Autocomplete / Texto Libre -->
+      <div class="form-group flex-1 autocomplete-container">
+        <label>
+          Jugador 1 *
+          <span class="user-badge" *ngIf="j1Id">✓ Registrado</span>
+        </label>
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            [(ngModel)]="j1Nombre" 
+            (input)="onInputJ1()" 
+            (focus)="showDropJ1 = true; filterJ1()"
+            placeholder="Escribe nombre o busca usuario..." 
+            class="custom-input" 
+            [class.is-registered]="j1Id"
+          />
+        </div>
+
+        <div class="autocomplete-dropdown" *ngIf="showDropJ1 && filteredJugadoresJ1.length > 0">
+          <div 
+            class="dropdown-item" 
+            *ngFor="let u of filteredJugadoresJ1" 
+            (click)="selectJ1(u); $event.stopPropagation()"
+          >
+            <div class="u-name">{{ u.nombre }} {{ u.apellido }}</div>
+            <small class="u-meta">{{ u.usuario || u.email }} <span *ngIf="u.categoria">• Cat. {{ u.categoria }}</span></small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jugador 2 Autocomplete / Texto Libre -->
+      <div class="form-group flex-1 autocomplete-container">
+        <label>
+          Jugador 2 *
+          <span class="user-badge" *ngIf="j2Id">✓ Registrado</span>
+        </label>
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            [(ngModel)]="j2Nombre" 
+            (input)="onInputJ2()" 
+            (focus)="showDropJ2 = true; filterJ2()"
+            placeholder="Escribe nombre o busca usuario..." 
+            class="custom-input" 
+            [class.is-registered]="j2Id"
+          />
+        </div>
+
+        <div class="autocomplete-dropdown" *ngIf="showDropJ2 && filteredJugadoresJ2.length > 0">
+          <div 
+            class="dropdown-item" 
+            *ngFor="let u of filteredJugadoresJ2" 
+            (click)="selectJ2(u); $event.stopPropagation()"
+          >
+            <div class="u-name">{{ u.nombre }} {{ u.apellido }}</div>
+            <small class="u-meta">{{ u.usuario || u.email }} <span *ngIf="u.categoria">• Cat. {{ u.categoria }}</span></small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restricciones Horarias -->
+    <div class="restrictions-section">
+      <div class="restrictions-header">
+        <div>
+          <label class="restrictions-title">🗓️ Restricciones Horarias <span class="optional-tag">(Opcional, máx 2)</span></label>
+          <small class="restrictions-desc">Indica qué días/horas NO pueden jugar para la programación de partidos.</small>
+        </div>
+        <button type="button" class="btn-add-restriction" (click)="agregarRestriccion()" *ngIf="restricciones.length < 2">
+          + Agregar Horario
+        </button>
+      </div>
+      
+      <div class="restrictions-list" *ngIf="restricciones.length > 0">
+        <div *ngFor="let r of restricciones; let i = index" class="restriction-row animate-in">
+          <select [(ngModel)]="r.dia" class="custom-input select-day">
+            <option *ngFor="let d of diasSemana" [value]="d">{{ d }}</option>
+          </select>
+          <div class="time-range">
+            <input type="time" [(ngModel)]="r.hora_inicio" class="custom-input time-input" />
+            <span class="time-sep">a</span>
+            <input type="time" [(ngModel)]="r.hora_fin" class="custom-input time-input" />
+          </div>
+          <button type="button" class="btn-remove-restriction" (click)="eliminarRestriccion(i)" title="Eliminar restricción">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="cancelar()" [disabled]="loading">Cancelar</button>
+      <button class="btn-save" (click)="guardar()" [disabled]="loading">
+        {{ loading ? 'Guardando...' : (parejaToEdit ? '💾 Guardar Cambios' : 'Confirmar Inscripción') }}
+      </button>
+    </div>
+  </div>
+</div>

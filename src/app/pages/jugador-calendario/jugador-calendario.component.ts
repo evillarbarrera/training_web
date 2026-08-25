@@ -1,0 +1,249 @@
+import { Component, OnInit, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { MysqlService } from '../../services/mysql.service';
+import { AlumnoService } from '../../services/alumno.service';
+import { SidebarComponent } from '../../components/sidebar/sidebar.component';
+import { PopupService } from '../../services/popup.service';
+
+@Component({
+  selector: 'app-jugador-calendario',
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
+  templateUrl: './jugador-calendario.component.html',
+  styleUrls: ['./jugador-calendario.component.scss']
+})
+export class JugadorCalendarioComponent implements OnInit {
+  // View State
+  vistaActual: 'activas' | 'historial' = 'activas';
+  isLoading = true;
+  userId: number | null = null;
+
+  // Pagination
+  itemsPerPage = 8;
+  currentPage = 1;
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.calcularItemsPerPage();
+  }
+
+  private calcularItemsPerPage() {
+    if (window.innerWidth >= 768) {
+      this.itemsPerPage = 9999;
+      return;
+    }
+    // Restamos cabeceras, titulo de la página
+    const alturaDisponible = window.innerHeight - 250;
+    const filas = Math.max(2, Math.floor(alturaDisponible / 180));
+
+    let columnas = 1;
+
+    this.itemsPerPage = filas * columnas;
+  }
+
+  // User Data
+  jugadorNombre: string = 'Jugador';
+  jugadorFoto: string | null = null;
+
+  // Data
+  reservasFuturas: any[] = [];
+  reservasPasadas: any[] = [];
+
+  // Modal Invitation
+  showModalInvitacion = false;
+  selectedReserva: any = null;
+  emailInvitado: string = '';
+
+  constructor(
+    private mysqlService: MysqlService,
+    private alumnoService: AlumnoService,
+    private router: Router,
+    private popupService: PopupService
+  ) { }
+
+  ngOnInit(): void {
+    this.userId = Number(localStorage.getItem('userId'));
+    if (!this.userId) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.calcularItemsPerPage();
+    this.loadUserProfile();
+    this.loadReservas();
+  }
+
+  loadUserProfile(): void {
+    if (!this.userId) return;
+    this.mysqlService.getPerfil(this.userId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.jugadorNombre = res.user.nombre;
+          this.jugadorFoto = res.user.foto_perfil || res.user.foto || null;
+        }
+      },
+      error: (err) => console.error('Error loading profile:', err)
+    });
+  }
+
+  cambiarVista(vista: 'activas' | 'historial'): void {
+    this.vistaActual = vista;
+    this.currentPage = 1;
+  }
+
+  get paginatedReservas(): any[] {
+    const source = this.vistaActual === 'activas' ? this.reservasFuturas : this.reservasPasadas;
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return source.slice(start, start + this.itemsPerPage);
+  }
+
+  get totalPages(): number {
+    const source = this.vistaActual === 'activas' ? this.reservasFuturas : this.reservasPasadas;
+    return Math.ceil(source.length / this.itemsPerPage);
+  }
+
+  nextPage() {
+    if (this.currentPage < this.totalPages) this.currentPage++;
+  }
+
+  prevPage() {
+    if (this.currentPage > 1) this.currentPage--;
+  }
+
+  loadReservas(): void {
+    if (!this.userId) return;
+    this.isLoading = true;
+
+    this.mysqlService.getReservasJugador(this.userId).subscribe({
+      next: (res: any) => {
+        let allReservas = [];
+        if (Array.isArray(res)) {
+          allReservas = res;
+        } else {
+          const individuales = res.reservas_individuales || [];
+          const grupales = res.entrenamientos_grupales || [];
+          allReservas = [...individuales, ...grupales];
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        this.reservasFuturas = allReservas.filter(r => {
+          const rDate = new Date((r.fecha || '') + 'T' + (r.hora_inicio || '00:00'));
+          return rDate >= today;
+        }).sort((a, b) => new Date((a.fecha || '') + 'T' + (a.hora_inicio || '00:00')).getTime() - new Date((b.fecha || '') + 'T' + (b.hora_inicio || '00:00')).getTime());
+
+        this.reservasPasadas = allReservas.filter(r => {
+          const rDate = new Date((r.fecha || '') + 'T' + (r.hora_inicio || '00:00'));
+          return rDate < today;
+        }).sort((a, b) => new Date((b.fecha || '') + 'T' + (b.hora_inicio || '00:00')).getTime() - new Date((a.fecha || '') + 'T' + (a.hora_inicio || '00:00')).getTime());
+
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        console.error('Error loading reservations:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  cancelarReserva(reserva: any): void {
+
+
+    // Determine ID
+    const id = reserva.id || reserva.reserva_id || reserva.inscripcion_id;
+
+    if (!id) {
+      console.error('No se encontró ID válido para cancelar:', reserva);
+      this.popupService.error('Error', 'No se pudo identificar la reserva. Contacta a soporte.');
+      return;
+    }
+
+    this.popupService.confirm(
+      '¿Estás seguro?',
+      "Cancelarás tu reserva y dejarás el horario libre."
+    ).then((result) => {
+      if (result) {
+        if (!this.userId) return;
+
+        // Check if it is a group enrollment (not a physical slot yet)
+        if (reserva.inscripcion_id) {
+          this.mysqlService.cancelarInscripcionGrupal(reserva.inscripcion_id, this.userId).subscribe({
+            next: (res) => {
+              this.popupService.success('¡Cancelada!', res.message || 'Tu cupo ha sido liberado.');
+              this.loadReservas();
+            },
+            error: (err) => {
+              console.error('Error canceling group:', err);
+              this.popupService.error('Error', err.error?.error || 'No se pudo cancelar.');
+            }
+          });
+        } else {
+          // Normal Reservation (even if it's marked as grupal, we use the reserva_id)
+          this.mysqlService.cancelarReserva(id, this.userId).subscribe({
+            next: () => {
+              this.popupService.success('¡Cancelada!', 'Tu reserva ha sido cancelada.');
+              this.loadReservas();
+            },
+            error: (err: any) => {
+              console.error('Error canceling reservation:', err);
+              const msg = err.error?.error || 'No se pudo cancelar la reserva.';
+              this.popupService.error('Error', msg);
+            }
+          });
+        }
+      }
+    });
+  }
+
+  // --- Invitation Logic ---
+
+  abrirModalInvitacion(reserva: any) {
+    this.selectedReserva = reserva;
+    this.emailInvitado = '';
+    this.showModalInvitacion = true;
+  }
+
+  cerrarModal() {
+    this.showModalInvitacion = false;
+    this.selectedReserva = null;
+  }
+
+  enviarInvitacion() {
+    if (!this.emailInvitado || !this.emailInvitado.includes('@')) {
+      this.popupService.warning('Error', 'Ingresa un email válido');
+      return;
+    }
+
+    if (!this.selectedReserva || !this.selectedReserva.pack_jugador_id) {
+      this.popupService.error('Error', 'No se pudo identificar el pack para esta reserva.');
+      return;
+    }
+
+    this.popupService.info('Enviando...', 'Espera un momento mientras procesamos la invitación.');
+
+    this.alumnoService.invitarJugador(this.selectedReserva.pack_jugador_id, this.emailInvitado).subscribe({
+      next: (res: any) => {
+        this.popupService.success('¡Listo!', res.message || 'Jugador agregado al equipo.');
+        this.cerrarModal();
+        this.loadReservas();
+      },
+      error: (err: any) => {
+        console.error(err);
+        this.popupService.error('Error', err.error?.error || 'No se pudo invitar al jugador.');
+      }
+    });
+  }
+
+  // Navigation
+  irAInicio(): void { this.router.navigate(['/jugador-home']); }
+  irACalendario(): void { } // Self
+  irAReservas(): void { this.router.navigate(['/jugador-reservas']); }
+  irAPerfil(): void { this.router.navigate(['/perfil']); }
+  logout(): void {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userId');
+    this.router.navigate(['/login']);
+  }
+}

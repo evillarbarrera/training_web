@@ -1,0 +1,185 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="coachNombre" [jugadorFoto]="coachFoto" [role]="'entrenador'"
+    activePage="alumnos">
+  </app-sidebar>
+
+  <main class="main-content">
+
+
+    <div class="dashboard-grid">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-text">
+          <h2>Gestión de Alumnos</h2>
+          <p>Administra el progreso y créditos de tus estudiantes</p>
+        </div>
+        <div class="header-btns">
+          <button class="btn-help" (click)="startTutorial()">
+            💡 Ayuda
+          </button>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE TUTORIAL SYSTEM -->
+      <div class="tutorial-overlay" *ngIf="showTutorial"></div>
+      
+      <div class="tutorial-card shadow-lg" *ngIf="showTutorial" [style.top]="tutorialTop" [style.left]="tutorialLeft">
+        <div class="t-header">
+          <div class="t-step-count">Paso {{ currentTutorialStep + 1 }} de {{ tutorialSteps.length }}</div>
+        </div>
+        <div class="t-body">
+          <h3>{{ tutorialSteps[currentTutorialStep].title }}</h3>
+          <p>{{ tutorialSteps[currentTutorialStep].content }}</p>
+        </div>
+        <div class="t-footer">
+          <button class="btn-skip" (click)="closeTutorial()">Saltar</button>
+          <button class="btn-next" (click)="nextTutorialStep()">
+            {{ currentTutorialStep === tutorialSteps.length - 1 ? '¡Listo!' : 'Siguiente' }}
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-section">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" [(ngModel)]="searchTerm" (input)="filtrarAlumnos()"
+            placeholder="Buscar alumno por nombre..." class="search-input" />
+        </div>
+        <div class="sort-controls">
+          <span class="sort-label">Filtrar:</span>
+          <button class="sort-btn" [class.active]="filterTab === 'todos'" (click)="cambiarFiltro('todos')">
+            Todos ({{ alumnos.length }})
+          </button>
+          <button class="sort-btn" [class.active]="filterTab === 'pendientes'" (click)="cambiarFiltro('pendientes')">
+            🎾 Clases Pendientes (≥1)
+          </button>
+          <button class="sort-btn" [class.active]="sortCriteria === 'saldo'" (click)="cambiarOrden('saldo')">
+            ⚠️ Saldo Bajo
+          </button>
+          <button class="create-btn" (click)="mostrarModalCrear()">
+            + Registrar Alumno
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="skeleton-grid">
+        <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]">
+          <div class="skeleton-header">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-text">
+              <div class="skeleton-line title"></div>
+              <div class="skeleton-line sub"></div>
+            </div>
+          </div>
+          <div class="skeleton-body">
+            <div class="skeleton-rect"></div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && alumnosFiltrados.length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No tienes alumnos</h3>
+        <p>Registra a tu primer alumno usando el botón superior.</p>
+      </div>
+
+      <div *ngIf="!isLoading && pagedAlumnos.length > 0">
+        <div class="alumnos-grid">
+          <div *ngFor="let alumno of pagedAlumnos" class="alumno-card"
+            [class.critical-balance]="alumno.sesiones_pendientes <= 1">
+            <div class="card-header">
+              <div class="critical-badge" *ngIf="alumno.sesiones_pendientes <= 1">
+                ⚠️ RENOVACIÓN
+              </div>
+              <div class="avatar-container">
+                <span class="initials">{{ alumno.jugador_nombre?.charAt(0) || '👤' }}</span>
+                <img *ngIf="alumno.foto" [src]="alumno.foto" class="student-img"
+                  (error)="$event.target.style.display='none'" />
+              </div>
+              <div class="header-info">
+                <h3>{{ alumno.jugador_nombre }}</h3>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="session-info">
+                <div class="session-stat">
+                  <span class="label">Pag.</span>
+                  <span class="value">{{ alumno.sesiones_pagadas || 0 }}</span>
+                </div>
+                <div class="session-stat">
+                  <span class="label">Res.</span>
+                  <span class="value">{{ alumno.sesiones_reservadas || 0 }}</span>
+                </div>
+                <div class="session-stat">
+                  <span class="label">Grup.</span>
+                  <span class="value" style="color: #2196f3; font-weight: 800;">{{ alumno.sesiones_grupales || 0
+                    }}</span>
+                </div>
+                <div class="session-stat">
+                  <span class="label">Pend.</span>
+                  <span class="value highlight">{{ alumno.sesiones_pendientes || 0 }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-footer" style="padding: 15px;">
+              <button class="action-btn" (click)="verClases(alumno)"
+                style="width: 100%; background-color: #111; color: #ccff00; border: 2px solid #ccff00; font-weight: 800; border-radius: 12px; height: 50px;">
+                📋 Malla / Evaluar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-controls" *ngIf="totalPages > 1">
+          <button class="page-btn" (click)="prevPage()" [disabled]="currentPage === 1">
+            Anterior
+          </button>
+          <span class="page-indicator">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button class="page-btn next-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            Siguiente
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL CREACIÓN ALUMNO -->
+  <div class="modal-overlay" *ngIf="isCreatingAlumno">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nuevo Alumno</h3>
+        <button class="close-btn" (click)="cerrarModalCrear()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-intro">Ingresa los datos del alumno para crear su cuenta y enviarle sus credenciales de acceso.</p>
+        
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" [(ngModel)]="nuevoAlumno.nombre" placeholder="Ej: Juan Pérez" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label>Correo Electrónico (Será su Usuario)</label>
+          <input type="email" [(ngModel)]="nuevoAlumno.email" placeholder="alumno@correo.com" class="form-input">
+        </div>
+
+        <div class="info-box" style="background: #eef2ff; padding: 12px; border-radius: 8px; display: flex; align-items: flex-start; gap: 10px; margin-top: 15px;">
+          <span style="font-size: 1.2rem;">📧</span>
+          <p style="margin: 0; font-size: 0.9rem; color: #4338ca;">Se enviará un correo automáticamente con una contraseña genérica vinculada a tu perfil de entrenador.</p>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 20px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #eee;">
+        <button class="btn-secondary" (click)="cerrarModalCrear()" style="background: none; border: 1px solid #ccc; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancelar</button>
+        <button class="btn-primary" (click)="crearAlumno()" [disabled]="!nuevoAlumno.nombre || !nuevoAlumno.email" 
+          style="background: #111; color: #ccff00; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+          Crear y Notificar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,356 @@
+/* ==========================================
+   SHARED ADMIN LAYOUT STYLES
+   ========================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+/* ==========================================
+   CROSS-BROWSER COMPATIBILITY
+   Safari / iOS / Firefox fixes
+   ========================================== */
+
+/* 1. Font smoothing for Safari & macOS */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2. Smooth scroll with fallback */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* 3. Safari: appearance fix for ALL form elements */
+input, select, textarea, button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+}
+
+/* 4. Safari: date input normalization */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  min-height: 44px; /* iOS touch target */
+}
+
+/* 5. Safari: Fix flexbox gap (older Safari <14.1) */
+@supports not (gap: 1px) {
+  .admin-layout > * + * {
+    margin-left: 0;
+  }
+}
+
+/* 6. Safari: backdrop-filter prefix (global fallback) */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  [style*="backdrop-filter"] {
+    -webkit-backdrop-filter: inherit;
+  }
+}
+
+/* 7. Custom scrollbar: WebKit (Chrome/Safari/Edge) + Firefox */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* 8. Safari: Fix input zoom on iOS (font-size < 16px triggers zoom) */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* 9. Safari: Fix 100vh issue on iOS */
+.admin-layout {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* 10. Safari: Fix transform flickering */
+.animate-up, .animate-fade {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  background-color: var(--bg-primary, #f3f4f6);
+  color: var(--text-main, #111827);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+
+  /* Mobile Responsive Base */
+  @media (max-width: 992px) {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+}
+
+/* Sidebar Styles moved to SidebarComponent */
+/* The .sidebar class is now encapsulated in app-sidebar */
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+/* Top Header */
+.top-header {
+  height: 80px;
+  /* Increased from 64px */
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--card-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  .breadcrumbs {
+    color: var(--text-secondary);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+
+    .current {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .separator {
+      margin: 0 8px;
+      opacity: 0.5;
+    }
+  }
+
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+
+    .user-info {
+      text-align: right;
+
+      .name {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-main);
+      }
+
+      .role {
+        display: block;
+        font-size: 11px;
+        color: var(--text-secondary);
+      }
+    }
+
+    .avatar-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent-blue, #2563eb);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      object-fit: cover;
+    }
+  }
+}
+
+/* Dashboard Grid Wrapper */
+.dashboard-grid {
+  padding: 32px 40px;
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Media Queries */
+@media (max-width: 992px) {
+  .admin-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .main-content {
+    width: 100%;
+    height: auto;
+    overflow-x: hidden;
+    padding-bottom: 40px;
+  }
+
+  .top-header {
+    height: 70px;
+    padding: 0 20px;
+    position: sticky;
+    top: 0;
+    
+    .breadcrumbs {
+      font-size: 12px;
+    }
+  }
+
+  .dashboard-grid {
+    padding: 20px 15px;
+    width: 100%;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .page-header {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    
+    h1, h2 {
+      font-size: 1.5rem !important;
+    }
+  }
+}
+
+/* Global Responsive Utilities */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.text-truncate-responsive {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  @media (max-width: 768px) {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+
+/* ==========================================
+   SWEETALERT2 OVERRIDES (Global)
+   ========================================== */
+body.swal2-shown .swal2-container {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.swal2-popup {
+  border-radius: 24px !important;
+  padding: 32px !important;
+  font-family: 'Inter', sans-serif !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+
+  .swal2-title {
+    font-size: 1.5rem !important;
+    font-weight: 900 !important;
+    color: #111 !important;
+    letter-spacing: -0.5px !important;
+  }
+
+  .swal2-html-container {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: #64748b !important;
+    line-height: 1.6 !important;
+  }
+
+  .swal2-actions {
+    margin-top: 24px !important;
+    gap: 12px;
+  }
+
+  .swal2-confirm,
+  .swal2-cancel,
+  .swal2-deny {
+    box-shadow: none !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    padding: 14px 24px !important;
+    border-radius: 12px !important;
+    font-size: 0.85rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  button.swal2-confirm {
+    background: #000 !important;
+    color: #fff !important;
+
+    &:hover {
+      background: #222 !important;
+    }
+  }
+
+  button.swal2-cancel {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+
+    &:hover {
+      background: #e5e7eb !important;
+      color: #111 !important;
+    }
+  }
+}
+
+.swal2-container {
+  z-index: 1000000 !important;
+}

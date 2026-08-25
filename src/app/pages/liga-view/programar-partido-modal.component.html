@@ -1,0 +1,36 @@
+<div class="modal-backdrop">
+  <div class="modal-card animate-in">
+    <div class="modal-header">
+      <h3>📅 Programar Partido (Semanal)</h3>
+      <button class="btn-close" (click)="cancelar()">✕</button>
+    </div>
+
+    <div class="match-summary">
+      <span>{{ partido?.pareja1_nombre }}</span>
+      <span class="vs">VS</span>
+      <span>{{ partido?.pareja2_nombre }}</span>
+    </div>
+
+    <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
+
+    <div class="form-group">
+      <label>Asignar Cancha del Club</label>
+      <select [(ngModel)]="canchaId" class="custom-select">
+        <option [value]="null">-- Por Determinar / Sin Cancha --</option>
+        <option *ngFor="let c of canchas" [value]="c.id">{{ c.nombre }}</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Fecha y Hora del Partido</label>
+      <input type="datetime-local" [(ngModel)]="fechaHora" class="custom-input" />
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="cancelar()" [disabled]="loading">Cancelar</button>
+      <button class="btn-save" (click)="guardar()" [disabled]="loading">
+        {{ loading ? 'Guardando...' : '📅 Asignar Horario y Cancha' }}
+      </button>
+    </div>
+  </div>
+</div>

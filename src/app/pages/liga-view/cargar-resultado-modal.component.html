@@ -1,0 +1,73 @@
+<div class="modal-backdrop">
+  <div class="modal-card animate-in">
+    <div class="modal-header">
+      <h3>🎾 Cargar Marcador del Partido</h3>
+      <button class="btn-close" (click)="cancelar()">✕</button>
+    </div>
+
+    <div class="match-teams-summary">
+      <div class="team p1" [class.winner]="partido.pareja_ganadora_id === partido.pareja1_id">
+        <span class="team-label">PAREJA 1</span>
+        <span class="team-name">{{ partido.pareja1_nombre }}</span>
+      </div>
+      <div class="vs">VS</div>
+      <div class="team p2" [class.winner]="partido.pareja_ganadora_id === partido.pareja2_id">
+        <span class="team-label">PAREJA 2</span>
+        <span class="team-name">{{ partido.pareja2_nombre }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
+
+    <div class="wo-toggle">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="esWO" />
+        <span>Declarar Walkover (WO / No Show)</span>
+      </label>
+    </div>
+
+    <!-- Si es WO -->
+    <div *ngIf="esWO" class="wo-select-box">
+      <label>¿Qué pareja NO SE PRESENTÓ (Perdedor WO)?</label>
+      <select [(ngModel)]="parejaWoPerdedoraId" class="custom-select">
+        <option [value]="null">-- Seleccionar Perdedor WO --</option>
+        <option [value]="partido.pareja1_id">{{ partido.pareja1_nombre }}</option>
+        <option [value]="partido.pareja2_id">{{ partido.pareja2_nombre }}</option>
+      </select>
+    </div>
+
+    <!-- Si es partido normal -->
+    <div *ngIf="!esWO" class="sets-input-grid">
+      <div class="set-row header">
+        <span>Set</span>
+        <span>{{ partido.pareja1_nombre }}</span>
+        <span>{{ partido.pareja2_nombre }}</span>
+      </div>
+
+      <div class="set-row">
+        <span class="set-name">SET 1</span>
+        <input type="number" [(ngModel)]="set1_p1" min="0" max="7" class="score-input" />
+        <input type="number" [(ngModel)]="set1_p2" min="0" max="7" class="score-input" />
+      </div>
+
+      <div class="set-row">
+        <span class="set-name">SET 2</span>
+        <input type="number" [(ngModel)]="set2_p1" min="0" max="7" class="score-input" />
+        <input type="number" [(ngModel)]="set2_p2" min="0" max="7" class="score-input" />
+      </div>
+
+      <div class="set-row">
+        <span class="set-name">SET 3 / Super TB</span>
+        <input type="number" [(ngModel)]="set3_p1" min="0" max="15" class="score-input" />
+        <input type="number" [(ngModel)]="set3_p2" min="0" max="15" class="score-input" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="cancelar()" [disabled]="loading">Cancelar</button>
+      <button class="btn-save" (click)="guardar()" [disabled]="loading">
+        {{ loading ? 'Guardando...' : '💾 Guardar Resultado' }}
+      </button>
+    </div>
+  </div>
+</div>

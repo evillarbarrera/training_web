@@ -1,0 +1,322 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="reservar-cancha">
+    </app-sidebar>
+
+    <main class="main-content">
+        <!-- 1. EXPLORER HEADER (PLAYTOMIC / NIKE STYLE) -->
+        <header class="content-header explorer-v2" *ngIf="!selectedClub">
+            <div class="header-title">
+                <h1>Reserva de Canchas <span class="badge expert">PODER PADEL</span></h1>
+                <p>Encuentra los mejores clubes, selecciona tu horario y reserva al instante.</p>
+            </div>
+
+            <div class="discovery-filters">
+                <div class="filter-group">
+                    <span class="icon">📍</span>
+                    <select [(ngModel)]="selectedRegion" (change)="updateComunas(false)">
+                        <option value="">Todas las Regiones</option>
+                        <option *ngFor="let reg of regiones" [value]="reg">{{ reg }}</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <span class="icon">🏙️</span>
+                    <select [(ngModel)]="selectedComuna" [disabled]="filteredComunas.length === 0">
+                        <option value="">Todas las Comunas</option>
+                        <option *ngFor="let com of filteredComunas" [value]="com">{{ com }}</option>
+                    </select>
+                </div>
+                <div class="search-input">
+                    <span class="icon">🔎</span>
+                    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar club o dirección...">
+                </div>
+                <button class="btn-fav-toggle" [class.active]="showOnlyFavorites" (click)="toggleShowOnlyFavorites()" title="Ver Favoritos">
+                    ❤️ {{ showOnlyFavorites ? 'Todos' : 'Favoritos' }}
+                </button>
+                <button class="btn-clear-filters" *ngIf="selectedRegion || selectedComuna || searchTerm || showOnlyFavorites" (click)="limpiarFiltrosUbicacion()">
+                    Limpiar
+                </button>
+            </div>
+        </header>
+
+        <!-- 2. CLUB LISTING (IF NO CLUB SELECTED) -->
+        <div class="dashboard-content explorer-grid-content" *ngIf="!selectedClub">
+            <div class="club-v2-grid" *ngIf="!loading">
+                <div class="club-v2-card" *ngFor="let club of filteredClubes" (click)="onSelectClub(club)">
+                    <div class="card-image-wrapper">
+                        <img [src]="club.logoUrl || placeholderImg" (error)="club.logoUrl = placeholderImg" alt="Club Logo">
+                        <button class="fav-heart-btn" [class.active]="club.isFavorite" (click)="toggleFavorite(club, $event)">
+                            ♥
+                        </button>
+                        <div class="card-overlay">
+                            <span class="tag-status">Disponible</span>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-main-info">
+                            <h3>{{ club.nombre }}</h3>
+                            <p class="location-txt">📍 {{ club.direccion || 'Dirección no especificada' }}</p>
+                            <p class="comuna-txt">{{ club.comuna }} • {{ club.region }}</p>
+                        </div>
+                        <div class="card-footer-action">
+                            <span class="price-from">Canchas activas</span>
+                            <button class="btn-book-v2">VER DISPONIBILIDAD</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading-state" *ngIf="loading">
+                <p>Cargando clubes disponibles...</p>
+            </div>
+
+            <div class="empty-explorer" *ngIf="!loading && filteredClubes.length === 0">
+                <div class="icon">🎾</div>
+                <h3>No hay clubes disponibles con los filtros actuales</h3>
+                <p>Prueba cambiando la región, comuna o limpia la búsqueda.</p>
+                <button class="btn-clear-filters" (click)="limpiarFiltrosUbicacion()">Ver Todos los Clubes</button>
+            </div>
+        </div>
+
+        <!-- 3. CLUB DETAIL VIEW (DESKTOP 2-COLUMN SPLIT UX) -->
+        <div class="club-center-container" *ngIf="selectedClub">
+
+            <!-- CLUB MASTER INFO BAR -->
+            <div class="club-master-bar">
+                <button class="btn-back" (click)="selectedClub = null">← Volver a Clubes</button>
+                <div class="master-info">
+                    <img [src]="selectedClub.logoUrl || placeholderImg" alt="Club Logo">
+                    <div class="txt">
+                        <h2>{{ selectedClub.nombre }}</h2>
+                        <span class="location">📍 {{ selectedClub.direccion }} • {{ selectedClub.comuna }}, {{ selectedClub.region }}</span>
+                    </div>
+                </div>
+                <button class="fav-header-btn" [class.active]="selectedClub.isFavorite" (click)="toggleFavorite(selectedClub)">
+                    ♥ {{ selectedClub.isFavorite ? 'Favorito' : 'Guardar' }}
+                </button>
+            </div>
+
+            <!-- TABS SELECTOR -->
+            <div class="elite-tabs-wrapper">
+                <div class="elite-tabs">
+                    <button [class.active]="activeSubTab === 'reservar'" (click)="activeSubTab = 'reservar'">Reservar Cancha</button>
+                    <button [class.active]="activeSubTab === 'torneos'" (click)="activeSubTab = 'torneos'">Próximos Torneos</button>
+                    <button [class.active]="activeSubTab === 'americanos'" (click)="activeSubTab = 'americanos'">Americanos</button>
+                </div>
+            </div>
+
+            <!-- SUBTAB: RESERVAR CANCHA (2-COLUMN SPLIT LAYOUT) -->
+            <div class="subtab-content" *ngIf="activeSubTab === 'reservar'">
+                <div class="booking-split-layout">
+                    
+                    <!-- LEFT COLUMN: CONTROLS (FECHA + DURACIÓN + HORARIOS) -->
+                    <div class="booking-controls-column">
+
+                        <!-- 1. DATE SCROLLER -->
+                        <div class="playtomic-date-picker">
+                            <div class="picker-header">
+                                <h3>1. Selecciona la Fecha</h3>
+                            </div>
+                            <div class="picker-controls">
+                                <button class="ctrl-btn" (click)="scrollDates(-1)">‹</button>
+                                <div class="dates-scroller" #dateContainerRef>
+                                    <div *ngFor="let day of weekDays" class="date-item"
+                                        [class.active]="selectedFecha === day.fullDate" (click)="onSelectDate(day.fullDate)">
+                                        <span class="d-n">{{ day.nombre }}</span>
+                                        <span class="d-v">{{ day.numero }}</span>
+                                    </div>
+                                </div>
+                                <button class="ctrl-btn" (click)="scrollDates(1)">›</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. DURATION SELECTOR -->
+                        <div class="duration-selector-bar">
+                            <span class="ds-title">2. Duración del partido:</span>
+                            <div class="ds-pills">
+                                <button class="ds-pill" [class.active]="selectedDuration === 60" (click)="setDuration(60)">60 Min</button>
+                                <button class="ds-pill" [class.active]="selectedDuration === 90" (click)="setDuration(90)">90 Min</button>
+                                <button class="ds-pill" [class.active]="selectedDuration === 120" (click)="setDuration(120)">120 Min</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. TIME SLOTS GRID -->
+                        <div class="time-slots-container">
+                            <div class="slots-header">
+                                <h4>3. Selecciona tu Horario</h4>
+                                <span class="selected-date-lbl">{{ selectedFecha | date:'dd/MM/yyyy' }}</span>
+                            </div>
+
+                            <div class="time-grid-v6" *ngIf="!loading && horarios.length > 0">
+                                <button class="time-item-v6" 
+                                     *ngFor="let slot of horarios"
+                                     [class.active]="selectedSlot === slot"
+                                     [class.has-available]="hasAvailableInSlot(slot)"
+                                     [class.no-available]="!hasAvailableInSlot(slot)"
+                                     (click)="onSelectSlot(slot)">
+                                    <span class="t-val">{{ formatTime(slot.hora) }}</span>
+                                    <span class="t-badge" *ngIf="getAvailableCount(slot) > 0">{{ getAvailableCount(slot) }} libre{{ getAvailableCount(slot) > 1 ? 's' : '' }}</span>
+                                    <span class="t-badge empty" *ngIf="getAvailableCount(slot) === 0">Completo</span>
+                                </button>
+                            </div>
+
+                            <div class="loading-state" *ngIf="loading">
+                                <p>Cargando disponibilidad...</p>
+                            </div>
+
+                            <div class="empty-slots" *ngIf="!loading && horarios.length === 0">
+                                <p>No hay horarios disponibles para esta fecha.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- RIGHT COLUMN: COURTS & PRICES PANEL -->
+                    <div class="booking-results-column">
+                        <div class="court-selection-container sticky-panel" *ngIf="!loading && selectedSlot">
+                            <div class="cs-header">
+                                <div class="cs-badge">⏰ PASO FINAL</div>
+                                <h3>Pistas para las {{ formatTime(selectedSlot.hora) }}</h3>
+                                <p class="cs-sub-info">📅 {{ selectedFecha | date:'dd/MM/yyyy' }} • Duración {{ selectedDuration }} Minutos</p>
+                            </div>
+
+                            <div class="court-cards-list">
+                                <ng-container *ngFor="let c of selectedSlot.canchas">
+                                    <div class="court-card-item" *ngIf="getCourtPrice(c) > 0" [class.disabled]="!c.disponible">
+                                        <div class="court-main">
+                                            <div class="c-header">
+                                                <h4>🎾 {{ c.cancha_nombre }}</h4>
+                                                <span class="rate-badge" [class.peak]="c.es_horario_alto">
+                                                    {{ c.nombre_tarifa || (c.es_horario_alto ? '⚡ Horario Alto' : '🌿 Horario Bajo') }}
+                                                </span>
+                                            </div>
+                                            <p class="c-sub">{{ c.ubicacion || 'Exterior' }} • {{ c.tipo_suelo || 'Césped Sintético' }}</p>
+                                            
+                                            <div class="c-pricing-box">
+                                                <div class="total-row">
+                                                    <span class="lbl">Precio Total:</span>
+                                                    <span class="val">${{ getCourtPrice(c) | number:'1.0-0' }}</span>
+                                                </div>
+                                                <div class="player-row">
+                                                    <span class="lbl">Cuota por Jugador (x4):</span>
+                                                    <span class="val">${{ (getCourtPrice(c) / 4) | number:'1.0-0' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="court-action">
+                                            <button class="btn-reserve-court" *ngIf="c.disponible" (click)="reservar(selectedSlot, c)">
+                                                RESERVAR (${{ (getCourtPrice(c) / 4) | number:'1.0-0' }}/jug.)
+                                            </button>
+                                            <button class="btn-reserve-court disabled" *ngIf="!c.disponible" disabled>
+                                                OCUPADO
+                                            </button>
+                                        </div>
+                                    </div>
+                                </ng-container>
+
+                                <div class="no-courts-notice" *ngIf="getCourtsWithPriceForSlot(selectedSlot).length === 0">
+                                    <p>No hay pistas configuradas con precio para esta duración en este horario.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="court-selection-container sticky-panel empty" *ngIf="!loading && !selectedSlot">
+                            <div class="icon">👈</div>
+                            <h3>Selecciona un horario</h3>
+                            <p>Elige una hora de la lista para ver las pistas libres y sus tarifas.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SUBTAB: TORNEOS -->
+            <div class="subtab-content" *ngIf="activeSubTab === 'torneos'">
+                <div class="event-expert-grid" *ngIf="torneos.length > 0">
+                    <div class="event-card-elite" *ngFor="let t of torneos" (click)="irATorneo(t)">
+                        <div class="event-badge">{{ t.tipo }}</div>
+                        <div class="event-date">
+                            <span class="day">{{ t.fecha_inicio | date:'dd' }}</span>
+                            <span class="month">{{ t.fecha_inicio | date:'MMM' }}</span>
+                        </div>
+                        <div class="event-info">
+                            <h4>{{ t.nombre }}</h4>
+                            <p>Categorías activas</p>
+                            <div class="e-footer">
+                                <span class="price">Desde $15.000</span>
+                                <button class="btn-join">INSCRIBIRSE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="empty-subtab" *ngIf="torneos.length === 0">
+                    <div class="icon">🏆</div>
+                    <h3>No hay torneos próximos</h3>
+                    <p>El club aún no ha publicado torneos para este mes.</p>
+                </div>
+            </div>
+
+            <!-- SUBTAB: AMERICANOS -->
+            <div class="subtab-content" *ngIf="activeSubTab === 'americanos'">
+                <div class="event-expert-grid" *ngIf="americanos.length > 0">
+                    <div class="event-card-elite americano" *ngFor="let a of americanos" (click)="irATorneo(a)">
+                        <div class="event-badge">AMERICANO</div>
+                        <div class="event-date">
+                            <span class="day">{{ a.fecha_inicio | date:'dd' }}</span>
+                            <span class="month">{{ a.fecha_inicio | date:'MMM' }}</span>
+                        </div>
+                        <div class="event-info">
+                            <h4>{{ a.nombre }}</h4>
+                            <p>Incluye pelotas y organización</p>
+                            <div class="e-footer">
+                                <span class="slots">Cupos disponibles</span>
+                                <button class="btn-join">UNIRSE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="empty-subtab" *ngIf="americanos.length === 0">
+                    <div class="icon">🎾</div>
+                    <h3>No hay americanos activos</h3>
+                    <p>Mantente atento a los próximos eventos del club.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 4. SUCCESS CONFIRMATION MODAL -->
+        <div class="modal-overlay-pro" *ngIf="showSuccessModal">
+            <div class="modal-card-pro">
+                <div class="icon-circle">✅</div>
+                <h2>¡Reserva Confirmada!</h2>
+                <p>Tu cancha ha sido reservada con éxito.</p>
+
+                <div class="summary-box" *ngIf="lastReserva">
+                    <div class="sum-row">
+                        <span class="lbl">Club:</span>
+                        <span class="val">{{ lastReserva.club }}</span>
+                    </div>
+                    <div class="sum-row">
+                        <span class="lbl">Cancha y Horario:</span>
+                        <span class="val">{{ lastReserva.pista }} • {{ lastReserva.hora }}</span>
+                    </div>
+                    <div class="sum-row">
+                        <span class="lbl">Precio Total:</span>
+                        <span class="val">${{ lastReserva.precio | number:'1.0-0' }}</span>
+                    </div>
+                    <div class="sum-row highlight">
+                        <span class="lbl">Por Jugador:</span>
+                        <span class="val">${{ lastReserva.precioJugador | number:'1.0-0' }}</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-primary-action" (click)="goToEditMatch()">VER MIS PARTIDOS</button>
+                    <button class="btn-secondary-action" (click)="closeSuccessModal()">Volver a los Clubes</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>

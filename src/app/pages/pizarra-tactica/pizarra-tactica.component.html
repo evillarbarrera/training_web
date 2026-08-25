@@ -1,0 +1,266 @@
+<div class="admin-layout">
+  <app-sidebar></app-sidebar>
+
+  <main class="main-content">
+    <!-- NAVIGATION TABS -->
+    <nav class="coach-tabs">
+        <button [class.active]="activeTab === 'coach'" (click)="setTab('coach')">🎮 COACH EN VIVO</button>
+        <button [class.active]="activeTab === 'archivo'" (click)="setTab('archivo')">📂 ARCHIVO Y NOTAS</button>
+        <div class="spacer"></div>
+        <div class="session-name">
+            <span>{{ nombreSesion }}</span>
+        </div>
+        <div class="top-actions">
+            <button class="btn-new" (click)="newSession()">NUEVO +</button>
+            <button class="btn-save" (click)="saveSession()">💾 GUARDAR</button>
+        </div>
+    </nav>
+
+    <!-- TAB: COACH EN VIVO (UNIFIED) -->
+    <div class="unified-coach-layout" *ngIf="activeTab === 'coach'">
+        
+        <!-- SUB-NAVIGATION BAR (MOBILE ONLY) -->
+        <div class="mobile-subtabs">
+            <button [class.active]="coachSubTab === 'pizarra'" (click)="coachSubTab = 'pizarra'">✏️ PIZARRA</button>
+            <button [class.active]="coachSubTab === 'datos'" (click)="coachSubTab = 'datos'">📊 DATOS PARTIDO</button>
+        </div>
+
+        <!-- COMPACT PLAYER NAMES EDITOR -->
+        <header class="names-editor-top">
+            <div class="pair-edit p1">
+                <input [(ngModel)]="players[0].name" (ngModelChange)="onNameChange(0)" [style.color]="players[0].color" placeholder="J1">
+                <input [(ngModel)]="players[1].name" (ngModelChange)="onNameChange(1)" [style.color]="players[1].color" placeholder="J2">
+            </div>
+            <div class="vs-divider">VS</div>
+            <div class="pair-edit p2">
+                <input [(ngModel)]="players[2].name" (ngModelChange)="onNameChange(2)" [style.color]="players[2].color" placeholder="R1">
+                <input [(ngModel)]="players[3].name" (ngModelChange)="onNameChange(3)" [style.color]="players[3].color" placeholder="R2">
+            </div>
+        </header>
+
+        <div class="coach-grid-main">
+            <!-- LEFT COLUMN: SCORE + COURT -->
+            <div class="col-main-left animate-left">
+                <!-- HORIZONTAL SCOREBOARD -->
+                <header class="horizontal-score">
+                    <div class="set-item" *ngFor="let set of setsMarcador; let i = index">
+                        <div class="s-label">SET {{ i + 1 }}</div>
+                        <div class="s-values">
+                            <div class="v-pair">
+                                <span class="n">{{ (players[0].name.split(' ')[0] || players[0].label) + ' / ' + (players[1].name.split(' ')[0] || players[1].label) }}</span>
+                                <div class="v-ctrl">
+                                    <button (click)="updateScore(i, 1, -1)">-</button>
+                                    <span class="v">{{ set.p1 }}</span>
+                                    <button (click)="updateScore(i, 1, 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="v-pair">
+                                <span class="n">{{ (players[2].name.split(' ')[0] || players[2].label) + ' / ' + (players[3].name.split(' ')[0] || players[3].label) }}</span>
+                                <div class="v-ctrl">
+                                    <button (click)="updateScore(i, 2, -1)">-</button>
+                                    <span class="v">{{ set.p2 }}</span>
+                                    <button (click)="updateScore(i, 2, 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- TACTICAL COURT -->
+                <section class="col-court">
+                    <div class="floating-toolbar">
+                        <button [class.active]="activeTool === 'select'" (click)="setTool('select')">🖱️</button>
+                        <button [class.active]="activeTool === 'draw'" (click)="setTool('draw')">✏️</button>
+                        <button (click)="undo()">↩️</button>
+                        <div class="divider"></div>
+                        <button (click)="addPlayer('#cc3333')">🔴</button>
+                        <button (click)="addPlayer('#eab308')">🟡</button>
+                        <button (click)="addCone()">▲</button>
+                        <div class="divider"></div>
+                        <button class="delete" (click)="clearAll()">🗑️</button>
+                    </div>
+
+                    <div class="court-svg-container">
+                        <svg viewBox="0 0 500 800" class="padel-court-svg"
+                             (mousedown)="startAction($event)" (mousemove)="doAction($event)" (mouseup)="stopAction()"
+                             (touchstart)="startAction($event)" (touchmove)="doAction($event)" (touchend)="stopAction()">
+                            
+                            <rect x="50" y="50" width="400" height="700" fill="#2a67a8" stroke="#fff" stroke-width="4" />
+                            <line x1="50" y1="200" x2="450" y2="200" stroke="#fff" stroke-width="2" />
+                            <line x1="50" y1="400" x2="450" y2="400" stroke="#fff" stroke-width="2" stroke-dasharray="8,5" />
+                            <line x1="50" y1="600" x2="450" y2="600" stroke="#fff" stroke-width="2" />
+                            <line x1="250" y1="50" x2="250" y2="750" stroke="#fff" stroke-width="2" />
+
+                            <g class="drawings">
+                                <path *ngFor="let p of drawings" [attr.d]="p.d" [attr.stroke]="p.color" stroke-width="4" fill="none" />
+                            </g>
+
+                            <g *ngFor="let el of elements" class="tactical-el" [attr.transform]="'translate('+el.x+','+el.y+')'"
+                               (mousedown)="startAction($event, el)" (touchstart)="startAction($event, el)">
+                                <circle *ngIf="el.type === 'player'" r="20" [attr.fill]="el.color" stroke="#fff" stroke-width="2" />
+                                <text *ngIf="el.type === 'player'" y="5" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">{{el.label}}</text>
+                                
+                                <circle *ngIf="el.type === 'ball'" r="8" fill="#ccff00" stroke="#000" />
+                                <path *ngIf="el.type === 'cone'" d="M 0 -10 L 12 12 L -12 12 Z" fill="#ff7711" />
+                            </g>
+                        </svg>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT COLUMN: STATS (SPLIT) -->
+            <aside class="col-stats animate-right">
+                <div class="stats-dashboard">
+                    <div class="stats-group">
+                        <header class="stats-header">
+                            <div class="stat-name-col">MÉTRICA</div>
+                            <div class="player-col" *ngFor="let p of [players[0], players[1]]" [title]="p.name">{{ p.label }}</div>
+                        </header>
+                        <div class="stats-body">
+                            <div class="stat-row" *ngFor="let stat of statList">
+                                <div class="stat-name-col">{{ stat }}</div>
+                                <div class="player-col" *ngFor="let p of [players[0], players[1]]">
+                                    <div class="mini-ctrl">
+                                        <button (click)="updatePlayerStat(p.key, stat, 1)">+</button>
+                                        <span [class.active]="playerStats[p.key][stat] > 0">{{ playerStats[p.key][stat] }}</span>
+                                        <button (click)="updatePlayerStat(p.key, stat, -1)">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-group second">
+                        <header class="stats-header rival">
+                            <div class="stat-name-col">MÉTRICA RIVAL</div>
+                            <div class="player-col" *ngFor="let p of [players[2], players[3]]" [title]="p.name">{{ p.label }}</div>
+                        </header>
+                        <div class="stats-body">
+                            <div class="stat-row" *ngFor="let stat of statList">
+                                <div class="stat-name-col">{{ stat }}</div>
+                                <div class="player-col" *ngFor="let p of [players[2], players[3]]">
+                                    <div class="mini-ctrl">
+                                        <button (click)="updatePlayerStat(p.key, stat, 1)">+</button>
+                                        <span [class.active]="playerStats[p.key][stat] > 0">{{ playerStats[p.key][stat] }}</span>
+                                        <button (click)="updatePlayerStat(p.key, stat, -1)">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- TAB: ARCHIVO Y NOTAS -->
+    <div class="archive-layout" *ngIf="activeTab === 'archivo'">
+        <div class="archive-split">
+            <!-- Sidebar: Lista de Sesiones -->
+            <aside class="archive-sidebar">
+                <header class="sidebar-header">
+                    <h3>HISTORIAL DE SESIONES</h3>
+                    <div class="search-mini">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Filtrar archivos...">
+                    </div>
+                </header>
+
+                <div class="archive-list custom-scroll">
+                    <div class="archive-item" *ngFor="let t of savedSessions" 
+                         (click)="selectSessionToPreview(t)" 
+                         [class.active]="selectedSessionPreview?.id === t.id">
+                        <div class="item-icon">📂</div>
+                        <div class="item-info">
+                            <span class="name">{{ t.nombre || t.nombre_sesion || 'Sesión #' + t.id }}</span>
+                            <span class="date">{{ t.fecha_actualizacion | date:'mediumDate' }} • {{ t.id }}</span>
+                        </div>
+                        <i class="fas fa-chevron-right arrow"></i>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Panel: Resumen Inteligente -->
+            <main class="archive-viewer animate-fade">
+                <div class="empty-state" *ngIf="!selectedSessionPreview">
+                    <i class="fas fa-folder-open"></i>
+                    <h2>Selecciona una sesión para ver el análisis</h2>
+                    <p>El resumen de métricas y marcador aparecerá aquí.</p>
+                </div>
+
+                <div class="viewer-content" *ngIf="selectedSessionPreview" id="sessionPreview">
+                    <header class="viewer-header">
+                        <div class="h-left">
+                            <span class="badge-status">SESIÓN FINALIZADA</span>
+                            <h1>{{ selectedSessionPreview.nombre || selectedSessionPreview.nombre_sesion }}</h1>
+                            <p class="meta"><i class="fas fa-calendar"></i> {{ selectedSessionPreview.fecha_actualizacion | date:'fullDate':'':'es' }}</p>
+                        </div>
+                        <button class="btn-open-session animate-pop" (click)="loadTactica(selectedSessionPreview)">
+                            <i class="fas fa-expand-arrows-alt"></i> ABRIR EN PIZARRA
+                        </button>
+                    </header>
+
+                    <div class="viewer-grid">
+                        <!-- Scoreboard Summary -->
+                        <section class="summary-section score-summary">
+                            <h3><i class="fas fa-trophy"></i> MARCADOR FINAL</h3>
+                            <div class="score-display">
+                                <div class="pair-row" [class.is-winner]="getWinnerTeam() === 1">
+                                    <div class="p-names-group">
+                                        <span class="p-names">{{ (selectedSessionPreview.players_data?.[0]?.name || 'Jugador 1') + ' / ' + (selectedSessionPreview.players_data?.[1]?.name || 'Jugador 2') }}</span>
+                                        <span class="winner-badge" *ngIf="getWinnerTeam() === 1">🏆 WINNER</span>
+                                    </div>
+                                    <div class="sets">
+                                        <span class="set" *ngFor="let s of selectedSessionPreview.marcador_data" [class.w]="s.p1 > s.p2">{{ s.p1 }}</span>
+                                    </div>
+                                </div>
+                                <div class="divider">VS</div>
+                                <div class="pair-row rival" [class.is-winner]="getWinnerTeam() === 2">
+                                    <div class="p-names-group">
+                                        <span class="p-names">{{ (selectedSessionPreview.players_data?.[2]?.name || 'Rival 1') + ' / ' + (selectedSessionPreview.players_data?.[3]?.name || 'Rival 2') }}</span>
+                                        <span class="winner-badge" *ngIf="getWinnerTeam() === 2">🏆 WINNER</span>
+                                    </div>
+                                    <div class="sets">
+                                        <span class="set" *ngFor="let s of selectedSessionPreview.marcador_data" [class.w]="s.p2 > s.p1">{{ s.p2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- High Level Metrics -->
+                        <section class="summary-section metrics-summary">
+                            <h3><i class="fas fa-chart-pie"></i> RENDIMIENTO POR JUGADOR</h3>
+                            <div class="metrics-grid">
+                                <div class="player-perf-card" *ngFor="let p of (selectedSessionPreview.players_data || players)">
+                                    <div class="card-header" [style.border-color]="p.color">
+                                        <span class="p-initials" [style.background]="p.color">{{ p.label }}</span>
+                                        <span class="p-full-name">{{ p.name }}</span>
+                                    </div>
+                                    <div class="card-stats">
+                                        <div class="stat-item winners">
+                                            <span class="val">{{ getWinningPoints(p.key) }}</span>
+                                            <span class="lab">GANADORES</span>
+                                        </div>
+                                        <div class="stat-item errors">
+                                            <span class="val">{{ getErrors(p.key) }}</span>
+                                            <span class="lab">ERRORES</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Notes / Analysis -->
+                        <section class="summary-section notes-summary">
+                            <h3><i class="fas fa-sticky-note"></i> CONCLUSIONES TÁCTICAS</h3>
+                            <div class="notes-content">
+                                {{ selectedSessionPreview.notas || 'No hay notas técnicas registradas en esta sesión.' }}
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,129 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="header-box">
+      <div class="logo">
+        <img src="assets/images/logo-circular.png" class="logo-img" alt="PadelBlox" />
+        <span class="logo-text">Padel<span class="accent">Blox</span></span>
+      </div>
+      <h2>{{ showRecoverForm ? 'Recuperar Contraseña' : 'Bienvenido de nuevo' }}</h2>
+      <p class="subtitle">{{ showRecoverForm ? 'Ingresa tu correo para recibir instrucciones' : 'Ingresa tus
+        credenciales para acceder' }}</p>
+    </div>
+
+    <!-- Login Form -->
+    <div class="form-box" *ngIf="!showRecoverForm && !showProfileSelector">
+      <div class="input-group">
+        <label>Correo Electrónico</label>
+        <div class="input-wrapper">
+          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="email" (keypress)="handleKeyPress($event)">
+          <span class="icon">✉️</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Contraseña</label>
+        <div class="input-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="password"
+            (keypress)="handleKeyPress($event)">
+          <span class="toggle-password" (click)="togglePasswordVisibility()">
+            {{ showPassword ? '👁️' : '🔒' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <label class="checkbox-container">
+          <input type="checkbox">
+          Recordarme
+        </label>
+        <a (click)="toggleRecoverMode()" class="forgot-link">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button class="btn-login" (click)="login()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Iniciar Sesión</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+
+      <div *ngIf="error" class="error-message">
+        {{ error }}
+      </div>
+
+      <div class="divider">
+        <span>o continuar con</span>
+      </div>
+
+      <div id="googleBtn" class="google-btn-container"></div>
+
+      <div class="register-prompt">
+        ¿No tienes cuenta? <a (click)="goToRegister()">Regístrate aquí</a>
+      </div>
+    </div>
+
+    <!-- PROFILE SELECTOR -->
+    <div class="form-box profile-selector" *ngIf="showProfileSelector">
+      <h3>Selecciona un Perfil</h3>
+      <p class="subtitle-small">Tienes múltiples roles asociados a esta cuenta.</p>
+
+      <div class="profiles-list">
+        <button *ngFor="let p of availableProfiles" 
+                class="profile-btn" 
+                [class.is-admin]="p.rol === 'administrador_club' || p.rol === 'administrador'"
+                [class.is-staff]="p.rol === 'staff_club'"
+                [class.is-entrenador]="p.rol === 'entrenador'"
+                [class.is-jugador]="p.rol === 'jugador'"
+                (click)="selectProfile(p)">
+          <div class="p-icon">
+            {{ p.rol === 'administrador_club' || p.rol === 'administrador' ? '🏢' : (p.rol === 'entrenador' ? '🎾' : (p.rol === 'staff_club' ? '👤' : '👤')) }}
+          </div>
+          <div class="p-info">
+            <span class="p-club">{{ p.club_nombre || 'Perfil Global' }}</span>
+            <span class="p-rol">
+               {{ p.rol === 'administrador_club' ? 'Administrador' : 
+                  (p.rol === 'staff_club' ? 'Personal del Club' : 
+                  (p.rol === 'entrenador' ? 'Entrenador' : 
+                  (p.rol === 'administrador' ? 'Super Admin' : 'Jugador'))) }}
+            </span>
+          </div>
+          <div class="p-arrow">➜</div>
+        </button>
+      </div>
+
+      <div class="register-prompt">
+        <a (click)="showProfileSelector = false">Volver al inicio</a>
+      </div>
+    </div>
+
+    <!-- Recovery Form -->
+    <div class="form-box" *ngIf="showRecoverForm && !showProfileSelector">
+      <div class="input-group">
+        <label>Correo Electrónico</label>
+        <div class="input-wrapper">
+          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="recoverEmail">
+          <span class="icon">✉️</span>
+        </div>
+      </div>
+
+      <button class="btn-login" (click)="sendRecovery()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Enviar Instrucciones</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+
+      <div *ngIf="recoverMessage" class="success-message">
+        {{ recoverMessage }}
+      </div>
+
+      <div *ngIf="recoverError" class="error-message">
+        {{ recoverError }}
+      </div>
+
+      <div class="register-prompt">
+        <a (click)="toggleRecoverMode()">Volver a Iniciar Sesión</a>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="#">Privacidad</a>
+      <a href="#">Términos</a>
+    </div>
+  </div>
+</div>

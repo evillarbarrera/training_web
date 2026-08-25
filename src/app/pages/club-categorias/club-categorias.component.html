@@ -1,0 +1,116 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="club-categorias">
+    </app-sidebar>
+
+    <main class="main-content">
+        <!-- CLUB TABS NAV -->
+        <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 0">
+            <div class="tabs-scroll-container">
+                <button class="club-tab-btn" 
+                        [class.active]="selectedClubId === 0" 
+                        (click)="selectClub(0)"
+                        *ngIf="clubes.length > 1 && !isStaff">
+                    <span class="tab-icon">🌐</span>
+                    <span class="tab-name">Vista Global</span>
+                    <span class="tab-badge" *ngIf="selectedClubId === 0">Activo</span>
+                </button>
+                
+                <button *ngFor="let club of clubes" 
+                        class="club-tab-btn" 
+                        [class.active]="selectedClubId === club.club_id"
+                        (click)="selectClub(club.club_id)">
+                    <span class="tab-icon">🏢</span>
+                    <span class="tab-name">{{club.club_nombre}}</span>
+                    <span class="tab-badge" *ngIf="selectedClubId === club.club_id">Activo</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="categories-container animate-in">
+            <!-- Header -->
+            <header class="page-header">
+                <div class="title-wrap">
+                    <h1>Mantenimiento de Categorías</h1>
+                    <p>Crea, edita y organiza las categorías de productos de venta de tu club.</p>
+                </div>
+            </header>
+
+            <!-- Global Notice -->
+            <div class="global-notice-card" *ngIf="selectedClubId === 0">
+                <div class="icon">ℹ️</div>
+                <div class="text">
+                    <h3>Vista Global Seleccionada</h3>
+                    <p>Por favor selecciona una sede de la barra superior para agregar o editar las categorías de su inventario.</p>
+                </div>
+            </div>
+
+            <div class="categories-grid" *ngIf="selectedClubId !== 0">
+                <!-- Columna Izquierda: Crear Nueva Categoría -->
+                <div class="grid-card add-card">
+                    <h3 class="card-title">✨ Nueva Categoría</h3>
+                    <p class="card-subtitle">Define una nueva categoría de productos para clasificar tu inventario.</p>
+                    
+                    <div class="input-group">
+                        <label>Nombre de la Categoría</label>
+                        <input type="text" 
+                               [(ngModel)]="newCategoryName" 
+                               placeholder="Ej: Accesorios, Bebidas Isotónicas"
+                               (keyup.enter)="addCategory()">
+                    </div>
+
+                    <button class="btn-add-cat" (click)="addCategory()" [disabled]="isLoading">
+                        <i class="fas fa-plus"></i> Crear Categoría
+                    </button>
+                </div>
+
+                <!-- Columna Derecha: Listado de Categorías -->
+                <div class="grid-card list-card">
+                    <h3 class="card-title">🏷️ Categorías Registradas</h3>
+                    <p class="card-subtitle">Administra y edita los nombres de las categorías activas.</p>
+
+                    <div class="categories-list">
+                        <div *ngFor="let cat of categorias" class="category-row-item" [class.editing]="editingId === cat.id">
+                            <!-- View mode -->
+                            <ng-container *ngIf="editingId !== cat.id">
+                                <div class="cat-avatar">{{ getCategoryEmoji(cat.nombre) }}</div>
+                                <div class="cat-info">
+                                    <span class="cat-name">{{ cat.nombre }}</span>
+                                </div>
+                                <div class="row-actions">
+                                    <button class="btn-row-action edit" (click)="startEdit(cat)" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-row-action delete" (click)="deleteCategory(cat)" title="Eliminar" *ngIf="cat.nombre !== 'Otros'">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </ng-container>
+
+                            <!-- Edit mode -->
+                            <ng-container *ngIf="editingId === cat.id">
+                                <div class="edit-input-wrapper">
+                                    <input type="text" [(ngModel)]="editingName" (keyup.enter)="saveEdit(cat)" (keyup.escape)="cancelEdit()" placeholder="Nombre de categoría...">
+                                </div>
+                                <div class="row-actions editing">
+                                    <button class="btn-row-confirm save" (click)="saveEdit(cat)" title="Guardar">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn-row-confirm cancel" (click)="cancelEdit()" title="Cancelar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </ng-container>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div class="empty-state" *ngIf="categorias.length === 0 && !isLoading">
+                            <i class="fas fa-tags"></i>
+                            <p>No hay categorías personalizadas registradas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

@@ -1,0 +1,951 @@
+import { Component, OnInit, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { EntrenamientoService } from '../../services/entrenamientos.service';
+import { MysqlService } from '../../services/mysql.service';
+import { SidebarComponent } from '../../components/sidebar/sidebar.component';
+import { PopupService } from '../../services/popup.service';
+import Swal from 'sweetalert2';
+
+interface BloqueHorario {
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  seleccionado: boolean;
+  ocupado: boolean; // Reserved by student
+  lockedByOtherClub?: boolean;
+  club_id?: number | null;
+}
+
+interface DiaSemana {
+  nombre: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  duracion: number;
+}
+
+@Component({
+  selector: 'app-disponibilidad-entrenador',
+  standalone: true,
+  imports: [CommonModule, FormsModule, SidebarComponent],
+  templateUrl: './disponibilidad-entrenador.component.html',
+  styleUrls: ['./disponibilidad-entrenador.component.scss']
+})
+export class DisponibilidadEntrenadorComponent implements OnInit {
+
+  userId: number | null = null;
+  coachNombre = 'Entrenador';
+  coachFoto: string | null = null;
+  isLoading = true;
+
+  clubes: any[] = [];
+  selectedClubId: number | null = null;
+  dias: DiaSemana[] = [];
+  diaSeleccionado: string = '';
+  bloquesPorDia: { [fecha: string]: BloqueHorario[] } = {};
+  
+  // Months navigation (for 6 months horizon)
+  mesesDisponibles: { label: string, month: number, year: number }[] = [];
+  selectedMonthLabel: string = '';
+  diasFiltrados: DiaSemana[] = [];
+
+  // Cache of existing availability keys "YYYY-MM-DD HH:MM:00-YYYY-MM-DD HH:MM:00" -> club_id
+  disponibilidadExistente: Map<string, number> = new Map();
+  hasSlotsWithoutClub = false;
+  viewMode: 'calendar' | 'template' = 'calendar';
+
+  // Default Week Config
+  showDefaultModal = false;
+  diasSemana = [
+    { id: 1, name: 'Lunes' },
+    { id: 2, name: 'Martes' },
+    { id: 3, name: 'Miércoles' },
+    { id: 4, name: 'Jueves' },
+    { id: 5, name: 'Viernes' },
+    { id: 6, name: 'Sábado' },
+    { id: 0, name: 'Domingo' }
+  ];
+  templateBlocks: { [dayId: number]: { time: string, selected: boolean }[] } = {};
+  selectedDayTemplate: number = 1; // Default Lunes
+
+  // Copy Day in Calendar State
+  showCopyDayModal = false;
+  copySourceFecha = '';
+  copyTargetFechas: string[] = [];
+
+  // Target month replication
+  targetReplicationMonthLabel: string = '';
+
+  // Interactive Tutorial State
+  showTutorial = false;
+  currentTutorialStep = 0;
+  tutorialTop = '0px';
+  tutorialLeft = '0px';
+  tutorialSteps = [
+    { target: '.club-selector-web', title: '🏢 Selección de Recinto', content: 'Primero elige dónde harás tus clases. Si tu club no aparece, dale al botón "+" para registrarlo rápido.' },
+    { target: '.month-tabs', title: '📅 Mes de Trabajo', content: 'Elige el mes que deseas configurar. Puedes proyectar tu disponibilidad hasta con 6 meses de anticipación.' },
+    { target: '.day-tabs', title: '📆 Selección de Día', content: 'Navega por los días del mes y selecciona el que vas a editar.' },
+    { target: '.blocks-grid', title: '⚡ Bloques Horarios', content: 'Pulsa directamente sobre cada bloque para activarlo o desactivarlo. Los bloques con 🔒 ya están reservados.' },
+    { target: '.btn-template', title: '⚙️ Semana Base (PRO)', content: '¡Ahorra tiempo! Configura aquí tu horario semanal típico y úsalo de plantilla.' },
+    { target: '.default-modal', title: '📅 Tu Plantilla Semanal', content: 'Aquí defines tu horario "ideal" para cada día. El sistema lo usará para rellenar tus próximos 30 días automáticamente.' },
+    { target: '.template-day-tabs', title: '📆 Días de la Semana', content: 'Cambia entre Lunes, Martes, etc. para configurar el horario base de cada día por separado.' },
+    { target: '.btn-primary-neon', title: '💾 Guardar Plantilla', content: 'No olvides guardar tus ajustes de plantilla antes de aplicarlos a tu calendario real.' },
+    { target: '.btn-apply', title: '🪄 Aplicar Plantilla', content: '¡El toque final! Una vez tengas tu plantilla, úsala aquí para configurar todo el mes en un solo clic.' }
+  ];
+
+  @HostListener('window:resize')
+  onResize() {
+    if (this.showTutorial) this.updateTutorialPosition();
+  }
+
+  constructor(
+    private entrenamientoService: EntrenamientoService,
+    private mysqlService: MysqlService,
+    private router: Router,
+    private popupService: PopupService
+  ) { }
+
+  ngOnInit(): void {
+    this.userId = Number(localStorage.getItem('userId'));
+    if (!this.userId) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.loadProfile();
+    this.cargarClubes();
+
+    this.crearSemanaDesdeHoy();
+    this.generarBloquesSemana();
+    this.cargarDisponibilidadExistente();
+  }
+
+  loadProfile(): void {
+    if (!this.userId) return;
+    this.mysqlService.getPerfil(this.userId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.coachNombre = res.user.nombre || 'Entrenador';
+          this.coachFoto = res.user.foto_perfil || res.user.link_foto || null;
+        }
+      },
+      error: (err: any) => console.error(err)
+    });
+  }
+
+  /* =============================
+     INIT & GENERATION
+  ============================== */
+
+  crearSemanaDesdeHoy() {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const TOTAL_DIAS_ADELANTE = 210; // ~7 months horizon
+    const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    this.dias = [];
+    this.mesesDisponibles = [];
+
+    for (let i = 0; i < TOTAL_DIAS_ADELANTE; i++) {
+        const fecha = new Date(hoy);
+        fecha.setDate(hoy.getDate() + i);
+        
+        const mLabel = `${nombresMeses[fecha.getMonth()]} ${fecha.getFullYear()}`;
+        
+        // Add to mesesDisponibles ONLY if it's the current month or future
+        if (!this.mesesDisponibles.some(m => m.label === mLabel)) {
+            this.mesesDisponibles.push({ label: mLabel, month: fecha.getMonth(), year: fecha.getFullYear() });
+        }
+
+        this.dias.push({
+            nombre: nombresDias[fecha.getDay()],
+            fecha: this.getLocalISODate(fecha),
+            hora_inicio: '07:00',
+            hora_fin: '22:00',
+            duracion: 60
+        });
+    }
+
+    if (this.mesesDisponibles.length > 0) {
+        // First month available will be the current one starting from today
+        this.selectedMonthLabel = this.mesesDisponibles[0].label;
+        this.diaSeleccionado = this.getLocalISODate(hoy);
+        this.filtrarDiasPorMes();
+    }
+}
+
+filtrarDiasPorMes() {
+    this.diasFiltrados = this.dias.filter(d => {
+        const dObj = new Date(d.fecha + 'T00:00:00');
+        const mLabel = `${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][dObj.getMonth()]} ${dObj.getFullYear()}`;
+        return mLabel === this.selectedMonthLabel;
+    });
+
+    if (this.diasFiltrados.length > 0) {
+        // Only change selection if current isn't in filtered list
+        if (!this.diasFiltrados.some(df => df.fecha === this.diaSeleccionado)) {
+            this.diaSeleccionado = this.diasFiltrados[0].fecha;
+        }
+    }
+}
+
+onMonthChange() {
+    this.filtrarDiasPorMes();
+}
+
+  getLocalISODate(date: Date): string {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  generarBloquesSemana() {
+    this.bloquesPorDia = {};
+    this.dias.forEach(dia => {
+      this.bloquesPorDia[dia.fecha] = this.generarBloquesDia(
+        dia.fecha,
+        dia.hora_inicio,
+        dia.hora_fin,
+        dia.duracion
+      );
+    });
+  }
+
+  generarBloquesDia(fecha: string, horaInicio: string, horaFin: string, duracion: number): BloqueHorario[] {
+    const bloques: BloqueHorario[] = [];
+    let inicio = new Date(`${fecha}T${horaInicio}:00`);
+    const fin = new Date(`${fecha}T${horaFin}:00`);
+
+    while (inicio < fin) {
+      const finBloque = new Date(inicio.getTime() + duracion * 60000);
+      if (finBloque > fin) break;
+
+      const key = `${fecha} ${this.formatTime(inicio)}-${fecha} ${this.formatTime(finBloque)}`;
+      const savedClubId = this.disponibilidadExistente.get(key);
+      const isThisClub = savedClubId === Number(this.selectedClubId);
+      const isOtherClub = savedClubId && savedClubId !== Number(this.selectedClubId);
+
+      bloques.push({
+        fecha,
+        hora_inicio: this.formatTime(inicio).slice(0, 5), // "HH:MM"
+        hora_fin: this.formatTime(finBloque).slice(0, 5),
+        seleccionado: isThisClub || false,
+        ocupado: false,
+        lockedByOtherClub: isOtherClub || false,
+        club_id: savedClubId
+      });
+
+      inicio = finBloque;
+    }
+    return bloques;
+  }
+
+  /* =============================
+     DATA LOADING
+  ============================== */
+
+  cargarClubes(): void {
+    this.entrenamientoService.getClubes().subscribe({
+      next: (res) => {
+        this.clubes = res;
+        if (res.length > 0 && !this.selectedClubId) {
+          this.selectedClubId = res[0].id;
+        }
+      }
+    });
+  }
+
+  get activeClubes() {
+    const usedClubIds = new Set(this.disponibilidadExistente.values());
+    if (this.selectedClubId) usedClubIds.add(Number(this.selectedClubId));
+    return this.clubes.filter(c => usedClubIds.has(Number(c.id)));
+  }
+
+  selectClub(id: number) {
+    this.selectedClubId = id;
+    this.onClubChange();
+  }
+
+  onClubChange(): void {
+    if (this.selectedClubId) {
+      this.selectedClubId = Number(this.selectedClubId);
+    }
+    this.cargarDisponibilidadExistente();
+  }
+
+  cargarDisponibilidadExistente() {
+    this.isLoading = true;
+    if (!this.userId) return;
+    this.hasSlotsWithoutClub = false;
+    this.disponibilidadExistente.clear();
+
+    this.entrenamientoService.getDisponibilidad(this.userId).subscribe({
+      next: (data: any[]) => {
+        data.forEach(d => {
+          const key = `${d.fecha_inicio}-${d.fecha_fin}`;
+          this.disponibilidadExistente.set(key, Number(d.club_id));
+
+          if (!d.club_id || d.club_id === 0) {
+            this.hasSlotsWithoutClub = true;
+          }
+        });
+
+        // Re-generate to apply selection state
+        this.generarBloquesSemana();
+
+        // Load reservations to mark occupied blocks
+        this.cargarReservasExistentes();
+      },
+      error: (err: any) => {
+        console.error('Error loading disponibilidad:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  cargarReservasExistentes() {
+    if (!this.userId) return;
+
+    this.entrenamientoService.getReservasEntrenador(this.userId).subscribe({
+      next: (data: any) => {
+        const reservas = [
+          ...(data.reservas_tradicionales || []),
+          ...(data.packs_grupales || [])
+        ];
+
+        // Mark blocks as occupied if they match a reservation time
+        Object.keys(this.bloquesPorDia).forEach(fecha => {
+          this.bloquesPorDia[fecha].forEach(bloque => {
+            const tieneReserva = reservas.some(reserva => {
+              if (!reserva.fecha || !reserva.hora_inicio) return false;
+
+              const fechaReserva = reserva.fecha;
+              const horaReserva = String(reserva.hora_inicio).slice(0, 5); // "HH:MM"
+
+              // Only block if confirmed or active (not cancelled)
+              const status = reserva.estado || reserva.estado_grupo;
+              if (status === 'cancelado') return false;
+
+              return fechaReserva === fecha && horaReserva === bloque.hora_inicio;
+            });
+
+            if (tieneReserva) {
+              bloque.ocupado = true;
+            }
+          });
+        });
+
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        console.error('Error loading reservations:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  /* =============================
+     INTERACTION
+  ============================== */
+
+  toggleBloque(b: BloqueHorario) {
+    if (b.ocupado || b.lockedByOtherClub) return;
+    b.seleccionado = !b.seleccionado;
+  }
+
+  seleccionarTodos() {
+    const bloques = this.bloquesPorDia[this.diaSeleccionado];
+    if (bloques) {
+      bloques.forEach(b => {
+        if (!b.ocupado && !b.lockedByOtherClub) b.seleccionado = true;
+      });
+    }
+  }
+
+  deseleccionarTodos() {
+    const bloques = this.bloquesPorDia[this.diaSeleccionado];
+    if (bloques) {
+      bloques.forEach(b => {
+        if (!b.ocupado && !b.lockedByOtherClub) b.seleccionado = false;
+      });
+    }
+  }
+
+  get todosSeleccionados(): boolean {
+    const bloques = this.bloquesPorDia[this.diaSeleccionado];
+    if (!bloques) return false;
+    return bloques.every(b => b.seleccionado || b.ocupado || b.lockedByOtherClub);
+  }
+
+  seleccionarDia(fecha: string) {
+    this.diaSeleccionado = fecha;
+  }
+
+  get bloquesActuales() {
+    return this.bloquesPorDia[this.diaSeleccionado] || [];
+  }
+
+  toggleTodoDia(fecha: string) {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return;
+
+    const todosSeleccionados = bloques.every(b => b.seleccionado || b.ocupado || b.lockedByOtherClub);
+    
+    bloques.forEach(b => {
+      if (!b.ocupado && !b.lockedByOtherClub) {
+        b.seleccionado = !todosSeleccionados;
+      }
+    });
+  }
+
+  /* --- ACCIONES RÁPIDAS DE TURNOS PARA DÍA ACTIVO --- */
+  aplicarTurnoManana(fecha: string) {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return;
+    bloques.forEach(b => {
+      if (!b.ocupado && !b.lockedByOtherClub) {
+        const hour = parseInt(b.hora_inicio.split(':')[0], 10);
+        b.seleccionado = (hour >= 8 && hour < 13);
+      }
+    });
+  }
+
+  aplicarTurnoTarde(fecha: string) {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return;
+    bloques.forEach(b => {
+      if (!b.ocupado && !b.lockedByOtherClub) {
+        const hour = parseInt(b.hora_inicio.split(':')[0], 10);
+        b.seleccionado = (hour >= 16 && hour < 21);
+      }
+    });
+  }
+
+  aplicarDiaCompleto(fecha: string) {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return;
+    bloques.forEach(b => {
+      if (!b.ocupado && !b.lockedByOtherClub) {
+        const hour = parseInt(b.hora_inicio.split(':')[0], 10);
+        b.seleccionado = (hour >= 8 && hour < 21);
+      }
+    });
+  }
+
+  limpiarDia(fecha: string) {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return;
+    bloques.forEach(b => {
+      if (!b.ocupado && !b.lockedByOtherClub) {
+        b.seleccionado = false;
+      }
+    });
+  }
+
+  /* --- MODAL Y COPIA DE DÍA A OTRAS FECHAS --- */
+  abrirCopiarDiaModal(fecha: string) {
+    this.copySourceFecha = fecha;
+    this.copyTargetFechas = [];
+    this.showCopyDayModal = true;
+  }
+
+  toggleCopyTargetFecha(fecha: string) {
+    const idx = this.copyTargetFechas.indexOf(fecha);
+    if (idx > -1) {
+      this.copyTargetFechas.splice(idx, 1);
+    } else {
+      this.copyTargetFechas.push(fecha);
+    }
+  }
+
+  seleccionarTodosTargetFechas() {
+    this.copyTargetFechas = this.diasFiltrados
+      .map(d => d.fecha)
+      .filter(f => f !== this.copySourceFecha);
+  }
+
+  deseleccionarTodosTargetFechas() {
+    this.copyTargetFechas = [];
+  }
+
+  ejecutarCopiarDia() {
+    if (!this.copySourceFecha || this.copyTargetFechas.length === 0) {
+      this.popupService.error('Recinto o Día no seleccionado', 'Selecciona al menos un día de destino.');
+      return;
+    }
+
+    const sourceBloques = this.bloquesPorDia[this.copySourceFecha];
+    if (!sourceBloques) return;
+
+    const sourceMap = new Map<string, boolean>();
+    sourceBloques.forEach(b => {
+      sourceMap.set(b.hora_inicio, b.seleccionado);
+    });
+
+    this.copyTargetFechas.forEach(targetFecha => {
+      const targetBloques = this.bloquesPorDia[targetFecha];
+      if (targetBloques) {
+        targetBloques.forEach(tb => {
+          if (!tb.ocupado && !tb.lockedByOtherClub) {
+            const isSel = sourceMap.get(tb.hora_inicio);
+            if (isSel !== undefined) {
+              tb.seleccionado = isSel;
+            }
+          }
+        });
+      }
+    });
+
+    this.popupService.success('Horario Copiado', `Configuración copiada a ${this.copyTargetFechas.length} días.`);
+    this.showCopyDayModal = false;
+  }
+
+  isDiaCompleto(fecha: string): boolean {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques || bloques.length === 0) return false;
+    return bloques.every(b => b.seleccionado || b.ocupado || b.lockedByOtherClub);
+  }
+
+  /* =============================
+     SAVING
+  ============================== */
+
+  guardarDisponibilidad() {
+    if (!this.selectedClubId) {
+      this.popupService.error('Recinto Obligatorio', 'Debes seleccionar un club/recinto antes de guardar tu disponibilidad.');
+      return;
+    }
+
+    const crear: any[] = [];
+    const eliminar: any[] = [];
+
+    // Analyze all days
+    Object.values(this.bloquesPorDia).forEach(bloques => {
+      bloques.forEach(b => {
+        const key = `${b.fecha} ${b.hora_inicio}:00-${b.fecha} ${b.hora_fin}:00`;
+        const existiaId = this.disponibilidadExistente.get(key);
+        const existia = existiaId === Number(this.selectedClubId);
+
+        if (b.seleccionado && !existia) {
+          crear.push({
+            profesor_id: this.userId,
+            fecha_inicio: `${b.fecha} ${b.hora_inicio}:00`,
+            fecha_fin: `${b.fecha} ${b.hora_fin}:00`,
+            club_id: this.selectedClubId
+          });
+        }
+
+        if (!b.seleccionado && existia) {
+          eliminar.push({
+            profesor_id: this.userId,
+            fecha_inicio: `${b.fecha} ${b.hora_inicio}:00`,
+            fecha_fin: `${b.fecha} ${b.hora_fin}:00`,
+            club_id: this.selectedClubId
+          });
+        }
+      });
+    });
+
+    if (crear.length === 0 && eliminar.length === 0) {
+      this.popupService.info('Sin cambios', 'No hay cambios para guardar.');
+      return;
+    }
+
+    this.isLoading = true;
+    this.entrenamientoService.syncDisponibilidad({ crear, eliminar }).subscribe({
+      next: () => {
+        this.popupService.success('Guardado', 'Horario actualizado correctamente');
+
+        // Refresh local state
+        this.hasSlotsWithoutClub = false;
+        this.disponibilidadExistente.clear();
+        this.dias = []; // Reset days to regenerate everything cleanly
+        this.crearSemanaDesdeHoy();
+        this.cargarDisponibilidadExistente(); // Reload fresh from DB
+      },
+      error: (err: any) => {
+        console.error('Error syncing disponibilidad:', err);
+        this.popupService.error('Error', 'No se pudieron guardar los cambios');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  migrateSlots() {
+    if (!this.selectedClubId) {
+      this.popupService.error('Error', 'Selecciona un club para vincular');
+      return;
+    }
+    this.popupService.confirm('Vincular Horarios', 'Tienes horarios guardados que no están asociados a ningún club. ¿Deseas vincularlos todos al club seleccionado actualmente?')
+      .then(conf => {
+        if (conf) {
+          this.isLoading = true;
+          this.entrenamientoService.migrateAvailability(this.userId!, this.selectedClubId!).subscribe({
+            next: (res: any) => {
+              this.popupService.success('Éxito', res.message || 'Horarios vinculados correctamente');
+              this.cargarDisponibilidadExistente();
+            },
+            error: () => {
+              this.isLoading = false;
+              this.popupService.error('Error', 'No se pudieron vincular los horarios');
+            }
+          });
+        }
+      });
+  }
+
+  /* =============================
+     DEFAULT WEEK CONFIG
+  ============================== */
+
+  openDefaultModal() {
+    this.isLoading = true;
+    this.initTemplateBlocks();
+    this.entrenamientoService.getDefaultConfig(this.userId!).subscribe({
+      next: (res) => {
+        // Expand ranges to blocks
+        res.forEach(range => {
+          const dayId = range.dia_semana;
+          const start = range.hora_inicio;
+          const end = range.hora_fin;
+          const clubId = range.club_id;
+
+          if (this.templateBlocks[dayId] && (clubId == this.selectedClubId)) {
+            this.templateBlocks[dayId].forEach(b => {
+              if (b.time >= start && b.time < end) {
+                b.selected = true;
+              }
+            });
+          }
+        });
+        this.showDefaultModal = true;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+        this.popupService.error('Error', 'No se pudo cargar la configuración');
+      }
+    });
+  }
+
+  initTemplateBlocks() {
+    this.templateBlocks = {};
+    const horas: string[] = [];
+    for (let h = 7; h < 22; h++) {
+      const hh = h < 10 ? '0' + h : h;
+      horas.push(`${hh}:00`);
+      // Si quieres bloques de 30 min, podrías añadir `${hh}:30` aquí
+    }
+
+    this.diasSemana.forEach(d => {
+      this.templateBlocks[d.id] = horas.map(h => ({ time: h, selected: false }));
+    });
+  }
+
+  toggleTemplateBlock(dayId: number, block: any) {
+    block.selected = !block.selected;
+  }
+
+  seleccionarTodoDiaTemplate(dayId: number) {
+    this.templateBlocks[dayId].forEach(b => b.selected = true);
+  }
+
+  deseleccionarTodoDiaTemplate(dayId: number) {
+    this.templateBlocks[dayId].forEach(b => b.selected = false);
+  }
+
+  aplicarTurnoMananaTemplate(dayId: number) {
+    if (!this.templateBlocks[dayId]) return;
+    this.templateBlocks[dayId].forEach(b => {
+      const hour = parseInt(b.time.split(':')[0], 10);
+      b.selected = (hour >= 8 && hour < 13);
+    });
+  }
+
+  aplicarTurnoTardeTemplate(dayId: number) {
+    if (!this.templateBlocks[dayId]) return;
+    this.templateBlocks[dayId].forEach(b => {
+      const hour = parseInt(b.time.split(':')[0], 10);
+      b.selected = (hour >= 16 && hour < 21);
+    });
+  }
+
+  aplicarDiaCompletoTemplate(dayId: number) {
+    if (!this.templateBlocks[dayId]) return;
+    this.templateBlocks[dayId].forEach(b => {
+      const hour = parseInt(b.time.split(':')[0], 10);
+      b.selected = (hour >= 8 && hour < 21);
+    });
+  }
+
+  copiarTemplateAOtrosDias(sourceDayId: number) {
+    if (!this.templateBlocks[sourceDayId]) return;
+    const sourceBlocks = this.templateBlocks[sourceDayId];
+    this.diasSemana.forEach(d => {
+      if (d.id !== sourceDayId) {
+        this.templateBlocks[d.id] = sourceBlocks.map(b => ({ ...b }));
+      }
+    });
+    this.popupService.success('Plantilla Duplicada', `Se copió la configuración del día seleccionado a toda la semana.`);
+  }
+
+  async saveDefaultConfig() {
+    if (!this.selectedClubId) {
+      this.popupService.error('Recinto Obligatorio', 'Debes seleccionar un club/recinto para tu plantilla.');
+      return;
+    }
+
+    this.isLoading = true;
+    const config: any[] = [];
+
+    // Compress selected blocks back to ranges
+    Object.keys(this.templateBlocks).forEach(dayKey => {
+      const dayId = parseInt(dayKey);
+      const blocks = this.templateBlocks[dayId];
+
+      let currentRange: any = null;
+
+      blocks.forEach((b, idx) => {
+        if (b.selected) {
+          if (!currentRange) {
+            currentRange = {
+              dia_semana: dayId,
+              club_id: this.selectedClubId,
+              hora_inicio: b.time,
+              duracion_bloque: 60
+            };
+          }
+        } else {
+          if (currentRange) {
+            currentRange.hora_fin = b.time;
+            config.push(currentRange);
+            currentRange = null;
+          }
+        }
+
+        // Si es el último bloque y está seleccionado
+        if (idx === blocks.length - 1 && currentRange) {
+          // Asumimos fin a la hora siguiente del último bloque
+          const lastH = parseInt(b.time.split(':')[0]);
+          currentRange.hora_fin = (lastH + 1 < 10 ? '0' : '') + (lastH + 1) + ':00';
+          config.push(currentRange);
+        }
+      });
+    });
+
+    const payload = {
+      entrenador_id: this.userId,
+      club_id: this.selectedClubId, // Added for backend deletion safety
+      config: config
+    };
+
+    this.entrenamientoService.saveDefaultConfig(payload).subscribe({
+      next: () => {
+        this.popupService.success('Éxito', 'Plantilla semanal guardada');
+        this.showDefaultModal = false;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+        this.popupService.error('Error', 'No se pudo guardar la configuración');
+      }
+    });
+  }
+
+  applyDefaultConfig() {
+    this.isLoading = true;
+    // Primero verificamos si hay algo configurado
+    this.entrenamientoService.getDefaultConfig(this.userId!).subscribe({
+      next: (res) => {
+        if (res.length === 0) {
+          this.isLoading = false;
+          this.popupService.info('Sin Plantilla', 'Primero debes configurar y guardar tu semana por defecto.');
+          return;
+        }
+
+        const selectedMonthObj = this.mesesDisponibles.find(m => m.label === this.selectedMonthLabel);
+        const hoy = new Date();
+        let dateStart = this.getLocalISODate(hoy);
+        let daysAhead = 30;
+        let msg = `Esto generará automáticamente tus bloques de disponibilidad para los próximos 30 días. ¿Continuar?`;
+
+        if (selectedMonthObj) {
+            // First day of selected month
+            let startOfSelected = new Date(selectedMonthObj.year, selectedMonthObj.month, 1);
+            
+            // If it's the current month, start from today
+            if (selectedMonthObj.month === hoy.getMonth() && selectedMonthObj.year === hoy.getFullYear()) {
+                dateStart = this.getLocalISODate(hoy);
+                const lastDay = new Date(selectedMonthObj.year, selectedMonthObj.month + 1, 0).getDate();
+                daysAhead = lastDay - hoy.getDate() + 1;
+                msg = `Aplicaremos tu plantilla para los días restantes de ${this.selectedMonthLabel}. ¿Continuar?`;
+            } else {
+                dateStart = this.getLocalISODate(startOfSelected);
+                const lastDay = new Date(selectedMonthObj.year, selectedMonthObj.month + 1, 0).getDate();
+                daysAhead = lastDay;
+                msg = `¿Deseas aplicar tu plantilla base a TODO el mes de ${this.selectedMonthLabel} (${daysAhead} días)?`;
+            }
+        }
+
+        this.popupService.confirm('Aplicar Plantilla', msg)
+          .then(conf => {
+            if (conf) {
+              this.entrenamientoService.applyDefaultConfig({ 
+                entrenador_id: this.userId, 
+                days_ahead: daysAhead, 
+                date_start: dateStart 
+              }).subscribe({
+                next: () => {
+                  this.popupService.success('Completado', `Horarios aplicados para ${this.selectedMonthLabel}.`);
+                  this.disponibilidadExistente.clear();
+                  this.cargarDisponibilidadExistente();
+                },
+                error: (err) => {
+                  this.isLoading = false;
+                  this.popupService.error('Error', 'No se pudo aplicar la plantilla');
+                }
+              });
+            } else {
+              this.isLoading = false;
+            }
+          });
+      },
+      error: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+  /* =============================
+     HELPERS
+  ============================== */
+
+  abrirModalNuevoClub() {
+    Swal.fire({
+      title: 'Registrar nuevo Recinto',
+      html: `
+        <div class="swal-form" style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+          <div>
+            <label style="font-size: 12px; color: #666;">Nombre del Club</label>
+            <input id="swal-nombre" class="swal2-input" placeholder="Nombre" style="margin: 5px 0; width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 12px; color: #666;">Comuna</label>
+            <input id="swal-comuna" class="swal2-input" placeholder="Comuna" style="margin: 5px 0; width: 100%;">
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Crear y Seleccionar',
+      confirmButtonColor: '#ccff00',
+      customClass: {
+        confirmButton: 'swal-btn-confirm'
+      },
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-nombre') as HTMLInputElement).value;
+        const comuna = (document.getElementById('swal-comuna') as HTMLInputElement).value;
+        if (!nombre) return Swal.showValidationMessage('El nombre es obligatorio');
+        return { nombre, comuna };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isLoading = true;
+        const clubData = {
+          nombre: result.value.nombre,
+          comuna: result.value.comuna,
+          admin_id: this.userId,
+          rol: 'entrenador' // IMPORTANTE: El entrenador crea el club pero mantiene su rol
+        };
+
+        this.mysqlService.postApi('clubes/add_club.php', clubData).subscribe({
+          next: (res: any) => {
+            if (res.success) {
+              this.popupService.success('¡Éxito!', 'Club creado y vinculado a tu perfil de entrenador.');
+              this.selectedClubId = res.id;
+              this.cargarClubes(); // Recargar lista
+            } else {
+              this.isLoading = false;
+              this.popupService.error('Error', res.error || 'No se pudo crear el club');
+            }
+          },
+          error: (err) => {
+            this.isLoading = false;
+            this.popupService.error('Error', 'Error de conexión');
+            console.error(err);
+          }
+        });
+      }
+    });
+  }
+
+  private formatTime(date: Date): string {
+    return date.toTimeString().slice(0, 8); // "HH:MM:SS"
+  }
+
+  // --- TUTORIAL METHODS ---
+  startTutorial() {
+    this.showTutorial = true;
+    this.currentTutorialStep = 0;
+    setTimeout(() => this.updateTutorialPosition(), 50);
+  }
+
+  closeTutorial() {
+    this.showTutorial = false;
+    localStorage.setItem('tutorial_disponibilidad_done', 'true');
+  }
+
+  nextTutorialStep() {
+    if (this.currentTutorialStep < this.tutorialSteps.length - 1) {
+      this.currentTutorialStep++;
+      
+      // Step logic: Open Modal
+      if (this.currentTutorialStep === 5) {
+        this.openDefaultModal();
+      }
+      // Step logic: Close Modal when moving past template steps
+      if (this.currentTutorialStep === 8) {
+        this.showDefaultModal = false;
+      }
+      
+      const waitTime = (this.currentTutorialStep === 5) ? 400 : 100;
+      setTimeout(() => this.updateTutorialPosition(), waitTime);
+    } else {
+      this.closeTutorial();
+    }
+  }
+
+  updateTutorialPosition() {
+    const step = this.tutorialSteps[this.currentTutorialStep];
+    const el = document.querySelector(step.target);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const cardHeight = 220;
+      const cardWidth = 340;
+      
+      let top = rect.bottom + 20;
+      let left = rect.left + (rect.width / 2) - (cardWidth / 2);
+
+      // Adjust if it goes off screen
+      if (top + cardHeight > window.innerHeight) top = rect.top - cardHeight - 20;
+      if (left + cardWidth > window.innerWidth) left = window.innerWidth - cardWidth - 20;
+      if (left < 0) left = 20;
+
+      this.tutorialTop = `${top + window.scrollY}px`;
+      this.tutorialLeft = `${left + window.scrollX}px`;
+      
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('tutorial-highlight');
+      setTimeout(() => el.classList.remove('tutorial-highlight'), 3000);
+    } else {
+      // Self-healing: skip step if element not found
+      if (this.currentTutorialStep < this.tutorialSteps.length - 1) {
+        this.nextTutorialStep();
+      }
+    }
+  }
+}

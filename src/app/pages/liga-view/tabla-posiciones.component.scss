@@ -1,0 +1,95 @@
+.table-responsive-wrapper {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.custom-table-standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  color: #1e293b;
+
+  th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    &.team-th { text-align: left; }
+    &.pts-th { color: #0f172a; }
+  }
+
+  td {
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+    &.team-td {
+      text-align: left;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+
+  tr.clasificado {
+    background: rgba(168, 255, 0, 0.08);
+  }
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #475569;
+    &.playoff {
+      background: #a8ff00;
+      color: #0f172a;
+    }
+  }
+
+  .playoff-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #15803d;
+    text-transform: uppercase;
+  }
+
+  .sub-info {
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+
+  .positive {
+    color: #16a34a;
+    font-weight: 700;
+  }
+
+  .negative {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  .pts-td {
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: #0f172a;
+  }
+
+  .empty-state {
+    padding: 30px;
+    color: #94a3b8;
+    font-style: italic;
+  }
+}

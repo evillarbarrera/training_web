@@ -1,0 +1,298 @@
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <!-- Sidebar -->
+  <app-sidebar [userId]="userId" [jugadorNombre]="profile.nombre" [jugadorFoto]="profile.foto_perfil" [role]="userRole"
+    activePage="perfil">
+  </app-sidebar>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+
+    <!-- Content -->
+    <div class="dashboard-grid">
+
+      <!-- TABS & SUPPORT -->
+      <div class="main-tabs-nav" style="margin-bottom: 20px; display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px;">
+          <button class="tab-btn" [class.active]="activeTab === 'profile'" (click)="activeTab = 'profile'"
+            style="padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700;"
+            [style.background]="activeTab === 'profile' ? '#111' : '#f1f5f9'"
+            [style.color]="activeTab === 'profile' ? '#fff' : '#64748b'">
+            👤 Mi Perfil
+          </button>
+          <button class="tab-btn" (click)="irAMiPlan()"
+            *ngIf="userRole === 'entrenador' || userRole === 'administrador_club'"
+            style="padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; background: #f1f5f9; color: #64748b;">
+            💎 Suscripción
+          </button>
+          <button class="tab-btn" (click)="irADifusion()"
+            *ngIf="userRole === 'administrador_club'"
+            style="padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; background: #f1f5f9; color: #64748b;">
+            📲 Difusión WhatsApp
+          </button>
+        </div>
+
+        <a href="https://wa.me/56969083124?text=Hola%20Soporte%20PadelBlox,%20necesito%20ayuda%20con%20mi%20cuenta"
+           target="_blank" rel="noopener noreferrer" 
+           style="background: #25D366; color: white; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,211,102,0.3); transition: all 0.2s;">
+           <span>💬</span> Soporte WhatsApp
+        </a>
+      </div>
+
+      <!-- PROFILE VIEW -->
+      <div class="profile-container animate-up" *ngIf="activeTab === 'profile'">
+
+        <!-- Avatar & Role -->
+        <div class="avatar-section">
+          <div class="avatar-wrapper" (click)="fileInput.click()">
+            <img [src]="profile.foto_perfil || 'assets/images/placeholder_avatar.png'"
+              (error)="profile.foto_perfil = 'assets/images/placeholder_avatar.png'" alt="Avatar" />
+            <div class="edit-overlay">
+              <span class="camera-icon">📷</span>
+            </div>
+          </div>
+          <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" style="display: none">
+          <span class="role-badge">{{ userRole }}</span>
+
+          <!-- Moved Save Button Here for Grid Layout -->
+          <div class="save-btn-container" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+            <button class="save-btn" (click)="guardarCambios()" [disabled]="isLoading">
+              <span *ngIf="isLoading" class="spinner"></span>
+              <span *ngIf="!isLoading">GUARDAR CAMBIOS</span>
+            </button>
+
+            <button class="btn-secondary-role" (click)="openRoleRequest()"
+              style="background: transparent; border: 1px dashed #cbd5e1; color: #64748b; padding: 8px; font-size: 11px; border-radius: 8px; cursor: pointer;">
+              ➕ Solicitar Nuevo Rol
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Datos Personales -->
+        <div class="section-card personal-card">
+          <h3 class="section-title">
+            <span class="icon">👤</span> Datos Personales
+          </h3>
+          <div class="nike-input-group">
+
+            <div class="nike-item">
+              <label>Nombre Completo</label>
+              <input type="text" [(ngModel)]="profile.nombre" placeholder="Tu nombre">
+            </div>
+
+            <div class="nike-item disabled">
+              <label>Email (Usuario)</label>
+              <input type="text" [(ngModel)]="profile.usuario" disabled>
+            </div>
+
+            <div class="nike-item">
+              <label>Teléfono</label>
+              <input type="tel" [(ngModel)]="profile.telefono" placeholder="+56 9 ...">
+            </div>
+
+            <div class="nike-item" *ngIf="userRole === 'jugador'">
+              <label>Categoría</label>
+              <select [(ngModel)]="profile.categoria">
+                <option value="" disabled selected>Selecciona tu nivel</option>
+                <optgroup label="Varones">
+                  <option value="Primera">Primera</option>
+                  <option value="Segunda">Segunda</option>
+                  <option value="Tercera">Tercera</option>
+                  <option value="Cuarta">Cuarta</option>
+                  <option value="Quinta">Quinta</option>
+                  <option value="Sexta">Sexta</option>
+                </optgroup>
+                <optgroup label="Damas">
+                  <option value="A">Damas A</option>
+                  <option value="B">Damas B</option>
+                  <option value="C">Damas C</option>
+                  <option value="D">Damas D</option>
+                </optgroup>
+                <optgroup label="Otros">
+                  <option value="Principiante">Principiante</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="nike-item" *ngIf="userRole === 'entrenador'">
+              <label>Curriculum / Resumen (Bio)</label>
+              <textarea [(ngModel)]="profile.descripcion"
+                placeholder="Describe tu experiencia, certificaciones y estilo de enseñanza..." rows="4"
+                style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e5e7eb; font-family: inherit; font-size: 14px; resize: vertical; margin-top: 8px;"></textarea>
+              <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">Este texto aparecerá cuando
+                los alumnos vean tus packs.</small>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2. Redes Sociales -->
+        <div class="section-card social-card">
+          <h3 class="section-title">
+            <span class="icon">🌐</span> Redes Sociales
+          </h3>
+          <div class="nike-input-group">
+
+            <div class="nike-item">
+              <label>Instagram</label>
+              <input type="text" [(ngModel)]="profile.instagram" placeholder="@usuario">
+            </div>
+
+            <div class="nike-item">
+              <label>Facebook</label>
+              <input type="text" [(ngModel)]="profile.facebook" placeholder="Perfil o página">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3. Dirección -->
+        <div class="section-card address-card">
+          <h3 class="section-title">
+            <span class="icon">📍</span> Dirección
+          </h3>
+          <div class="nike-input-group">
+
+            <div class="nike-item">
+              <label>Región</label>
+              <select [(ngModel)]="direccion.region" (change)="updateComunas()">
+                <option value="" disabled selected>Selecciona región</option>
+                <option *ngFor="let r of regions" [value]="r.name">{{ r.name }}</option>
+              </select>
+            </div>
+
+            <div class="nike-item">
+              <label>Comuna</label>
+              <select [(ngModel)]="direccion.comuna" [disabled]="!direccion.region">
+                <option value="" disabled selected>Selecciona comuna</option>
+                <option *ngFor="let c of filteredComunas" [value]="c">{{ c }}</option>
+              </select>
+            </div>
+
+            <div class="nike-item">
+              <label>Calle</label>
+              <input type="text" [(ngModel)]="direccion.calle" placeholder="Ej: Av. Providencia">
+            </div>
+
+            <div class="form-row">
+              <div class="nike-item">
+                <label>N°</label>
+                <input type="text" [(ngModel)]="direccion.numero_casa" placeholder="123">
+              </div>
+              <div class="nike-item">
+                <label>Referencia</label>
+                <input type="text" [(ngModel)]="direccion.referencia" placeholder="Depto, Block...">
+              </div>
+            </div>
+
+            <div class="nike-item" style="margin-top: 10px;">
+              <label>Ubicación GPS (Para filtrado)</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" class="btn-location" (click)="getCurrentLocation()">
+                  📍 Autodetectar Ubicación
+                </button>
+                <span *ngIf="direccion.latitud" style="font-size: 12px; color: #10b981; font-weight: 600;">
+                  ✅ Coordenadas listas
+                </span>
+              </div>
+              <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">Necesario para aparecer en
+                búsquedas por cercanía.</small>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 5. Privacidad y Derechos ARCO (Ley N° 19.628) -->
+        <div class="section-card danger-card animate-up" style="animation-delay: 0.2s;">
+          <h3 class="section-title">
+            <span class="icon">🛡️</span> Privacidad y Derechos ARCO (Ley N° 19.628)
+          </h3>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+            En cumplimiento de la legislación chilena de protección de datos personales, puedes ejercer en cualquier momento tus derechos de Acceso, Portabilidad y Cancelación.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button type="button" (click)="exportarDatos()"
+              style="background: #0f172a; color: #ccff00; border: 1px solid #ccff00; padding: 12px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px;">
+              <span class="icon">📥</span> Descargar mis Datos Personales (JSON)
+            </button>
+            <button type="button" (click)="eliminarCuenta()"
+              style="background: #ef4444; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">
+              <span class="icon">🗑️</span> Solicitar Eliminación / Anonimización de Cuenta
+            </button>
+          </div>
+        </div>
+
+      </div> <!-- End of profile-container grid -->
+
+      <!-- 4. Pagos Mercado Pago (Solo para Entrenadores) -->
+      <div class="mp-section-container" *ngIf="userRole === 'entrenador'"
+        style="margin-top: 30px;">
+        <div class="section-card mp-card animate-up" style="max-width: 100%;">
+          <h3 class="section-title">
+            <span class="icon">💳</span> Vinculación Mercado Pago (Cobros)
+          </h3>
+          <p style="font-size: 14px; color: #64748b; margin-bottom: 25px; margin-top: -10px;">
+            Para recibir tus pagos de forma automática, vincula tu cuenta de Mercado Pago.
+          </p>
+
+          <div class="mp-connect-full-width"
+            style="background: #f8fafc; border: 1px solid #009ee3; padding: 30px; border-radius: 16px; margin-bottom: 30px; border-left: 8px solid #009ee3; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px;">
+
+            <div style="display: flex; gap: 25px; align-items: center;">
+              <div
+                style="background: #009ee3; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 15px rgba(0, 158, 227, 0.3);">
+                <span style="font-size: 30px; color: white;">⚡</span>
+              </div>
+              <div style="flex: 1;">
+                <h4
+                  style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">
+                  CONEXIÓN AUTOMÁTICA DE CUENTA</h4>
+                <p style="margin: 8px 0 0 0; font-size: 15px; color: #475569; line-height: 1.6; font-weight: 500;">
+                  Autoriza nuestra aplicación para que el split de pagos y tus comisiones se procesen de forma inmediata
+                  y segura directamente a tu cuenta de Mercado Pago.
+                </p>
+              </div>
+            </div>
+
+            <button (click)="vincularMP()"
+              style="background: #009ee3; color: white; border: none; padding: 18px; border-radius: 14px; font-weight: 950; cursor: pointer; display: flex; align-items: center; gap: 15px; width: 100%; justify-content: center; transition: all 0.3s; font-size: 16px; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 8px 20px rgba(0, 158, 227, 0.25);">
+              <svg viewBox="0 0 48 48" style="height: 28px; fill: white;">
+                <path
+                  d="M34.5 15.5h-21c-1.1 0-2 .9-2 2v13c0 1.1.9 2 2 2h21c1.1 0 2-.9 2-2v-13c0-1.1-.9-2-2-2zm-21 2h21v2.5h-21v-2.5zm21 13h-21V23h21v7.5z" />
+              </svg>
+              VINCULAR MI CUENTA AHORA
+            </button>
+
+            <div
+              style="text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+              <span style="color: #10b981; font-size: 18px;">🛡️</span>
+              <span
+                style="font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;">✓
+                SISTEMA DE PAGO SEGURO POR MERCADO PAGO SDK</span>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin: 40px 0 30px; position: relative;">
+            <span
+              style="background: #fff; padding: 0 20px; color: #94a3b8; font-size: 13px; font-weight: 800; position: relative; z-index: 1; text-transform: uppercase; letter-spacing: 2px;">o
+              configuración manual</span>
+            <div style="border-top: 1px dashed #cbd5e1; position: absolute; top: 12px; width: 100%; z-index: 0;"></div>
+          </div>
+
+          <div class="nike-input-group" style="max-width: 500px; margin: 0 auto;">
+            <div class="nike-item">
+              <label>Mercado Pago Collector ID</label>
+              <input type="text" [(ngModel)]="profile.mp_collector_id" placeholder="Ej: 123456789"
+                style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 15px;">
+              * El ID es necesario para identificar tu cuenta en el proceso de split.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

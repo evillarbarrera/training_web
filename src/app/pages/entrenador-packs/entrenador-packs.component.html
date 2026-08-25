@@ -1,0 +1,241 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="coachNombre" [jugadorFoto]="coachFoto" [role]="'entrenador'"
+    activePage="packs">
+  </app-sidebar>
+
+  <main class="main-content">
+
+
+    <div class="dashboard-grid">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-text">
+          <h2>Mis Packs de Entrenamiento</h2>
+          <p>Crea y gestiona tus paquetes de clases</p>
+        </div>
+        <div class="header-btns">
+          <button class="btn-help" (click)="startTutorial()">💡 Ayuda</button>
+          <button class="add-btn" (click)="toggleFormulario()">
+            {{ mostrarFormulario ? '✕ Cancelar' : '+ Crear Nuevo Pack' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE TUTORIAL OVERLAY -->
+      <div class="tutorial-overlay" *ngIf="showTutorial"></div>
+      
+      <div class="tutorial-card shadow-lg" *ngIf="showTutorial" [style.top]="tutorialTop" [style.left]="tutorialLeft">
+        <div class="t-header">
+          <div class="t-step-count">Paso {{ currentTutorialStep + 1 }} de {{ tutorialSteps.length }}</div>
+        </div>
+        <div class="t-body">
+          <h3>{{ tutorialSteps[currentTutorialStep].title }}</h3>
+          <p>{{ tutorialSteps[currentTutorialStep].content }}</p>
+        </div>
+        <div class="t-footer">
+          <button class="btn-skip" (click)="closeTutorial()">Saltar</button>
+          <button class="btn-next" (click)="nextTutorialStep()">
+            {{ currentTutorialStep === tutorialSteps.length - 1 ? '¡Listo!' : 'Siguiente' }}
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Segment Navigation -->
+      <div class="segment-nav animate-down">
+        <button class="segment-btn" [class.active]="segmentoSeleccionado === 'individual'" (click)="setSegmento('individual')">
+          <i class="fas fa-user"></i> Individuales
+        </button>
+        <button class="segment-btn" [class.active]="segmentoSeleccionado === 'multijugador'" (click)="setSegmento('multijugador')">
+          <i class="fas fa-users"></i> Multijugador
+        </button>
+        <button class="segment-btn" [class.active]="segmentoSeleccionado === 'grupal'" (click)="setSegmento('grupal')">
+          <i class="fas fa-users-rectangle"></i> Grupales
+        </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-section animate-fade">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input [(ngModel)]="filtro" type="text" placeholder="Buscar en {{ segmentoSeleccionado }}..." class="search-input" />
+        </div>
+      </div>
+
+      <!-- Create/Edit Form -->
+      <div class="form-wrapper animate-down" *ngIf="mostrarFormulario">
+        <div class="form-header">
+          <h3>{{ nuevoPack.id ? 'Editar Pack' : 'Crear Nuevo Pack' }}</h3>
+        </div>
+
+        <form (ngSubmit)="crearPack()" class="pack-form">
+          <div class="form-grid">
+            <!-- Name -->
+            <div class="form-group span-2">
+              <label>Nombre del Pack</label>
+              <input [(ngModel)]="nuevoPack.nombre" name="nombre" type="text" placeholder="Ej: Pack Principiantes"
+                class="form-input" />
+            </div>
+
+            <!-- Type -->
+            <div class="form-group">
+              <label>Tipo</label>
+              <select [(ngModel)]="nuevoPack.tipo" name="tipo" class="form-input">
+                <option value="individual">Individual</option>
+                <option value="grupal">Grupal</option>
+              </select>
+            </div>
+
+            <!-- Sessions -->
+            <div class="form-group">
+              <label>Sesiones Totales</label>
+              <input [(ngModel)]="nuevoPack.sesiones_totales" name="sesiones" type="number" placeholder="4"
+                class="form-input" />
+            </div>
+
+            <!-- Group Specific Fields -->
+            <ng-container *ngIf="nuevoPack.tipo === 'grupal'">
+              <div class="form-group">
+                <label>Capacidad Mínima</label>
+                <input [(ngModel)]="nuevoPack.capacidad_minima" name="cap_min" type="number" min="2" max="6"
+                  class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Capacidad Máxima</label>
+                <input [(ngModel)]="nuevoPack.capacidad_maxima" name="cap_max" type="number" min="2" max="6"
+                  class="form-input" />
+              </div>
+
+
+
+
+              <div class="form-group">
+                <label>Categoría</label>
+                <input [(ngModel)]="nuevoPack.categoria" name="categoria" type="text"
+                  placeholder="Ej: Intermedio, Avanzado" class="form-input" />
+              </div>
+
+              <div class="form-group span-2">
+                <label class="checkbox-container">
+                  <input type="checkbox" [(ngModel)]="nuevoPack.permite_inscripcion" name="permite_ins" [checked]="nuevoPack.permite_inscripcion == 1" (change)="nuevoPack.permite_inscripcion = $any($event.target).checked ? 1 : 0">
+                  <span class="checkmark"></span>
+                  Permitir que los jugadores se inscriban ellos mismos (Dejar Abierto)
+                </label>
+              </div>
+            </ng-container>
+
+            <!-- Duration -->
+            <div class="form-group">
+              <label>Duración (min)</label>
+              <input [(ngModel)]="nuevoPack.duracion_sesion_min" name="duracion" type="number" placeholder="60"
+                class="form-input" />
+            </div>
+
+            <!-- Price -->
+            <div class="form-group">
+              <label>Precio ($)</label>
+              <input [(ngModel)]="nuevoPack.precio" name="precio" type="number" placeholder="0" class="form-input" />
+            </div>
+
+            <!-- Description -->
+            <!-- Time range (Valid Hours) -->
+            <div class="form-group span-2" *ngIf="nuevoPack.tipo === 'individual'">
+              <div class="flex-row gap-2" style="margin-bottom: 20px;">
+                <div class="half-width">
+                  <label>Cantidad Personas</label>
+                  <p class="helper-text">Ej: 2 para Pack Dupla.</p>
+                  <input [(ngModel)]="nuevoPack.cantidad_personas" name="cant_personas" type="number" min="1"
+                    class="form-input" />
+                </div>
+              </div>
+
+              <label>Rango Horario Permitido (Opcional)</label>
+              <p class="helper-text">Si llenas esto, el alumno solo podrá reservar clases dentro de este horario.</p>
+              <div class="flex-row gap-2">
+                <div class="half-width">
+                  <label class="sub-label">Desde</label>
+                  <input [(ngModel)]="nuevoPack.rango_horario_inicio" name="r_inicio" type="time" class="form-input" />
+                </div>
+                <div class="half-width">
+                  <label class="sub-label">Hasta</label>
+                  <input [(ngModel)]="nuevoPack.rango_horario_fin" name="r_fin" type="time" class="form-input" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group span-full">
+              <label>Descripción</label>
+              <textarea [(ngModel)]="nuevoPack.descripcion" name="descripcion" placeholder="Detalles del pack..."
+                class="form-textarea"></textarea>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" [disabled]="isSaving">
+            <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+            {{ isSaving ? 'Guardando...' : (nuevoPack.id ? 'Guardar Cambios' : 'Crear Pack') }}
+          </button>
+        </form>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Cargando packs...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && packsFiltrados.length === 0" class="empty-state">
+        <div class="empty-icon">📦</div>
+        <p>{{ filtro ? 'Sin resultados' : 'No tienes packs creados aún.' }}</p>
+      </div>
+
+      <!-- Packs List -->
+      <div class="packs-grid" *ngIf="!isLoading && packsFiltrados.length > 0">
+        <div class="pack-card animate-up" *ngFor="let pack of packsFiltrados; let i = index"
+          [style.animation-delay]="(i * 0.05) + 's'">
+
+          <div class="pack-type" [ngClass]="pack.tipo">
+            <span *ngIf="pack.cantidad_personas > 1">PACK {{ pack.cantidad_personas }} JUGADORES</span>
+            <span *ngIf="!pack.cantidad_personas || pack.cantidad_personas <= 1">
+              {{ pack.tipo === 'individual' ? 'Individual' : 'Grupal' }}
+            </span>
+          </div>
+
+          <div class="pack-icon">
+            <span *ngIf="pack.sesiones_totales > 10">🏆</span>
+            <span *ngIf="pack.sesiones_totales <= 10 && pack.sesiones_totales > 5">⚡</span>
+            <span *ngIf="pack.sesiones_totales <= 5">🎾</span>
+          </div>
+
+          <h2 class="pack-title">{{ pack.nombre }}</h2>
+
+          <div class="pack-price">
+            ${{ pack.precio | number:'1.0-0':'es' }}<span>/pack</span>
+          </div>
+
+          <ul class="pack-details">
+            <li><strong>{{ pack.sesiones_totales }}</strong> Clases incluídas</li>
+            <li *ngIf="pack.cantidad_personas > 1"><strong>Válido para {{ pack.cantidad_personas }} jugadores</strong>
+            </li>
+            <li *ngIf="!pack.cantidad_personas || pack.cantidad_personas <= 1">Uso personal (1 jugador)</li>
+            <li>
+              Horario: <strong>{{ pack.rango_horario_inicio ? (pack.rango_horario_inicio | slice:0:5) + ' a ' +
+                (pack.rango_horario_fin | slice:0:5) : 'Sin restricción' }}</strong>
+            </li>
+            <li *ngIf="pack.tipo === 'grupal'">
+              Cupos: <strong
+                [ngClass]="{'full': pack.cupos_ocupados >= pack.capacidad_maxima, 'open': pack.cupos_ocupados < pack.capacidad_maxima}">
+                {{ pack.cupos_ocupados || 0 }} / {{ pack.capacidad_maxima }}
+              </strong>
+            </li>
+          </ul>
+
+          <div class="pack-footer">
+            <button class="action-btn edit" (click)="editarPack(pack)">Editar</button>
+            <button class="action-btn delete" (click)="eliminarPack(pack.id)">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

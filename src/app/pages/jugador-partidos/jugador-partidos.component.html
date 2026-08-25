@@ -1,0 +1,291 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" activePage="partidos"></app-sidebar>
+
+  <main class="main-content">
+    
+    <!-- Refined Header -->
+    <div class="compact-header">
+      <div class="header-main">
+        <div class="title-group">
+          <h1>Mis Partidos</h1>
+          <p class="subtitle">Gestión y análisis de tu actividad en pista</p>
+        </div>
+        <div class="header-stats">
+          <div class="h-stat">
+            <span class="h-val">{{ totalJugados }}</span>
+            <span class="h-lbl">Partidos</span>
+          </div>
+          <div class="h-stat">
+            <span class="h-val">{{ victorias }}</span>
+            <span class="h-lbl">Victorias</span>
+          </div>
+          <div class="h-stat level-badge">
+            <span class="h-val">{{ categoriaMasJugada }}</span>
+            <span class="h-lbl">Padel AI Level</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-reserva-premium" (click)="router.navigate(['/clubes-reservar'])">
+          <span>+</span> Nueva Reserva
+        </button>
+      </div>
+    </div>
+
+    <div class="main-dashboard-grid">
+      
+      <!-- List Column -->
+      <div class="list-column">
+        <div class="tab-pill-nav">
+          <button [class.active]="selectedTab === 'proximos'" (click)="selectedTab = 'proximos'">
+            <span class="icon">📅</span> Próximos
+          </button>
+          <button [class.active]="selectedTab === 'historial'" (click)="selectedTab = 'historial'">
+            <span class="icon">🎾</span> Historial
+          </button>
+        </div>
+
+        <div class="tab-pane" *ngIf="selectedTab === 'proximos'">
+          <div class="simple-list">
+            <div class="compact-match-item" *ngFor="let p of proximos" (click)="openMatchDetail(p)">
+              <div class="m-date-box">
+                <span class="day">{{ p.fecha | date:'dd' }}</span>
+                <span class="month">{{ p.fecha | date:'MMM' }}</span>
+              </div>
+              <div class="m-info">
+                <div class="m-club-time">
+                  <strong>{{ p.club_nombre }}</strong>
+                  <span class="time-tag">{{ p.hora_inicio?.slice(0,5) }}</span>
+                </div>
+                <div class="m-players">
+                  {{ p.jugador1_nombre }} & {{ p.jugador2_nombre || 'Invitado' }} vs 
+                  {{ p.jugador3_nombre || 'Invitado' }} & {{ p.jugador4_nombre || 'Invitado' }}
+                </div>
+              </div>
+              <div class="m-action">
+                <button class="btn-icon-sm">➜</button>
+              </div>
+            </div>
+          </div>
+          <div class="empty-compact" *ngIf="proximos.length === 0 && !isLoading">
+            No hay partidos pendientes. <a (click)="router.navigate(['/clubes-reservar'])">Reservar ahora</a>
+          </div>
+        </div>
+
+        <div class="tab-pane" *ngIf="selectedTab === 'historial'">
+          <div class="table-compact-wrapper">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>FECHA</th>
+                  <th>CLUB</th>
+                  <th>RESULTADO</th>
+                  <th>ESTADO</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of jugados" (click)="openMatchDetail(p)">
+                  <td>{{ p.fecha | date:'dd/MM/yy' }}</td>
+                  <td>{{ p.club_nombre }}</td>
+                  <td><strong>{{ p.marcador || '--' }}</strong></td>
+                  <td>
+                    <span class="res-pill" [class.win]="isWinner(p)" [class.loss]="p.resultado_registrado && !isWinner(p)">
+                      {{ p.resultado_registrado ? (isWinner(p) ? 'WIN' : 'LOSS') : 'PEND' }}
+                    </span>
+                  </td>
+                  <td (click)="$event.stopPropagation()">
+                    <button class="btn-text-action" *ngIf="!p.resultado_registrado" (click)="openResultModal(p, $event)">
+                      Registrar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Column (Smaller) -->
+      <div class="analytics-column">
+        <div class="compact-chart-card">
+          <label>WIN RATE</label>
+          <div class="canvas-wrap">
+            <canvas id="winLossChart"></canvas>
+          </div>
+        </div>
+        <div class="compact-chart-card">
+          <label>ACTIVIDAD MENSUAL</label>
+          <div class="canvas-wrap">
+            <canvas id="activityChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- MODALS (Stay functional but more compact) -->
+<div class="web-modal-overlay" *ngIf="showResultModal">
+  <div class="web-modal compact glass-modal">
+    <div class="modal-header">
+      <h3>Registrar Resultado</h3>
+      <button class="btn-close" (click)="showResultModal = false">×</button>
+    </div>
+    <div class="modal-body p-30">
+      <div class="score-card-editor">
+        <div class="score-header">
+          <div class="label-spacer"></div>
+          <div class="set-labels">
+            <span>SET 1</span>
+            <span>SET 2</span>
+            <span>SET 3</span>
+          </div>
+        </div>
+
+        <div class="team-row">
+          <div class="team-info">
+            <span class="team-name">TÚ EQUIPO</span>
+            <span class="team-desc">Local</span>
+          </div>
+          <div class="inputs">
+            <input type="number" [(ngModel)]="set1A" placeholder="0">
+            <input type="number" [(ngModel)]="set2A" placeholder="0">
+            <input type="number" [(ngModel)]="set3A" placeholder="0">
+          </div>
+        </div>
+
+        <div class="score-divider">
+          <span>vs</span>
+        </div>
+
+        <div class="team-row">
+          <div class="team-info">
+            <span class="team-name">OPONENTES</span>
+            <span class="team-desc">Visitante</span>
+          </div>
+          <div class="inputs">
+            <input type="number" [(ngModel)]="set1B" placeholder="0">
+            <input type="number" [(ngModel)]="set2B" placeholder="0">
+            <input type="number" [(ngModel)]="set3B" placeholder="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-selector-premium">
+        <label>CATEGORÍA DE JUEGO</label>
+        <div class="select-wrapper">
+          <select [(ngModel)]="categoria">
+            <option value="1ra">1ra Categoría</option>
+            <option value="2da">2da Categoría</option>
+            <option value="3ra">3ra Categoría</option>
+            <option value="4ta">4ta Categoría</option>
+            <option value="5ta">5ta Categoría</option>
+            <option value="6ta">6ta Categoría</option>
+          </select>
+          <i class="chevron">▼</i>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost-sm" (click)="showResultModal = false">Cancelar</button>
+      <button class="btn-primary-sm" (click)="saveResult()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="web-modal-overlay" *ngIf="showDetailModal">
+  <div class="web-modal glass-modal compact-detail">
+    <div class="modal-header">
+      <h3>Detalle del Partido</h3>
+      <button class="btn-close" (click)="showDetailModal = false">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="match-detail-elite cyber-mode">
+        <!-- 1. Broadcast Header (The Wow Factor) -->
+        <div class="broadcast-header">
+          <div class="mesh-bg"></div>
+          <div class="header-main">
+            <div class="status-pill">
+              <span class="live-dot"></span> {{ selectedMatch?.resultado_registrado ? 'MATCH RECAP' : 'LIVE PREVIEW' }}
+            </div>
+            <h2 class="club-title">{{ selectedMatch?.club_nombre }}</h2>
+            <div class="broadcast-meta">
+              <span class="meta-item"><i class="icon">📅</i> {{ selectedMatch?.fecha | date:'EEE, dd MMM' }}</span>
+              <span class="divider">|</span>
+              <span class="meta-item"><i class="icon">⏰</i> {{ selectedMatch?.hora_inicio?.slice(0,5) }} HRS</span>
+            </div>
+          </div>
+          <div class="header-action">
+            <button class="btn-location-glow" title="Ubicación de la cancha">
+              <span class="loc-icon">📍</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Match DNA (Rosters) -->
+        <div class="match-dna">
+          <div class="dna-section">
+            <label class="section-tag">TEAM ALPHA</label>
+            <div class="roster-grid">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador1_nombre === jugadorNombre">
+                <div class="rank-badge">P1</div>
+                <div class="pro-info">
+                  <span class="name">{{ selectedMatch?.jugador1_nombre }}</span>
+                  <span class="role">Drive</span>
+                </div>
+              </div>
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador2_nombre === jugadorNombre">
+                <div class="rank-badge">P2</div>
+                <div class="pro-info">
+                  <span class="name">{{ selectedMatch?.jugador2_nombre || 'INVITADO' }}</span>
+                  <span class="role">Revés</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="match-pulse">
+            <div class="vs-neon">VS</div>
+            <div class="live-score-display" *ngIf="selectedMatch?.resultado_registrado">
+              {{ selectedMatch?.marcador }}
+            </div>
+          </div>
+
+          <div class="dna-section">
+            <label class="section-tag">TEAM BRAVO</label>
+            <div class="roster-grid">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador3_nombre === jugadorNombre">
+                <div class="rank-badge">P3</div>
+                <div class="pro-info">
+                  <span class="name">{{ selectedMatch?.jugador3_nombre || 'INVITADO' }}</span>
+                  <span class="role">Drive</span>
+                </div>
+              </div>
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador4_nombre === jugadorNombre">
+                <div class="rank-badge">P4</div>
+                <div class="pro-info">
+                  <span class="name">{{ selectedMatch?.jugador4_nombre || 'INVITADO' }}</span>
+                  <span class="role">Revés</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Intelligence Footer -->
+        <div class="intel-footer">
+          <div class="intel-pill">
+            <span class="label">LEVEL</span>
+            <span class="value">{{ selectedMatch?.categoria || 'PRO' }}</span>
+          </div>
+          <div class="intel-actions">
+            <button class="btn-share-elite">SHARE MATCH</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

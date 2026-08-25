@@ -1,0 +1,154 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="club-home">
+    </app-sidebar>
+
+    <main class="main-content">
+        <div class="dashboard-container">
+            <div class="header-row">
+                <div>
+                    <h1 class="welcome-title">Bienvenido, {{ userName | titlecase }} 👋</h1>
+                    <p class="welcome-subtitle">Resumen operativo e indicadores de gestión en tiempo real.</p>
+                </div>
+                <div class="club-selector-wrapper" *ngIf="clubes.length > 0">
+                    <label for="club-select" class="selector-label">Club:</label>
+                    <select id="club-select" class="club-select-input" [(ngModel)]="selectedClub" (change)="onClubSelectChange()">
+                        <option *ngFor="let c of clubes" [ngValue]="c">{{ c.nombre }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- KPI GRID (4 INDICADORES REQUERIDOS) -->
+            <div class="dashboard-stats-view animate-in">
+                <div class="kpi-grid">
+                    <!-- 1. Ocupación Hoy -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-icon ocupacion">🎾</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Ocupación Hoy</span>
+                            <h3 class="kpi-value">{{ stats.ocupacion }}</h3>
+                            <span class="kpi-trend up">{{ stats.total_reservas_hoy }} reservas registradas</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Ingresos Canchas -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-icon canchas-ingresos">🏟️</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Ingresos Canchas</span>
+                            <h3 class="kpi-value">${{ stats.ingresos_canchas | number }}</h3>
+                            <span class="kpi-trend">Arriendos de hoy</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Ingresos Productos -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-icon productos-ingresos">🛒</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Ingresos Productos</span>
+                            <h3 class="kpi-value">${{ stats.ingresos_productos | number }}</h3>
+                            <span class="kpi-trend">Ventas de tienda hoy</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Americanos Activos -->
+                    <div class="kpi-card glass-card">
+                        <div class="kpi-icon americanos">🏆</div>
+                        <div class="kpi-info">
+                            <span class="kpi-label">Americanos Activos</span>
+                            <h3 class="kpi-value">{{ stats.americanos_activos }}</h3>
+                            <button class="btn-micro" (click)="navigate('/americano-admin')">Ver Americanos</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESUMEN EJECUTIVO UX DE CANCHAS Y HORAS DESOCUPADAS -->
+                <div class="summary-widget-card card animate-in">
+                    <div class="widget-header">
+                        <div class="header-titles">
+                            <h3>📊 Resumen Operativo de Canchas</h3>
+                            <p>Ocupación general y disponibilidad de horas desocupadas en tiempo real</p>
+                        </div>
+
+                        <div class="header-actions">
+                            <div class="quick-date-pills">
+                                <button class="pill-btn" [class.active]="selectedFecha === getLocalISODate()" (click)="setFechaQuick(0)">Hoy</button>
+                                <button class="pill-btn" (click)="setFechaQuick(1)">Mañana</button>
+                            </div>
+                            <input type="date" class="date-input" [(ngModel)]="selectedFecha" (change)="onFechaChange()" />
+                            <button class="btn-primary-action" (click)="navigate('/club-reservas')">Gestionar Reservas ➔</button>
+                        </div>
+                    </div>
+
+                    <!-- LOADER -->
+                    <div class="loader-container" *ngIf="isLoadingCalendar">
+                        <p>Cargando resumen de canchas...</p>
+                    </div>
+
+                    <div class="empty-state-mini" *ngIf="!isLoadingCalendar && canchas.length === 0">
+                        <p>No hay canchas registradas en este club.</p>
+                        <button class="btn-micro" (click)="navigate('/club-canchas')">Configurar Canchas</button>
+                    </div>
+
+                    <ng-container *ngIf="!isLoadingCalendar && canchas.length > 0">
+                        <!-- BARRA DE PROGRESO DE OCUPACION VS HORAS DESOCUPADAS -->
+                        <div class="occupancy-progress-section">
+                            <div class="progress-labels">
+                                <span class="label-occupied">🔴 Horas Reservadas: {{ totalHorasReservadas }} franjas ({{ pctOcupacionCalendario }}%)</span>
+                                <span class="label-free">🟢 Horas Desocupadas: {{ totalHorasDesocupadas }} franjas ({{ pctDesocupadoCalendario }}%)</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill-occupied" [style.width.%]="pctOcupacionCalendario"></div>
+                                <div class="progress-fill-free" [style.width.%]="pctDesocupadoCalendario"></div>
+                            </div>
+                        </div>
+
+                        <!-- DIAGNOSTICO OPERATIVO UX -->
+                        <div class="ux-diagnosis-banner" [ngClass]="uxDiagnosis.color">
+                            <span class="diagnosis-badge">{{ uxDiagnosis.badge }}</span>
+                            <p class="diagnosis-text">{{ uxDiagnosis.message }}</p>
+                        </div>
+
+                        <!-- DESGLOSE RESUMIDO POR CANCHA -->
+                        <div class="courts-summary-grid">
+                            <div class="court-summary-card" *ngFor="let c of canchasSummary">
+                                <div class="court-header">
+                                    <div class="court-identity">
+                                        <span class="court-icon">🎾</span>
+                                        <div>
+                                            <h4 class="court-name">{{ c.nombre }}</h4>
+                                            <span class="court-type">{{ c.tipo }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="occupancy-badge" [class.high]="c.pct >= 75" [class.medium]="c.pct >= 40 && c.pct < 75" [class.low]="c.pct < 40">
+                                        {{ c.pct }}% Ocupada
+                                    </span>
+                                </div>
+
+                                <div class="court-metrics-row">
+                                    <div class="metric">
+                                        <span class="m-val free">{{ c.desocupadas }}</span>
+                                        <span class="m-lbl">Franjas Libres</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="m-val reserved">{{ c.reservadas }}</span>
+                                        <span class="m-lbl">Franjas Reservadas</span>
+                                    </div>
+                                </div>
+
+                                <div class="free-hours-highlight">
+                                    <span class="fh-title">💡 Horarios Desocupados Clave:</span>
+                                    <p class="fh-hours">{{ c.franjasLibresTxt }}</p>
+                                </div>
+
+                                <button class="btn-court-reserve" (click)="irAFormularioReserva(c.id)">
+                                    + Reservar Cancha
+                                </button>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

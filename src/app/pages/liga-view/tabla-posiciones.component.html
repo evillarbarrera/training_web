@@ -1,0 +1,41 @@
+<div class="table-responsive-wrapper">
+  <table class="custom-table-standings">
+    <thead>
+      <tr>
+        <th class="pos-th">#</th>
+        <th class="team-th">Pareja / Equipo</th>
+        <th>PJ</th>
+        <th>PG</th>
+        <th>PP</th>
+        <th>SF / SC</th>
+        <th>DIF S</th>
+        <th>GF / GC</th>
+        <th>DIF G</th>
+        <th class="pts-th">PTS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let pos of posicionesOrdenadas; let i = index" [class.clasificado]="i < cuposPlayoff">
+        <td class="pos-td">
+          <span class="rank-badge" [class.playoff]="i < cuposPlayoff">{{ i + 1 }}</span>
+        </td>
+        <td class="team-td">
+          <span class="team-name">{{ pos.nombre_pareja }}</span>
+          <span *ngIf="i < cuposPlayoff" class="playoff-tag">Clasifica Playoff</span>
+        </td>
+        <td>{{ pos.pj }}</td>
+        <td>{{ pos.pg }}</td>
+        <td>{{ pos.pp }}</td>
+        <td class="sub-info">{{ pos.sets_favor }}/{{ pos.sets_contra }}</td>
+        <td [class.positive]="pos.dif_sets > 0" [class.negative]="pos.dif_sets < 0">{{ pos.dif_sets > 0 ? '+' : '' }}{{ pos.dif_sets }}</td>
+        <td class="sub-info">{{ pos.games_favor }}/{{ pos.games_contra }}</td>
+        <td [class.positive]="pos.dif_games > 0" [class.negative]="pos.dif_games < 0">{{ pos.dif_games > 0 ? '+' : '' }}{{ pos.dif_games }}</td>
+        <td class="pts-td">{{ pos.puntos }}</td>
+      </tr>
+
+      <tr *ngIf="posicionesOrdenadas.length === 0">
+        <td colspan="10" class="empty-state">No hay resultados ni partidos jugados aún en este grupo.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

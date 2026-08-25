@@ -1,0 +1,133 @@
+import { Routes } from '@angular/router';
+import { LoginComponent } from './pages/login/login.component';
+import { RegisterComponent } from './pages/register/register.component';
+import { JugadorHomeComponent } from './pages/jugador-home/jugador-home.component';
+import { JugadorReservasComponent } from './pages/jugador-reservas/jugador-reservas.component';
+import { JugadorCalendarioComponent } from './pages/jugador-calendario/jugador-calendario.component';
+import { PerfilComponent } from './pages/perfil/perfil.component';
+import { EntrenadorHomeComponent } from './pages/entrenador-home/entrenador-home.component';
+import { AlumnosComponent } from './pages/alumnos/alumnos.component';
+import { EntrenadorAgendaComponent } from './pages/entrenador-agenda/entrenador-agenda.component';
+import { EntrenadorPacksComponent } from './pages/entrenador-packs/entrenador-packs.component';
+import { DisponibilidadEntrenadorComponent } from './pages/disponibilidad-entrenador/disponibilidad-entrenador.component';
+import { LandingComponent } from './pages/landing/landing.component';
+import { JugadorPacksComponent } from './pages/jugador-packs/jugador-packs.component';
+import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
+import { AceptarInvitacionComponent } from './pages/aceptar-invitacion/aceptar-invitacion.component';
+import { EntrenadorAgendarComponent } from './pages/entrenador-agendar/entrenador-agendar.component';
+import { ClubAdminComponent } from './pages/club-admin/club-admin.component';
+import { TorneoAmericanoComponent } from './pages/torneo-americano/torneo-americano.component';
+import { ClubesJugadorComponent } from './pages/clubes-jugador/clubes-jugador.component';
+import { ClubReservasComponent } from './pages/club-reservas/club-reservas.component';
+import { TorneoGestionComponent } from './pages/torneo-gestion/torneo-gestion.component';
+import { TorneoJugadorComponent } from './pages/torneo-jugador/torneo-jugador.component';
+import { EntrenadorCuponesComponent } from './pages/entrenador-cupones/entrenador-cupones.component';
+import { ClubHomeComponent } from './pages/club-home/club-home.component';
+import { SupportComponent } from './pages/support/support.component';
+
+export const routes: Routes = [
+  { path: 'soporte', component: SupportComponent },
+  { path: 'unete', component: AceptarInvitacionComponent },
+  { path: 'entrenador-agendar', component: EntrenadorAgendarComponent },
+  { path: 'reset-password', component: ResetPasswordComponent },
+  { path: 'login', component: LoginComponent },
+  { path: 'register', component: RegisterComponent },
+  { path: '', component: LandingComponent, pathMatch: 'full' },
+
+  // Student Routes
+  { path: 'jugador-home', component: JugadorHomeComponent },
+  { path: 'jugador-reservas', component: JugadorReservasComponent },
+  { path: 'jugador-calendario', component: JugadorCalendarioComponent },
+  { path: 'jugador-packs', component: JugadorPacksComponent },
+  { path: 'clubes-reservar', component: ClubesJugadorComponent },
+  { path: 'club-reservas', component: ClubReservasComponent },
+  {
+    path: 'mis-habilidades',
+    loadComponent: () => import('./pages/mis-habilidades/mis-habilidades.component').then(m => m.MisHabilidadesComponent)
+  },
+  { path: 'mis-torneos', component: TorneoJugadorComponent },
+  {
+    path: 'mis-partidos',
+    loadComponent: () => import('./pages/jugador-partidos/jugador-partidos.component').then(m => m.JugadorPartidosComponent)
+  },
+
+  // Trainer Routes
+  { path: 'entrenador-home', component: EntrenadorHomeComponent },
+  { path: 'alumnos', component: AlumnosComponent },
+  { path: 'entrenador-calendario', component: EntrenadorAgendaComponent },
+  { path: 'entrenador-packs', component: EntrenadorPacksComponent },
+  { path: 'entrenador-cupones', component: EntrenadorCuponesComponent },
+  { path: 'disponibilidad-entrenador', component: DisponibilidadEntrenadorComponent },
+  {
+    path: 'planificacion-mallas',
+    loadComponent: () => import('./pages/planificacion-mallas/planificacion-mallas.component').then(m => m.PlanificacionMallasComponent)
+  },
+  { path: 'club-home', component: ClubHomeComponent },
+  { path: 'admin-club', component: ClubAdminComponent },
+  { path: 'club-inventario', loadComponent: () => import('./pages/club-inventario/club-inventario.component').then(m => m.ClubInventarioComponent) },
+  { path: 'club-categorias', loadComponent: () => import('./pages/club-categorias/club-categorias.component').then(m => m.ClubCategoriasComponent) },
+  { path: 'club-ventas', loadComponent: () => import('./pages/club-ventas/club-ventas.component').then(m => m.ClubVentasComponent) },
+  { path: 'club-reportes', loadComponent: () => import('./pages/club-reportes/club-reportes.component').then(m => m.ClubReportesComponent) },
+  { path: 'club-whatsapp-difusion', loadComponent: () => import('./pages/club-whatsapp-difusion/club-whatsapp-difusion.component').then(m => m.ClubWhatsappDifusionComponent) },
+  { path: 'crear-americano', component: TorneoAmericanoComponent },
+  { path: 'torneos', component: TorneoGestionComponent },
+  { path: 'ligas', loadComponent: () => import('./pages/ligas-list/ligas-list.component').then(m => m.LigasListComponent) },
+  { path: 'liga-config', loadComponent: () => import('./pages/liga-config/liga-config.component').then(m => m.LigaConfigComponent) },
+  { path: 'liga-config/:id', loadComponent: () => import('./pages/liga-config/liga-config.component').then(m => m.LigaConfigComponent) },
+  { path: 'liga/:id', loadComponent: () => import('./pages/liga-view/liga-view.component').then(m => m.LigaViewComponent) },
+  {
+    path: 'mi-plan',
+    loadComponent: () => import('./pages/mi-plan/mi-plan.component').then(m => m.MiPlanComponent)
+  },
+  {
+    path: 'pizarra-tactica',
+    loadComponent: () => import('./pages/pizarra-tactica/pizarra-tactica.component').then(m => m.PizarraTacticaComponent)
+  },
+
+  // Shared Routes
+  { path: 'perfil', component: PerfilComponent },
+  {
+    path: 'evaluar/:id',
+    loadComponent: () => import('./pages/nueva-evaluacion/nueva-evaluacion.component').then(m => m.NuevaEvaluacionComponent)
+  },
+  {
+    path: 'progreso/:id',
+    loadComponent: () => import('./pages/alumno-progreso/alumno-progreso.component').then(m => m.AlumnoProgresoComponent)
+  },
+  {
+    path: 'clases/:id',
+    loadComponent: () => import('./pages/alumno-clases/alumno-clases.component').then(m => m.AlumnoClasesComponent)
+  },
+  {
+    path: 'mis-packs-activos',
+    loadComponent: () => import('./pages/alumno-mis-packs/alumno-mis-packs').then(m => m.AlumnoMisPacks)
+  },
+  {
+    path: 'ranking',
+    loadComponent: () => import('./pages/ranking/ranking.component').then(m => m.RankingComponent)
+  },
+  {
+    path: 'admin-dashboard',
+    loadComponent: () => import('./pages/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent)
+  },
+
+  {
+    path: 'mantenimiento',
+    loadComponent: () => import('./pages/mantenimiento/mantenimiento.component').then(m => m.MantenimientoComponent)
+  },
+
+  {
+    path: 'club-landing-config',
+    loadComponent: () => import('./pages/club-landing-config/club-landing-config.component').then(m => m.ClubLandingConfigComponent)
+  },
+  {
+    path: 'c/:slug',
+    loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+  {
+    path: 'club-landing/:slug',
+    loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+
+  { path: '**', redirectTo: '' }
+];

@@ -1,0 +1,406 @@
+@use '../../theme/colors.scss' as *;
+
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* 🏢 CLUB TABS NAV (CORE APP STYLE) */
+.club-tabs-nav {
+    background: #fff; padding: 12px 30px; border-bottom: 1px solid rgba(0,0,0,0.03); margin-bottom: 25px;
+    .tabs-scroll-container { display: flex; gap: 10px; flex-wrap: wrap; }
+    .club-tab-btn {
+        all: unset; padding: 8px 18px; background: #f8fafc; border-radius: 100px; color: #94a3b8; font-size: 13px; font-weight: 800; cursor: pointer; border: 1px solid #f1f5f9; transition: 0.2s;
+        display: flex; align-items: center; gap: 8px;
+        &:hover:not(.active) { background: #f1f5f9; color: #111; }
+        &.active { 
+            background: #0f172a; color: #ccff00; border-color: #0f172a; 
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+            .tab-badge { background: #ccff00; color: #111; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; margin-left: 5px; }
+        }
+        .tab-icon { font-size: 14px; }
+    }
+}
+
+.inventory-container {
+    padding: 30px;
+    background: #f8fafc;
+    flex: 1;
+}
+
+/* 📊 Header Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 25px;
+
+    .stat-card {
+        background: #fff;
+        padding: 12px 14px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: #f1f5f9;
+            color: #0f172a;
+            flex-shrink: 0;
+        }
+
+        .data {
+            min-width: 0;
+            label { 
+                display: block; 
+                font-size: 9px; 
+                font-weight: 800; 
+                color: #94a3b8; 
+                text-transform: uppercase; 
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            span { 
+                font-size: 16px; 
+                font-weight: 950; 
+                color: #0f172a; 
+                white-space: nowrap;
+            }
+        }
+
+        &.highlight { border-left: 4px solid #ccff00; .icon-box { background: #ccff00; color: #000; } }
+
+        &.low-stock-card {
+            transition: all 0.2s ease;
+            &:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15); }
+            &.active-filter {
+                border: 2px solid #ef4444;
+                background: #fef2f2;
+                .icon-box { background: #ef4444; color: #fff; }
+                .data label { color: #dc2626; font-weight: 900; }
+            }
+        }
+    }
+}
+
+/* 🔍 Controls Row */
+.controls-row {
+    background: #fff;
+    padding: 20px;
+    border-radius: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+
+    .search-input {
+        flex: 1;
+        max-width: 400px;
+        position: relative;
+        input { 
+            width: 100%; padding: 12px 20px 12px 45px; border-radius: 12px; border: 1px solid #e2e8f0; 
+            font-size: 14px; font-weight: 600; outline: none; transition: 0.2s;
+            &:focus { border-color: #ccff00; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.1); }
+        }
+        i { position: absolute; left: 18px; top: 15px; color: #94a3b8; }
+    }
+
+    .actions { 
+        display: flex; gap: 12px; 
+        .btn-add { 
+            background: #0f172a; color: #ccff00; border: none; padding: 12px 24px; border-radius: 12px; 
+            font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s;
+            &:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15); }
+        }
+    }
+}
+
+/* 📦 Products Table */
+.products-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+    overflow: hidden;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+
+        th { 
+            background: #f8fafc; padding: 15px 20px; text-align: left; font-size: 11px; 
+            font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        td { 
+            padding: 18px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: #334155; 
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        .prod-info {
+            .name { font-weight: 900; color: #0f172a; display: block; }
+            .cat { font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; }
+        }
+
+        .stock-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 80px; 
+            font-size: 12px; font-weight: 900;
+            &.low { background: #fee2e2; color: #ef4444; }
+            &.ok { background: #dcfce7; color: #10b981; }
+        }
+
+        .service-tag-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 80px; 
+            font-size: 11px; font-weight: 900; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+            text-transform: uppercase; letter-spacing: 0.3px;
+        }
+
+        .price { font-weight: 950; color: #0f172a; }
+
+        .actions-cell {
+            text-align: right;
+            .btn-edit { border: none; background: #f1f5f9; color: #64748b; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; transition: 0.2s; &:hover { background: #0f172a; color: #ccff00; } }
+        }
+    }
+}
+
+/* 🏷️ Categories Pill */
+.cat-pill {
+    display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 900; background: #f1f5f9; color: #475569;
+}
+
+/* 🖼️ Modal */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; z-index: 10000;
+}
+
+.modal-content {
+    background: #fff; width: 100%; max-width: 500px; border-radius: 24px; overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-header {
+    background: #0f172a; color: #fff; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center;
+    h2 { font-size: 18px; font-weight: 900; margin: 0; }
+    .btn-close { all: unset; cursor: pointer; font-size: 18px; opacity: 0.7; &:hover { opacity: 1; } }
+}
+
+.modal-body {
+    padding: 25px;
+    form {
+        display: grid; gap: 15px;
+        .input-group {
+            label { display: block; font-size: 11px; font-weight: 800; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; }
+            input, select { 
+                width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; 
+                font-weight: 700; outline: none; transition: 0.2s;
+                &:focus { border-color: #ccff00; }
+            }
+        }
+        .row-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    }
+}
+
+.modal-footer {
+    padding: 20px 25px; border-top: 1px solid #f1f5f9; display: flex; gap: 12px;
+    button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 900; cursor: pointer; transition: 0.2s; }
+    .btn-cancel { background: #f1f5f9; color: #64748b; }
+    .btn-save { background: #0f172a; color: #ccff00; box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2); }
+}
+
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.btn-delete-row {
+    &:hover { background: #fee2e2 !important; color: #ef4444 !important; }
+}
+
+/* 🏷️ Category Filter Strip (UX Design) */
+.category-filter-strip {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #fff;
+    padding: 12px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+
+    .cat-filter-btn {
+        all: unset;
+        padding: 8px 16px;
+        background: #f8fafc;
+        border-radius: 100px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        border: 1.5px solid #f1f5f9;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        &:hover {
+            border-color: #cbd5e1;
+            color: #475569;
+            background: #f1f5f9;
+        }
+
+        &.active {
+            background: #ccff00;
+            color: #000;
+            border-color: #ccff00;
+            box-shadow: 0 4px 12px rgba(204, 255, 0, 0.25);
+        }
+
+        &.low-stock-btn {
+            background: #fef2f2;
+            color: #dc2626;
+            border-color: #fca5a5;
+            &.active {
+                background: #ef4444;
+                color: #ffffff;
+                border-color: #ef4444;
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            }
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
+    }
+}
+
+/* 📄 Controles de Paginación Premium */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #fff;
+    border-top: 1px solid #f1f5f9;
+    flex-wrap: wrap;
+    gap: 15px;
+
+    .pagination-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            label {
+                font-size: 13px;
+                color: #94a3b8;
+                font-weight: 700;
+            }
+
+            select {
+                padding: 6px 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                font-weight: 700;
+                color: #0f172a;
+                outline: none;
+                cursor: pointer;
+                background: #f8fafc;
+                transition: border-color 0.2s;
+
+                &:focus {
+                    border-color: #ccff00;
+                }
+            }
+        }
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .btn-page {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover:not(:disabled) {
+                background: #f1f5f9;
+                color: #0f172a;
+                border-color: #cbd5e1;
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+
+        .btn-page-number {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #64748b;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 6px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover {
+                background: #f8fafc;
+                border-color: #e2e8f0;
+                color: #0f172a;
+            }
+
+            &.active {
+                background: #0f172a;
+                border-color: #0f172a;
+                color: #ccff00;
+                box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+            }
+        }
+    }
+}
+

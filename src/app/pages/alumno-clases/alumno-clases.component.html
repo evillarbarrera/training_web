@@ -1,0 +1,655 @@
+<div class="admin-layout">
+    <!-- 🏠 SIDEBAR MENU RE-INTEGRATED -->
+    <app-sidebar></app-sidebar>
+
+    <div class="main-content">
+        <div class="dashboard-container fade-in">
+            <!-- INTERACTIVE TUTORIAL SYSTEM -->
+            <div class="tutorial-overlay" *ngIf="showTutorial"></div>
+            
+            <div class="tutorial-card shadow-lg" *ngIf="showTutorial" [style.top]="tutorialTop" [style.left]="tutorialLeft">
+                <div class="t-header">
+                    <div class="t-step-count">Paso {{ currentTutorialStep + 1 }} de {{ tutorialSteps.length }}</div>
+                </div>
+                <div class="t-body">
+                    <h3>{{ tutorialSteps[currentTutorialStep].title }}</h3>
+                    <p>{{ tutorialSteps[currentTutorialStep].content }}</p>
+                </div>
+                <div class="t-footer">
+                    <button class="btn-skip" (click)="closeTutorial()">Saltar</button>
+                    <button class="btn-next" (click)="nextTutorialStep()">
+                        {{ currentTutorialStep === tutorialSteps.length - 1 ? '¡Listo!' : 'Siguiente' }}
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 💎 PREMIUM PROFILE HEADER -->
+            <header class="student-profile-header">
+                <div class="p-left">
+                    <div class="avatar-box">
+                        <div class="avatar-shimmer" *ngIf="!alumnoNombre"></div>
+                        <img [src]="alumnoFoto || 'assets/images/placeholder_avatar.png'" class="avatar" alt="Alumno">
+                        <div class="level-badge-float" *ngIf="alumnoProfile?.categoria">
+                            {{ alumnoProfile.categoria }}
+                        </div>
+                    </div>
+                    
+                    <div class="info">
+                        <h1 class="fade-in" style="text-transform: capitalize;">{{ alumnoNombre || 'Cargando perfil...' }}</h1>
+                        <div class="user-meta" style="margin-top: -5px; margin-bottom: 5px;">
+                            <span class="user-handle" style="color: #666; font-weight: 500;">@{{ alumnoProfile?.usuario || alumnoProfile?.email?.split('@')[0] || 'usuario' }}</span>
+                        </div>
+                        
+                        <div class="level-edit">
+                            <span>Categoría Oficial Padel Academy</span>
+                            <select class="category-select" [value]="alumnoProfile?.categoria || ''" (change)="actualizarNivel($event)">
+                                <option value="">Seleccionar Nivel</option>
+                                <optgroup label="👨 HOMBRES">
+                                    <option value="6ª">6ª Categoría</option>
+                                    <option value="5ª">5ª Categoría</option>
+                                    <option value="4ª">4ª Categoría</option>
+                                    <option value="3ª">3ª Categoría</option>
+                                    <option value="2ª">2ª Categoría</option>
+                                    <option value="1ª">1ª Categoría (Pro)</option>
+                                </optgroup>
+                                <optgroup label="👩 MUJERES">
+                                    <option value="D">Categoría D</option>
+                                    <option value="C">Categoría C</option>
+                                    <option value="B">Categoría B</option>
+                                    <option value="A">Categoría A (Pro)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-right">
+                    <button class="btn-help" (click)="startTutorial()" style="margin-bottom: 15px;">💡 Ayuda</button>
+                    <div class="progress-circle-wrap" *ngIf="hasChartData">
+                        <span class="label">Rendimiento Técnico Global</span>
+                        <div class="p-text">{{ (storedLineData[storedLineData.length-1] || 0) | number:'1.1-1' }} / 10</div>
+                        <div class="p-bar-container">
+                            <div class="p-fill" [style.width.%]="(storedLineData[storedLineData.length-1] || 0) * 10"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 📍 MASTER NAVIGATION TABS -->
+            <nav class="tabs-row">
+                <button class="tab-btn" [class.active]="activeTab === 'roadmap'" (click)="setTab('roadmap')">
+                    <span>📍</span> Hoja de Ruta
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'progreso'" (click)="setTab('progreso')">
+                    <span>📈</span> Análisis y Progreso
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'evaluar'" (click)="setTab('evaluar')" *ngIf="userRole === 'entrenador' || userRole === 'admin'">
+                    <span>📊</span> Evaluar Técnica
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'historial'" (click)="setTab('historial')">
+                    <span>📜</span> Pasado Académico
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'pagos'" (click)="setTab('pagos')">
+                    <span>💰</span> Gestión de Pagos
+                </button>
+            </nav>
+
+            <!-- 🚀 VIEW 1: ROADMAP (SESIONES) -->
+            <div class="view-content fade-in" *ngIf="activeTab === 'roadmap'">
+                <div class="section-intro">
+                    <h2>Hoja de Ruta del Jugador</h2>
+                    <p>Tu evolución técnica definida por el Coach para alcanzar el siguiente nivel.</p>
+                </div>
+
+                <!-- 🧩 ROADMAP TABS: BY ALL STUDENT PACKS -->
+                <div class="sub-nav" *ngIf="roadmapPacks.length > 0">
+                    <button class="sn-btn" *ngFor="let p of roadmapPacks" [class.active]="selectedPack?.id === p.id" (click)="seleccionarPackRoadmap(p)">
+                        📦 {{ p.nombre }}
+                    </button>
+                    <span class="history-label" style="margin-left: auto; color: #ccff00; font-size: 11px; font-weight: 700;">PLANES ACTIVOS</span>
+                </div>
+
+                <div class="roadmap-grid" *ngIf="historialMalla.length > 0">
+                    <div class="sesion-card professional-sheet fade-in" *ngFor="let sesion of historialMalla; let i = index" [ngClass]="sesion.estado_asistencia">
+                        <!-- Top status line -->
+                        <div class="sheet-status-bar"></div>
+                        
+                        <div class="s-header">
+                            <div class="sheet-id">S-{{ (i + 1) | number:'2.0' }}</div>
+                            <div class="status-badge-mini" [ngClass]="sesion.estado_asistencia">
+                                {{ sesion.estado_asistencia === 'proxima' ? 'Agendada' : (sesion.estado_asistencia === 'completada' ? 'OK' : 'Pte') }}
+                            </div>
+                        </div>
+
+                        <div class="s-content">
+                            <div class="sheet-main-row">
+                                <h3 class="session-title">{{ sesion.titulo }}</h3>
+                                <span class="mesh-badge-mini">{{ selectedPack?.activeMesh?.malla_nombre || 'Plan' }}</span>
+                            </div>
+                            
+                            <div class="objectives-list-compact" *ngIf="sesion.lista_objetivos?.length > 0">
+                                <div class="obj-item-mini" *ngFor="let obj of sesion.lista_objetivos | slice:0:2">
+                                    <span class="dot"></span> {{ obj }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="s-footer-compact">
+                            <div class="date-info-mini">
+                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'d/MM') : '??/??' }}</span>
+                                <span class="v time-m" *ngIf="sesion.hora">@{{ sesion.hora | slice:0:5 }}</span>
+                            </div>
+                            
+                            <button class="btn-sheet-mini" (click)="abrirPanelDetalle(sesion)">
+                                Ficha →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="no-data-card" *ngIf="historialMalla.length === 0">
+                    <div class="icon">📋</div>
+                    <h3>Sin Planificación Activa</h3>
+                    <p>El coach aún no ha definido las sesiones pedagógicas para el pack <strong>{{ selectedPack?.nombre }}</strong>.</p>
+                    
+                    <!-- 🛠 COACH ACTION: ASSIGN MALLA -->
+                    <div class="coach-assign-box" *ngIf="userRole === 'entrenador' || userRole === 'admin'">
+                        <p class="small">Como Entrenador, puedes iniciar un plan ahora:</p>
+                        <div class="assign-form">
+                            <select class="category-select" #mallaSelector>
+                                <option value="">Seleccionar Plan de Entrenamiento</option>
+                                <option *ngFor="let m of availableMallas" [value]="m.id">{{ m.nombre }}</option>
+                            </select>
+                            <button class="btn-primary-neon" (click)="asignarMalla(mallaSelector.value)">
+                                Iniciar Planificación →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📊 VIEW 2: CENTRO DE PROGRESO (Charts / Details / Videos) -->
+            <div class="view-content fade-in" *ngIf="activeTab === 'progreso'">
+                <div class="sub-nav">
+                    <button class="sn-btn" [class.active]="activeProgresoSubTab === 'graficos'" (click)="activeProgresoSubTab = 'graficos'">📊 Radar Técnico</button>
+                    <button class="sn-btn" [class.active]="activeProgresoSubTab === 'detalle'" (click)="activeProgresoSubTab = 'detalle'">📍 Desglose por Golpe</button>
+                    <button class="sn-btn" [class.active]="activeProgresoSubTab === 'videos'" (click)="activeProgresoSubTab = 'videos'">🎥 Videoteca IA</button>
+                </div>
+
+                <!-- CHARTS GRID -->
+                <div class="charts-gallery fade-in" *ngIf="activeProgresoSubTab === 'graficos'">
+                    <div class="main-chart-card radar">
+                        <div class="c-info">
+                            <h3>Mapa de Habilidades</h3>
+                            <p>Distribución técnica actual</p>
+                        </div>
+                        <div class="canvas-wrap">
+                            <canvas id="webRadarChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="main-chart-card radar">
+                        <div class="c-info">
+                            <h3>Métricas Tácticas</h3>
+                            <p>Toma de decisiones y posición</p>
+                        </div>
+                        <div class="canvas-wrap">
+                            <canvas id="webTacticoChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="main-chart-card radar">
+                        <div class="c-info">
+                            <h3>Métricas Físicas</h3>
+                            <p>Potencia, agilidad y coordinación</p>
+                        </div>
+                        <div class="canvas-wrap">
+                            <canvas id="webFisicoChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="main-chart-card radar">
+                        <div class="c-info">
+                            <h3>Métricas Mentales</h3>
+                            <p>Confianza, foco y comunicación</p>
+                        </div>
+                        <div class="canvas-wrap">
+                            <canvas id="webMentalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SKILLS CARDS GRID -->
+                <div class="skills-grid fade-in" *ngIf="activeProgresoSubTab === 'detalle'">
+                    <div class="skill-detail-card hover-glow" *ngFor="let label of storedRadarLabels; let i = index" (click)="verDetalleGolpe(label)">
+                        <div class="s-header">
+                            <span class="s-name">{{ label }}</span>
+                            <span class="s-score">{{ (storedRadarData[i] || 0) | number:'1.1-1' }}</span>
+                        </div>
+                        <span class="s-label">Promedio de Sesiones</span>
+                        <div class="s-bar-bg">
+                            <div class="s-bar-fill" [style.width.%]="(storedRadarData[i] || 0) * 10"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIDEOS VIEW -->
+                <div class="videos-gallery fade-in" *ngIf="activeProgresoSubTab === 'videos'">
+                    <div class="video-header-row">
+                        <div class="v-title">
+                            <h2>Videoteca de Entrenamiento</h2>
+                            <p>Analizando cada movimiento con Inteligencia Artificial.</p>
+                        </div>
+                        <button class="btn-primary-neon" (click)="triggerVideoUpload()" *ngIf="userRole === 'entrenador' || userRole === 'admin'">
+                            ➕ Subir Nuevo Clip
+                        </button>
+                    </div>
+
+                    <div class="sub-nav" style="margin-bottom: 30px;">
+                        <button class="sn-btn" *ngFor="let cat of availableVideoCategories" [class.active]="activeVideoCategory === cat" (click)="activeVideoCategory = cat">
+                            {{ cat }}
+                        </button>
+                    </div>
+
+                    <!-- 🎥 VIDEO GRID & STATES -->
+                    <div class="video-grid">
+                        
+                        <!-- 🦴 SKELETON LOADERS (While fetching) -->
+                        <ng-container *ngIf="isVideosLoading">
+                            <div class="skeleton-card" *ngFor="let i of [1,2,3]">
+                                <div class="sk-media"></div>
+                                <div class="sk-body">
+                                    <div class="sk-line title"></div>
+                                    <div class="sk-line meta"></div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <!-- 💎 PREMIUM EMPTY STATE -->
+                        <div class="empty-state-premium fade-in" *ngIf="!isVideosLoading && filteredVideos.length === 0">
+                            <div class="empty-illustration">🎥</div>
+                            <h3>Videoteca Vacía</h3>
+                            <p>Aún no hay clips analizados en esta categoría. Sube un nuevo video para comenzar el análisis con IA.</p>
+                            <button class="btn-action-empty" (click)="triggerVideoUpload()" *ngIf="userRole === 'entrenador'">
+                                ➕ Subir mi primer clip
+                            </button>
+                        </div>
+
+                        <!-- 🎬 VIDEO CARDS -->
+                        <div class="v-card fade-in" *ngFor="let vid of filteredVideos">
+                            <div class="v-media">
+                                <!-- OVERLAY SI ESTA ANALIZANDO -->
+                                <div class="analysis-overlay" *ngIf="isAnalyzing[vid.id]">
+                                    <div class="spinner-neon"></div>
+                                    <span>Analizando con IA...</span>
+                                </div>
+                                
+                                <video [src]="vid.video_url" controls *ngIf="!isAnalyzing[vid.id]"></video>
+                                
+                                <button class="btn-delete-vid" *ngIf="userRole === 'entrenador' || userRole === 'admin'" (click)="confirmDeleteVideo(vid)" title="Eliminar Video">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div class="v-body">
+                                <div class="v-meta-row">
+                                    <h4>{{ vid.titulo }}</h4>
+                                    <span class="v-cat">{{ vid.categoria }}</span>
+                                </div>
+                                
+                                <div class="v-ai-report" *ngIf="aiResults[vid.id] && !isAnalyzing[vid.id]">
+                                    <div class="ai-badge">🤖 Reporte IA</div>
+                                    <p>"{{ aiResults[vid.id].FeedbackGeneral | slice:0:80 }}..."</p>
+                                </div>
+
+                                <div class="v-ai-report pending" *ngIf="isAnalyzing[vid.id]">
+                                    <div class="ai-badge" style="color: #666;">🤖 Procesando...</div>
+                                    <p>Estamos trabajando en tu análisis técnico detallado.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔄 LOADING OVERLAY -->
+            <div class="global-loader" *ngIf="isLoading">
+                <div class="loader-content">
+                    <div class="spinner-neon"></div>
+                    <p>Procesando...</p>
+                </div>
+            </div>
+
+            <!-- 📊 VIEW 3: EVALUAR TÉCNICA (Coach Only) -->
+            <div class="view-content fade-in" *ngIf="activeTab === 'evaluar'">
+                <div class="sub-nav">
+                    <button class="sn-btn" [class.active]="activeEvalSubTab === 'tecnico'" (click)="activeEvalSubTab = 'tecnico'">🎾 Técnico</button>
+                    <button class="sn-btn" [class.active]="activeEvalSubTab === 'tactico'" (click)="activeEvalSubTab = 'tactico'">🧠 Táctico</button>
+                    <button class="sn-btn" [class.active]="activeEvalSubTab === 'fisico'" (click)="activeEvalSubTab = 'fisico'">🏃‍♂️ Físico</button>
+                    <button class="sn-btn" [class.active]="activeEvalSubTab === 'mental'" (click)="activeEvalSubTab = 'mental'">🧘 Mental</button>
+                </div>
+
+                <div class="eval-grid" *ngIf="activeEvalSubTab === 'tecnico'">
+                    <div class="eval-header-card">
+                        <h2>Comité Técnico (Golpes)</h2>
+                        <p>Puntúa el desempeño del alumno en cada golpe (1-10).</p>
+                        <div class="quick-actions">
+                            <button type="button" (click)="setAllEvaluationScores(5, $event)">Set Todos a 5</button>
+                            <button type="button" (click)="setAllEvaluationScores(7, $event)">Set Todos a 7</button>
+                        </div>
+                    </div>
+
+                    <div class="strokes-form">
+                        <div class="stroke-item-card" *ngFor="let golpe of golpes">
+                            <div class="s-head">
+                                <h3>{{ golpe }}</h3>
+                                <div class="s-avg">{{ getGolpePromedio(golpe) | number:'1.1-1' }}</div>
+                            </div>
+                            
+                            <div class="metrics-grid">
+                                <div class="m-field">
+                                    <label>Técnica</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateEvaluationScore(golpe, 'tecnica', -1, $event)">-</button>
+                                        <span class="v-num">{{ evaluationData[golpe]?.tecnica || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateEvaluationScore(golpe, 'tecnica', 1, $event)">+</button>
+                                    </div>
+                                </div>
+                                <div class="m-field">
+                                    <label>Control</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateEvaluationScore(golpe, 'control', -1, $event)">-</button>
+                                        <span class="v-num">{{ evaluationData[golpe]?.control || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateEvaluationScore(golpe, 'control', 1, $event)">+</button>
+                                    </div>
+                                </div>
+                                <div class="m-field">
+                                    <label>Dirección</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateEvaluationScore(golpe, 'direccion', -1, $event)">-</button>
+                                        <span class="v-num">{{ evaluationData[golpe]?.direccion || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateEvaluationScore(golpe, 'direccion', 1, $event)">+</button>
+                                    </div>
+                                </div>
+                                <div class="m-field">
+                                    <label>Decisión</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateEvaluationScore(golpe, 'decision', -1, $event)">-</button>
+                                        <span class="v-num">{{ evaluationData[golpe]?.decision || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateEvaluationScore(golpe, 'decision', 1, $event)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <textarea *ngIf="evaluationData[golpe]" [(ngModel)]="evaluationData[golpe].comentario" placeholder="Anotaciones extra para {{ golpe }}..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🧠 COMITÉ TÁCTICO -->
+                <div class="eval-grid" *ngIf="activeEvalSubTab === 'tactico'">
+                    <div class="eval-header-card">
+                        <h2>Comité Táctico (Estrategia)</h2>
+                        <p>Evaluación de la toma de decisiones y posicionamiento estratégico.</p>
+                    </div>
+
+                    <div class="strokes-form tactical-grid">
+                        <div class="stroke-item-card" *ngFor="let t of tacticas">
+                            <div class="s-head">
+                                <h3>{{ t }}</h3>
+                                <div class="s-avg">{{ (tacticalData[t]?.valor || 1) | number:'1.1-1' }}</div>
+                            </div>
+
+                            <div class="metrics-grid" style="grid-template-columns: 1fr;">
+                                <div class="m-field">
+                                    <label>Nivel de Ejecución / Decisión</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateTacticoScore(t, -1, $event)">-</button>
+                                        <span class="v-num">{{ tacticalData[t]?.valor || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateTacticoScore(t, 1, $event)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <textarea *ngIf="tacticalData[t]" [(ngModel)]="tacticalData[t].comentario" placeholder="Anotación táctica sobre {{ t }}..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🏃‍♂️ COMITÉ FÍSICO -->
+                <div class="eval-grid" *ngIf="activeEvalSubTab === 'fisico'">
+                    <div class="eval-header-card fisico">
+                        <h2>Comité Físico (Atleta)</h2>
+                        <p>Evaluación de las capacidades físicas y motrices del alumno.</p>
+                    </div>
+
+                    <div class="strokes-form tactical-grid">
+                        <div class="stroke-item-card fis" *ngFor="let f of fisicos">
+                            <div class="s-head">
+                                <h3>{{ f }}</h3>
+                                <div class="s-avg">{{ (fisicoData[f]?.valor || 1) | number:'1.1-1' }}</div>
+                            </div>
+
+                            <div class="metrics-grid" style="grid-template-columns: 1fr;">
+                                <div class="m-field">
+                                    <label>Puntuación Física</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateFisicoScore(f, -1, $event)">-</button>
+                                        <span class="v-num">{{ fisicoData[f]?.valor || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateFisicoScore(f, 1, $event)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea *ngIf="fisicoData[f]" [(ngModel)]="fisicoData[f].comentario" placeholder="Anotación sobre {{ f }}..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🧘 COMITÉ MENTAL -->
+                <div class="eval-grid" *ngIf="activeEvalSubTab === 'mental'">
+                    <div class="eval-header-card mental">
+                        <h2>Comité Mental (Psicología)</h2>
+                        <p>Evaluación de la fortaleza mental, actitud y gestión del estrés.</p>
+                    </div>
+
+                    <div class="strokes-form tactical-grid">
+                        <div class="stroke-item-card men" *ngFor="let m of mentales">
+                            <div class="s-head">
+                                <h3>{{ m }}</h3>
+                                <div class="s-avg">{{ (mentalData[m]?.valor || 1) | number:'1.1-1' }}</div>
+                            </div>
+
+                            <div class="metrics-grid" style="grid-template-columns: 1fr;">
+                                <div class="m-field">
+                                    <label>Puntuación Mental</label>
+                                    <div class="val-ctrl-premium">
+                                        <button type="button" class="minus" (click)="updateMentalScore(m, -1, $event)">-</button>
+                                        <span class="v-num">{{ mentalData[m]?.valor || 1 }}</span>
+                                        <button type="button" class="plus" (click)="updateMentalScore(m, 1, $event)">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea *ngIf="mentalData[m]" [(ngModel)]="mentalData[m].comentario" placeholder="Anotación sobre {{ m }}..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="save-bar fade-in">
+                        <div class="sb-info">
+                            <h3 class="sb-title">Conclusión de la Sesión</h3>
+                            <p>Añade un resumen general sobre el desempeño y objetivos para la próxima clase.</p>
+                        </div>
+                        <textarea [(ngModel)]="evaluacionComentarios" placeholder="Ej: Gran avance en la empuñadura, seguiremos trabajando la volea..."></textarea>
+                        
+                        <button class="btn-primary-neon" (click)="guardarEvaluacion()" [disabled]="isLoading">
+                            🚀 Publicar Evaluación Trazable
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 📜 VIEW 4: PASADO ACADÉMICO -->
+            <div class="view-content fade-in" *ngIf="activeTab === 'historial'">
+                <div class="section-intro">
+                    <h2>Pasado Académico</h2>
+                    <p>Revisa tu historial de planificaciones y hojas de ruta completadas.</p>
+                </div>
+
+                <!-- 🧩 HISTORY TABS -->
+                <div class="sub-nav" *ngIf="historialPacks.length > 0">
+                    <button class="sn-btn" *ngFor="let p of historialPacks" [class.active]="selectedPack?.id === p.id" (click)="seleccionarPackRoadmap(p)">
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                            <span style="font-weight: 700;">📦 {{ p.nombre }}</span>
+                            <span style="font-size: 10px; opacity: 0.7;">Comprado: {{ p.fecha_inicio | date:'dd/MM/yy' }}</span>
+                        </div>
+                    </button>
+                    <span class="history-label" style="margin-left: auto; color: #94a3b8; font-size: 12px; font-weight: 700;">PLANES COMPLETADOS</span>
+                </div>
+
+                <div class="roadmap-grid" *ngIf="historialMalla.length > 0">
+                    <div class="sesion-card professional-sheet fade-in completada" *ngFor="let sesion of historialMalla; let i = index">
+                        <div class="sheet-status-bar"></div>
+                        <div class="s-header">
+                            <div class="sheet-id">S-{{ (i + 1) | number:'2.0' }}</div>
+                            <div class="status-badge-mini completada">Finalizada</div>
+                        </div>
+                        <div class="s-content">
+                            <div class="sheet-main-row">
+                                <h3 class="session-title">{{ sesion.titulo }}</h3>
+                                <span class="mesh-badge-mini" style="background: #f1f5f9; color: #64748b;">{{ selectedPack?.activeMesh?.malla_nombre || 'Archivo' }}</span>
+                            </div>
+                        </div>
+                        <div class="s-footer-compact">
+                            <div class="date-info-mini">
+                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'d/MM/yy') : 'Hist' }}</span>
+                            </div>
+                            <button class="btn-sheet-mini" (click)="abrirPanelDetalle(sesion)">
+                                Ver Ficha →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="no-data-card" *ngIf="historialPacks.length === 0">
+                    <div class="icon">📚</div>
+                    <h3>Sin Historial Finalizado</h3>
+                    <p>Aún no tienes planificaciones pedagógicas completadas para archivar.</p>
+                </div>
+            </div>
+
+            <!-- 💰 VIEW 4: PAGOS & PACKS -->
+            <div class="view-content fade-in" *ngIf="activeTab === 'pagos'">
+                <div class="no-data-card" *ngIf="alumnoPacks.length === 0">
+                    <div class="icon">💰</div>
+                    <h3>Sin Packs Registrados</h3>
+                    <p>No se han encontrado packs de entrenamiento para este alumno.</p>
+                </div>
+                
+                <!-- SUB-TABS PAGOS -->
+                <div class="sub-nav" style="margin-bottom: 30px;" *ngIf="alumnoPacks.length > 0">
+                    <button class="sn-btn" [class.active]="activePacksSubTab === 'individuales'" (click)="activePacksSubTab = 'individuales'">
+                        👤 Individuales ({{ packsIndividuales.length }})
+                    </button>
+                    <button class="sn-btn" [class.active]="activePacksSubTab === 'grupales'" (click)="activePacksSubTab = 'grupales'">
+                        🎾 Grupales ({{ packsGrupales.length }})
+                    </button>
+                </div>
+
+                <div class="packs-container" *ngIf="alumnoPacks.length > 0">
+                    <!-- DISPLAY GRUPALES -->
+                    <div class="packs-grid" *ngIf="activePacksSubTab === 'grupales'">
+                        <div class="no-data-card" *ngIf="packsGrupales.length === 0" style="width: 100%; grid-column: 1 / -1;">
+                            <div class="icon">🎾</div>
+                            <h3>Sin Clases Grupales</h3>
+                            <p>No se han encontrado registros de packs grupales.</p>
+                        </div>
+
+                        <!-- MONTH/YEAR SUB-NAV -->
+                        <div class="month-tabs" *ngIf="grupalPeriodKeys.length > 1">
+                            <button *ngFor="let k of grupalPeriodKeys" 
+                                    [class.active]="activeGrupalPeriod === k"
+                                    (click)="activeGrupalPeriod = k"
+                                    class="month-dot">
+                                {{ k }}
+                            </button>
+                        </div>
+
+                        <!-- RENDER FILTERED GRUPALES -->
+                        <div class="packs-grid" *ngIf="activePacksSubTab === 'grupales'">
+                            <div class="grupal-card fade-in" *ngFor="let p of groupedPacksGrupales[activeGrupalPeriod]">
+                                <div class="grupal-indicator"></div>
+                                <div class="grupal-content">
+                                    <div class="grupal-header">
+                                        <div class="day-label">
+                                            <h3 class="text-uppercase">{{ p.dia_semana != null ? getDayName(p.dia_semana) : (p.fecha_inicio | date:'EEEE':'':'es') }} {{ p.fecha_inicio | date:'dd MMM' }}</h3>
+                                        </div>
+                                        <div class="status-badge" [class.active]="p.estado === 'activo' || p.estado_inscripcion === 'activo'">
+                                            INSCRITO
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grupal-details">
+                                        <div class="detail-item">
+                                            <i class="fas fa-clock"></i>
+                                            <span>{{ p.hora_inicio | slice:0:5 }} ({{ p.duracion_sesion_min || 120 }} MIN)</span>
+                                        </div>
+                                        <div class="pack-tag">
+                                            {{ p.pack_nombre || p.nombre }} • {{ p.categoria || 'Nivel Único' }}
+                                        </div>
+                                    </div>
+
+                                    <div class="inscritos-row">
+                                        <div class="participants-badge">
+                                            <i class="fas fa-users"></i>
+                                            <span>Sesión Grupal: {{ p.cupos_ocupados || 0 }} / {{ p.capacidad_maxima || 6 }} Jugadores</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DISPLAY INDIVIDUALES -->
+                    <div class="packs-grid" *ngIf="activePacksSubTab === 'individuales'">
+                        <div class="no-data-card" *ngIf="packsIndividuales.length === 0" style="width: 100%; grid-column: 1 / -1;">
+                            <div class="icon">👤</div>
+                            <h3>Sin Clases Individuales</h3>
+                            <p>No se han encontrado registros de packs individuales o multijugador.</p>
+                        </div>
+                        <div class="pack-card fade-in" *ngFor="let p of packsIndividuales">
+                            <div class="p-header">
+                                <div class="p-title-wrap">
+                                    <h3>{{ p.pack_nombre }}</h3>
+                                    <p class="p-date">{{ p.fecha_inicio | date:'dd/MM/yyyy' }}</p>
+                                </div>
+                                <span class="p-pay-status" [ngClass]="p.estado_pago || 'pendiente'">
+                                    {{ (p.estado_pago === 'pagado') ? '✅ PAGADO' : '⏳ PENDIENTE' }}
+                                </span>
+                            </div>
+                            <div class="p-body">
+                                <div class="metric-row">
+                                    <span class="m-label">Clases Realizadas:</span>
+                                    <strong class="m-val">{{ p.sesiones_pasadas || 0 }} / {{ p.sesiones_totales }}</strong>
+                                </div>
+                                <div class="p-bar-bg"><div class="p-bar-fill" [style.width.%]="(p.sesiones_pasadas/p.sesiones_totales)*100"></div></div>
+                                <div class="metric-row secondary">
+                                    <span class="m-label">Reservadas:</span>
+                                    <strong>{{ p.sesiones_reservadas || 0 }} / {{ p.sesiones_totales }}</strong>
+                                </div>
+                                <div class="p-details-row">
+                                    <div class="p-detail">
+                                        <span class="l">Inversión:</span>
+                                        <span class="v">${{ (p.precio_pagado || 0) | number }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-footer" *ngIf="p.estado_pago !== 'pagado' && userRole === 'entrenador'">
+                                <button class="btn-confirm-pay" (click)="marcarPagado(p)">✅ Marcar Pagado</button>
+                                <button class="btn-remind-pay" (click)="enviarRecordatorioPago(p)">🔔 Aviso</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

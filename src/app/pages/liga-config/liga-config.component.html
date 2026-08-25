@@ -1,0 +1,223 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="userName" [role]="userRole" activePage="ligas">
+  </app-sidebar>
+
+  <main class="main-content">
+    <header class="top-header">
+      <div class="breadcrumbs">
+        <span>Competición</span> <span class="separator">/</span> <span class="current">Configuración de Liga</span>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <div class="header-title animate-in">
+        <h1>{{ ligaId ? '✏️ Editar Liga: ' + ligaNombre : '⚙️ Configuración de Nueva Liga' }}</h1>
+        <p>Define el afiche promocional, precio de inscripción, categorías y visibilidad en la App Móvil.</p>
+      </div>
+
+      <div *ngIf="mensajeExito" class="alert alert-success animate-in">
+        {{ mensajeExito }}
+      </div>
+
+      <div *ngIf="errorMsj" class="alert alert-error animate-in">
+        {{ errorMsj }}
+      </div>
+
+      <div class="card-glass animate-in">
+        <h3 class="section-title">📌 Información General y Visibilidad</h3>
+        
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Nombre de la Liga *</label>
+            <input type="text" [(ngModel)]="ligaNombre" placeholder="Ej: Liga Apertura PadelBlox 2026" class="custom-input" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Precio de Inscripción ($)</label>
+            <input type="number" [(ngModel)]="precio" placeholder="0.00" class="custom-input" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Fecha Inicio *</label>
+            <input type="date" [(ngModel)]="fechaInicio" class="custom-input" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Fecha Fin *</label>
+            <input type="date" [(ngModel)]="fechaFin" class="custom-input" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Estado de la Liga</label>
+            <select [(ngModel)]="estado" class="custom-input">
+              <option value="Inscripción">Inscripción</option>
+              <option value="En Curso">En Curso</option>
+              <option value="Playoffs">Playoffs</option>
+              <option value="Finalizada">Finalizada (Histórica)</option>
+            </select>
+          </div>
+          <div class="form-group flex-1 toggle-group">
+            <label>Visibilidad App Móvil</label>
+            <label class="toggle-switch">
+              <input type="checkbox" [(ngModel)]="visibleApp" />
+              <span class="slider"></span>
+              <span class="toggle-text">{{ visibleApp ? '📱 Activa en App' : '🔒 Oculta en App' }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción / Reglamento General</label>
+          <textarea [(ngModel)]="descripcion" placeholder="Detalles de inscripciones, días de juego, premios..." class="custom-textarea" rows="2"></textarea>
+        </div>
+
+        <!-- AFICHE / IMAGEN PROMOCIONAL -->
+        <div class="form-group">
+          <label>🖼️ Afiche / Imagen Promocional de la Liga</label>
+          <div class="poster-upload-box">
+            <div *ngIf="imagenUrl" class="poster-preview">
+              <img [src]="imagenUrl" alt="Poster Promocional" />
+            </div>
+            <div class="upload-controls">
+              <input type="file" (change)="onFileSelected($event)" accept="image/*" id="posterInput" class="file-input-hidden" />
+              <label for="posterInput" class="btn-secondary-upload">
+                {{ uploadingPoster ? 'Subiendo...' : (imagenUrl ? '🔄 Cambiar Afiche' : '📁 Seleccionar Imagen Promocional') }}
+              </label>
+              <small *ngIf="imagenUrl" class="url-hint">URL: {{ imagenUrl }}</small>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- DEFINICIÓN DE CATEGORÍAS -->
+        <div class="section-header-flex">
+          <div>
+            <h3 class="section-title">🏷️ Categorías de la Liga</h3>
+            <p class="subtitle-hint">Agrega las categorías que disputarán esta liga (ej: 1ª Masculina, 3ª Mixta, Damas B).</p>
+          </div>
+          <button class="btn-secondary-add" (click)="agregarCategoria()">➕ Agregar Categoría</button>
+        </div>
+
+        <div class="categories-list">
+          <div *ngFor="let cat of categorias; let i = index" class="category-box">
+            <div class="box-header">
+              <span class="box-num">Categoría #{{ i + 1 }}</span>
+              <button class="btn-remove" (click)="eliminarCategoria(i)" *ngIf="categorias.length > 1">✕ Eliminar</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label>Nombre Categoría</label>
+                <input type="text" [(ngModel)]="cat.nombre" placeholder="Ej: 2ª Categoría Masculina" class="custom-input" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Género</label>
+                <select [(ngModel)]="cat.genero" class="custom-input">
+                  <option value="Caballeros">Caballeros</option>
+                  <option value="Damas">Damas</option>
+                  <option value="Mixto">Mixto</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label>Max Parejas</label>
+                <input type="number" [(ngModel)]="cat.max_parejas" class="custom-input" />
+              </div>
+              <div class="form-group flex-1">
+                <label>Pasan a Playoff</label>
+                <input type="number" [(ngModel)]="cat.parejas_clasifican_playoff" class="custom-input" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <h3 class="section-title">🏆 Asignación de Puntos de Liga (Por Partido)</h3>
+        <div class="points-grid">
+          <div class="point-card">
+            <div class="badge-icon">2-0</div>
+            <label>Victoria en 2 Sets</label>
+            <input type="number" [(ngModel)]="reglas.puntos_victoria_normal" class="point-input" />
+            <small>Puntos por ganar 2-0</small>
+          </div>
+
+          <div class="point-card">
+            <div class="badge-icon">2-1</div>
+            <label>Victoria en Set Decisivo / Super TB</label>
+            <input type="number" [(ngModel)]="reglas.puntos_victoria_decisivo" class="point-input" />
+            <small>Puntos por ganar 2-1</small>
+          </div>
+
+          <div class="point-card">
+            <div class="badge-icon">P</div>
+            <label>Derrota Jugada</label>
+            <input type="number" [(ngModel)]="reglas.puntos_derrota_jugada" class="point-input" />
+            <small>Puntos por jugar y perder</small>
+          </div>
+
+          <div class="point-card alert-wo">
+            <div class="badge-icon wo">WO</div>
+            <label>Derrota por No Show / WO</label>
+            <input type="number" [(ngModel)]="reglas.puntos_derrota_wo" class="point-input" />
+            <small>Puntos penalización WO</small>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <h3 class="section-title">🎖️ Puntos de Ranking por Jugador (Participación y Posición Final)</h3>
+        <p class="subtitle-hint">Puntos individuales que sumará cada jugador a su ranking general de la academia al concluir la liga.</p>
+        <div class="points-grid">
+          <div class="point-card">
+            <div class="badge-icon">PART</div>
+            <label>Puntos Participación</label>
+            <input type="number" [(ngModel)]="reglas.puntos_ranking_participacion" class="point-input" />
+            <small>Por inscribirse y competir</small>
+          </div>
+
+          <div class="point-card">
+            <div class="badge-icon">🥇 1º</div>
+            <label>1º Puesto (Campeón)</label>
+            <input type="number" [(ngModel)]="reglas.puntos_ranking_primer_lugar" class="point-input" />
+            <small>Puntos al 1er Lugar</small>
+          </div>
+
+          <div class="point-card">
+            <div class="badge-icon">🥈 2º</div>
+            <label>2º Puesto (Subcampeón)</label>
+            <input type="number" [(ngModel)]="reglas.puntos_ranking_segundo_lugar" class="point-input" />
+            <small>Puntos al 2do Lugar</small>
+          </div>
+
+          <div class="point-card">
+            <div class="badge-icon">🥉 3º</div>
+            <label>3º Puesto (Tercero)</label>
+            <input type="number" [(ngModel)]="reglas.puntos_ranking_tercer_lugar" class="point-input" />
+            <small>Puntos al 3er Lugar</small>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <h3 class="section-title">📊 Prioridad de Criterios de Desempate</h3>
+        <p class="subtitle-hint">Ordena la prioridad que utilizará el sistema para clasificar las parejas igualadas en la tabla de posiciones.</p>
+        
+        <div class="tiebreak-list">
+          <div *ngFor="let criterio of reglas.criterios_desempate; let i = index" class="tiebreak-item">
+            <span class="rank">{{ i + 1 }}º Prioridad</span>
+            <span class="criterio-label">{{ criterio | uppercase }}</span>
+            <div class="btn-group">
+              <button (click)="moverCriterio(i, 'up')" [disabled]="i === 0" class="btn-arrow" title="Subir prioridad">▲</button>
+              <button (click)="moverCriterio(i, 'down')" [disabled]="i === reglas.criterios_desempate.length - 1" class="btn-arrow" title="Bajar prioridad">▼</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions-footer">
+          <button class="btn-primary-neon" (click)="guardarConfiguracion()" [disabled]="loading">
+            {{ loading ? 'Guardando Liga...' : (ligaId ? '💾 Guardar Cambios de la Liga' : '💾 Crear y Publicar Liga') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

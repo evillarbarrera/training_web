@@ -1,0 +1,476 @@
+<div class="admin-layout" [class.sidebar-open]="isSidebarOpen">
+    <!-- Mobile Toggle -->
+    <button class="mobile-nav-toggle" (click)="toggleSidebar()">
+        <span>{{ isSidebarOpen ? '✕' : '☰' }}</span>
+    </button>
+
+    <!-- Sidebar: High Growth Focus -->
+    <aside class="admin-sidebar" [class.open]="isSidebarOpen">
+        <div class="sidebar-header">
+            <img src="assets/images/logo-circular.png" class="logo-icon" alt="OverDrive" />
+            <h2>Over<span class="accent">Drive</span></h2>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-player-widget"  *ngIf="adminFoto">
+                <img [src]="adminFoto || 'assets/images/placeholder_avatar.png'" class="avatar-img-large" alt="Admin" />
+            </div>
+            <div class="admin-name-tag">{{ adminNombre }}</div>
+
+            <div class="menu-sections">
+                <a class="nav-item" [class.active]="activeTab === 'resumen'" (click)="switchTab('resumen')">
+                    <span class="icon">📊</span>
+                    <span>RESUMEN EJECUTIVO</span>
+                </a>
+                <a class="nav-item" [class.active]="activeTab === 'entrenadores'"
+                    (click)="switchTab('entrenadores')">
+                    <span class="icon">🎾</span>
+                    <span>COACHES Y ACADEMIAS</span>
+                </a>
+                <a class="nav-item" [class.active]="activeTab === 'analiticas'" (click)="switchTab('analiticas')">
+                    <span class="icon">📈</span>
+                    <span>ANÁLISIS DE TRÁFICO</span>
+                </a>
+                <a class="nav-item" [class.active]="activeTab === 'clubes'" (click)="switchTab('clubes')">
+                    <span class="icon">🏟️</span>
+                    <span>GESTIÓN DE SEDES</span>
+                </a>
+                <a class="nav-item" [class.active]="activeTab === 'config'" (click)="switchTab('config')">
+                    <span class="icon">⚙️</span>
+                    <span>CONFIGURACIÓN GLOBAL</span>
+                </a>
+                <a class="nav-item" (click)="navigate('/perfil')">
+                    <span class="icon">👤</span>
+                    <span>MI PERFIL</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" (click)="logout()">
+                <span class="icon">🚪</span>
+                <span>CERRAR SESIÓN</span>
+            </button>
+        </div>
+    </aside>
+
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="page-title">OverDrive Admin Center</h1>
+        </div>
+    </header>
+
+    <!-- PRO SUBSCRIPTION LOCK -->
+    <div class="billing-overlay animate-fade" *ngIf="isBlocked">
+        <div class="overlay-icon">🔒</div>
+        <h2 class="overlay-title">ACCESO RESTRINGIDO</h2>
+        <p class="overlay-text">
+            Esta cuenta no tiene una suscripción activa. Para acceder al panel de administración global, debes activar un plan profesional.
+        </p>
+        <button (click)="goToBilling()" class="btn-billing-action">
+            VER PLANES DISPONIBLES
+        </button>
+        <p class="overlay-footer">OverDrive Cloud Platform v2.5</p>
+    </div>
+
+    <main class="main-content">
+        <div class="dashboard-wrapper fade-in">
+
+            <!-- TAB: RESUMEN EJECUTIVO -->
+            <ng-container *ngIf="activeTab === 'resumen'">
+                <div class="page-header-v2">
+                    <div class="title-block">
+                        <h1 class="premium-title-v2">PANEL DE <span>CONTROL</span></h1>
+                        <p class="premium-subtitle-v2">Ecosistema OverDrive: Métricas consolidadas.</p>
+                    </div>
+
+                    <div class="header-filters">
+                        <select [(ngModel)]="selectedMonth" (change)="onFilterChange()" class="filter-select-modern">
+                            <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
+                        </select>
+                        <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select-modern">
+                            <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="stats-cards-grid" *ngIf="!isLoading && stats">
+                    <!-- Ingresos -->
+                    <div class="stat-card urgent">
+                        <div class="icon-container">💰</div>
+                        <div class="stat-info">
+                            <span class="label">COMISIONES ACUMULADAS</span>
+                            <div class="value-wrapper">
+                                <span class="value">${{ stats.ingresos_packs | number:'1.0-0' }}</span>
+                                <span class="trend up">+4.2%</span>
+                            </div>
+                            <span class="subtext">Ingresos por venta de suscripciones</span>
+                        </div>
+                        <div class="pulse-dot"></div>
+                    </div>
+
+                    <!-- Coaches -->
+                    <div class="stat-card">
+                        <div class="icon-container">🎾</div>
+                        <div class="stat-info" *ngIf="growthStats">
+                            <span class="label">COACHES TOTALES</span>
+                            <div class="value-wrapper">
+                                <span class="value">{{ stats.total_entrenadores }}</span>
+                                <span class="trend" [class.up]="growthStats.entrenadores.porcentaje >= 0">
+                                    {{ growthStats.entrenadores.porcentaje > 0 ? '+' : '' }}{{ growthStats.entrenadores.porcentaje | number:'1.0-1' }}%
+                                </span>
+                            </div>
+                            <span class="subtext">{{ growthStats.entrenadores.actual }} registrados este mes</span>
+                        </div>
+                    </div>
+
+                    <!-- Jugadores -->
+                    <div class="stat-card">
+                        <div class="icon-container">👥</div>
+                        <div class="stat-info" *ngIf="growthStats">
+                            <span class="label">JUGADORES EN RED</span>
+                            <div class="value-wrapper">
+                                <span class="value">{{ stats.total_jugadores }}</span>
+                                <span class="trend" [class.up]="growthStats.jugadores.porcentaje >= 0">
+                                    {{ growthStats.jugadores.porcentaje > 0 ? '+' : '' }}{{ growthStats.jugadores.porcentaje | number:'1.0-1' }}%
+                                </span>
+                            </div>
+                            <span class="subtext">{{ growthStats.jugadores.actual }} altas recientemente</span>
+                        </div>
+                    </div>
+
+                    <!-- Traffic -->
+                    <div class="stat-card" style="border-right: 4px solid var(--pm-primary);">
+                        <div class="icon-container" style="background: #000; color: #ccff00;">⚡</div>
+                        <div class="stat-info">
+                            <span class="label">TRÁFICO ACTUAL</span>
+                            <div class="value-wrapper">
+                                <span class="value">{{ stats.online_now || 0 }}</span>
+                                <span class="trend">ACTIVE</span>
+                            </div>
+                            <span class="subtext">Usuarios navegando en vivo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SOCIAL SECTION -->
+                <section class="social-section" *ngIf="socialStats">
+                    <div class="section-header">
+                        <h3>Métricas de Audiencia</h3>
+                    </div>
+                    <div class="social-card-pm">
+                        <div class="social-left">
+                            <span class="platform-tag">INSTAGRAM</span>
+                            <span class="handle">@overdrive</span>
+                            <button class="btn-visit" (click)="navigateExternal('https://www.instagram.com/overdrive/')">Ver Cuenta</button>
+                        </div>
+                        <div class="social-right">
+                            <div class="stat-box">
+                                <span class="s-val">{{ socialStats.instagram.seguidores }}</span>
+                                <span class="s-lab">Fans</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="s-val">{{ socialStats.instagram.engagement }}</span>
+                                <span class="s-lab">Engagement</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="charts-section-v2" *ngIf="!isLoading">
+                    <div class="charts-row-pm">
+                        <div class="chart-container-pm">
+                            <div class="chart-header">
+                                <h3>Flujo de Ingresos</h3>
+                            </div>
+                            <div class="canvas-box">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-container-pm">
+                             <div class="chart-header">
+                                <h3>Adquisición de Usuarios</h3>
+                            </div>
+                            <div class="canvas-box">
+                                <canvas id="usersPacksChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- TAB: COACHES HUB -->
+            <ng-container *ngIf="activeTab === 'entrenadores'">
+                <div class="page-intro-v2">
+                    <h1 class="premium-title-v2">COACHES <span>HUB</span></h1>
+                    <p class="premium-subtitle-v2">Gestión y monitoreo de academias activas.</p>
+                </div>
+
+                <div class="admin-split-view-v2">
+                    <div class="coach-list-v2">
+                        <div class="search-box">
+                            <input type="text" [(ngModel)]="coachSearchQuery" placeholder="Buscar coach..." class="filter-select-modern" style="width: 100%;">
+                        </div>
+                        <div class="coach-scrollable">
+                            <div class="coach-item-mini" *ngFor="let e of filteredEntrenadores" 
+                                 [class.active]="selectedEntrenador?.id === e.id" (click)="verDetalle(e)">
+                                <img [src]="e.foto_perfil || 'assets/images/placeholder_avatar.png'" alt="">
+                                <div class="c-meta">
+                                    <span class="c-name">{{ e.nombre }}</span>
+                                    <span class="c-sub">{{ e.total_alumnos || 0 }} alumnos</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="coach-detail-v2" *ngIf="selectedEntrenador">
+                        <div class="detail-card main-hero">
+                             <div class="hero-left">
+                                <img [src]="selectedEntrenador.foto_perfil || 'assets/images/placeholder_avatar.png'" class="big-avatar" alt="">
+                                <div class="hero-text">
+                                    <h2>{{ selectedEntrenador.nombre }}</h2>
+                                    <div class="hero-sub-tags">
+                                        <span class="tag">@{{ selectedEntrenador.usuario }}</span>
+                                        <span class="plan-tag-pm">{{ getPlanName(selectedEntrenador.plan_id) }}</span>
+                                    </div>
+                                </div>
+                             </div>
+                             <div class="hero-actions">
+                                <button class="btn-config" (click)="switchTab('config')">Configurar</button>
+                             </div>
+                        </div>
+
+                        <div class="detail-grids-pm mt-6" *ngIf="entrenadorStats">
+                            <div class="grid-stat-pm">
+                                <span class="l">Alumnos</span>
+                                <span class="v">{{ selectedEntrenador.total_alumnos || 0 }}</span>
+                            </div>
+                            <div class="grid-stat-pm">
+                                <span class="l">Packs Vendidos</span>
+                                <span class="v">{{ selectedEntrenador.total_packs || 0 }}</span>
+                            </div>
+                            <div class="grid-stat-pm">
+                                <span class="l">Ingresos Totales</span>
+                                <span class="v">${{ (entrenadorStats.ventas?.ingresos_totales || 0) | number:'1.0-0' }}</span>
+                            </div>
+                            <div class="grid-stat-pm">
+                                <span class="l">Reservas (F/P)</span>
+                                <span class="v">{{ entrenadorStats.reservas?.futuras || 0 }} / {{ entrenadorStats.reservas?.pasadas || 0 }}</span>
+                            </div>
+                            <div class="grid-stat-pm" [class.connected]="entrenadorStats.conectividad?.mercadopago">
+                                <span class="l">Mercado Pago</span>
+                                <span class="v">{{ entrenadorStats.conectividad?.mercadopago ? 'VINCULADO' : 'SIN VINCULAR' }}</span>
+                            </div>
+                            <div class="grid-stat-pm">
+                                <span class="l">Email</span>
+                                <span class="v small-text">{{ selectedEntrenador.email || 'N/A' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- MESES CON DISPONIBILIDAD -->
+                        <div class="availability-section mt-6" *ngIf="entrenadorStats">
+                            <h3 class="section-title-sm">Meses con Disponibilidad Creada</h3>
+                            <div class="availability-badges-list" *ngIf="entrenadorStats.meses_disponibilidad && entrenadorStats.meses_disponibilidad.length > 0">
+                                <span class="availability-badge" *ngFor="let mes of entrenadorStats.meses_disponibilidad">
+                                    📅 {{ mes }}
+                                </span>
+                            </div>
+                            <p class="no-data-msg" *ngIf="!entrenadorStats.meses_disponibilidad || entrenadorStats.meses_disponibilidad.length === 0">
+                                ⚠️ Sin disponibilidad creada en ningún mes.
+                            </p>
+                        </div>
+
+                        <!-- PACKS CREADOS -->
+                        <div class="packs-section mt-6" *ngIf="entrenadorStats">
+                            <h3 class="section-title-sm">Packs de Clases Creados</h3>
+                            <div class="packs-list-v2" *ngIf="entrenadorStats.packs_creados_list && entrenadorStats.packs_creados_list.length > 0">
+                                <div class="pack-item-mini-card" *ngFor="let pack of entrenadorStats.packs_creados_list">
+                                    <div class="p-info">
+                                        <span class="p-name">{{ pack.nombre }}</span>
+                                        <span class="p-meta">{{ pack.sesiones_totales }} clases | {{ pack.duracion_sesion_min }} min | {{ pack.tipo | uppercase }}</span>
+                                    </div>
+                                    <div class="p-price-status">
+                                        <span class="p-price">${{ pack.precio | number:'1.0-0' }}</span>
+                                        <span class="p-status-badge" [class.active]="pack.activo === 1">
+                                            {{ pack.activo === 1 ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="no-data-msg" *ngIf="!entrenadorStats.packs_creados_list || entrenadorStats.packs_creados_list.length === 0">
+                                ⚠️ No ha creado packs de clases.
+                            </p>
+                        </div>
+
+                        <!-- ACTIONS SECTION -->
+                        <div class="actions-header-sm mt-6" *ngIf="entrenadorStats">
+                            <h3 class="section-title-sm">Acciones de Gestión e Incentivos</h3>
+                        </div>
+                        <div class="action-footer-pm mt-2" *ngIf="entrenadorStats">
+                            <button class="btn-bank-data" (click)="verDatosBancarios(selectedEntrenador)">
+                                <span class="icon">💳</span> CONFIGURAR PAGOS
+                            </button>
+
+                            <!-- Bienvenida -->
+                            <button *ngIf="selectedEntrenador.total_alumnos > 0" 
+                                    class="btn-welcome-mail" 
+                                    (click)="enviarBienvenida(selectedEntrenador)">
+                                <span class="icon">📧</span> ENVIAR BIENVENIDA
+                            </button>
+                            
+                            <!-- Reactivación -->
+                            <button *ngIf="!selectedEntrenador.total_alumnos || selectedEntrenador.total_alumnos == 0" 
+                                    class="btn-reactivation-mail" 
+                                    (click)="enviarReactivacion(selectedEntrenador)">
+                                <span class="icon">🚀</span> ENVIAR REACTIVACIÓN
+                            </button>
+                        </div>
+
+                        <div class="incentive-actions-row mt-3" *ngIf="entrenadorStats">
+                            <!-- Incentivo crear packs -->
+                            <button class="btn-incentive-mail" 
+                                    [class.highlight-alert]="entrenadorStats.packs?.total === 0"
+                                    (click)="enviarIncentivoPacks(selectedEntrenador)">
+                                <span class="icon">📦</span> INCENTIVAR PACKS
+                                <span class="badge-alert" *ngIf="entrenadorStats.packs?.total === 0">Requerido</span>
+                            </button>
+
+                            <!-- Incentivo agenda/disponibilidad -->
+                            <button class="btn-incentive-mail" 
+                                    [class.highlight-alert]="!entrenadorStats.meses_disponibilidad || entrenadorStats.meses_disponibilidad.length === 0"
+                                    (click)="enviarIncentivoDisponibilidad(selectedEntrenador)">
+                                <span class="icon">📅</span> INCENTIVAR AGENDA
+                                <span class="badge-alert" *ngIf="!entrenadorStats.meses_disponibilidad || entrenadorStats.meses_disponibilidad.length === 0">Requerido</span>
+                            </button>
+
+                            <!-- Incentivo MP -->
+                            <button class="btn-incentive-mail" 
+                                    [class.highlight-alert]="!entrenadorStats.conectividad?.mercadopago"
+                                    (click)="enviarIncentivoMercadoPago(selectedEntrenador)">
+                                <span class="icon">💳</span> INCENTIVAR MP
+                                <span class="badge-alert" *ngIf="!entrenadorStats.conectividad?.mercadopago">Requerido</span>
+                            </button>
+                        </div>
+
+                        <!-- WHATSAPP DIRECT INCENTIVES -->
+                        <div class="actions-header-sm mt-5" *ngIf="entrenadorStats">
+                            <h3 class="section-title-sm">Incentivos directos por WhatsApp</h3>
+                        </div>
+                        <div class="whatsapp-actions-grid mt-2" *ngIf="entrenadorStats">
+                            <button class="btn-wa-action" (click)="enviarWABienvenida(selectedEntrenador)">
+                                <span class="icon">💬</span> WA: BIENVENIDA
+                            </button>
+
+                            <button class="btn-wa-action" 
+                                    [class.highlight-wa]="entrenadorStats.packs?.total === 0"
+                                    (click)="enviarWAPacks(selectedEntrenador)">
+                                <span class="icon">💬</span> WA: PACKS
+                                <span class="badge-alert" *ngIf="entrenadorStats.packs?.total === 0">Requerido</span>
+                            </button>
+
+                            <button class="btn-wa-action" 
+                                    [class.highlight-wa]="!entrenadorStats.meses_disponibilidad || entrenadorStats.meses_disponibilidad.length === 0"
+                                    (click)="enviarWADisponibilidad(selectedEntrenador)">
+                                <span class="icon">💬</span> WA: AGENDA
+                                <span class="badge-alert" *ngIf="!entrenadorStats.meses_disponibilidad || entrenadorStats.meses_disponibilidad.length === 0">Requerido</span>
+                            </button>
+
+                            <button class="btn-wa-action" 
+                                    [class.highlight-wa]="!entrenadorStats.conectividad?.mercadopago"
+                                    (click)="enviarWAMercadoPago(selectedEntrenador)">
+                                <span class="icon">💬</span> WA: MERCADO PAGO
+                                <span class="badge-alert" *ngIf="!entrenadorStats.conectividad?.mercadopago">Requerido</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="empty-detail-v2" *ngIf="!selectedEntrenador">
+                         <div class="empty-message">
+                            <span class="icon">🎾</span>
+                            <p>Selecciona un coach para ver su reporte detallado.</p>
+                         </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- TAB: ANALYTICS -->
+            <ng-container *ngIf="activeTab === 'analiticas'">
+                <div class="page-intro-v2">
+                    <h1 class="premium-title-v2">PLATFORM <span>METRICS</span></h1>
+                    <p class="premium-subtitle-v2">Demografía y comportamiento de uso.</p>
+                </div>
+
+                <div class="traffic-section-pm full">
+                     <div class="chart-container-pm">
+                        <h3>Tráfico Histórico</h3>
+                        <div class="canvas-box" style="height: 400px;">
+                            <canvas id="trafficChart"></canvas>
+                        </div>
+                     </div>
+                </div>
+
+                <div class="analytics-radial-grid mt-6">
+                    <div class="radial-card">
+                        <h3>Plataformas</h3>
+                        <div class="canvas-box-radial"><canvas id="deviceChart"></canvas></div>
+                    </div>
+                    <div class="radial-card">
+                        <h3>Audiencia por Género</h3>
+                        <div class="canvas-box-radial"><canvas id="genderChart"></canvas></div>
+                    </div>
+                    <div class="radial-card">
+                        <h3>Top Regiones</h3>
+                        <div class="canvas-box-radial"><canvas id="regionChart"></canvas></div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- TAB: GESTIÓN DE SEDES -->
+            <ng-container *ngIf="activeTab === 'clubes'">
+                <div class="page-intro-v2">
+                    <h1 class="premium-title-v2">GESTIÓN DE <span>SEDES</span></h1>
+                    <p class="premium-subtitle-v2">Administración y módulos activos por club.</p>
+                </div>
+
+                <div class="empty-detail-v2" *ngIf="loadingClubes">
+                    <div class="empty-message">
+                        <span class="icon">⌛</span>
+                        <p>Cargando sedes...</p>
+                    </div>
+                </div>
+
+                <div class="clubes-grid-pm mt-6" *ngIf="!loadingClubes">
+                    <div class="club-card-pm" *ngFor="let club of allClubes">
+                        <div class="c-header">
+                            <img [src]="club.logo || 'assets/images/placeholder_avatar.png'" alt="Logo Club" class="club-logo-pm">
+                            <div class="c-info">
+                                <h3>{{ club.nombre }}</h3>
+                                <p>{{ club.comuna }}, {{ club.region }}</p>
+                            </div>
+                        </div>
+                        <div class="c-body">
+                            <p class="c-address"><span class="icon">📍</span> {{ club.direccion }}</p>
+                        </div>
+                        <div class="c-modules">
+                            <div class="mod-toggle">
+                                <span>Reservas Activas</span>
+                                <label class="switch-pm">
+                                    <input type="checkbox" [checked]="club.reservas_activas == 1" (change)="toggleClubModule(club, 'reservas')">
+                                    <span class="slider-pm round"></span>
+                                </label>
+                            </div>
+                            <div class="mod-toggle">
+                                <span>Academia Activa</span>
+                                <label class="switch-pm">
+                                    <input type="checkbox" [checked]="club.academia_activa == 1" (change)="toggleClubModule(club, 'academia')">
+                                    <span class="slider-pm round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+        </div>
+    </main>
+</div>

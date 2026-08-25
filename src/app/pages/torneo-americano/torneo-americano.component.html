@@ -1,0 +1,849 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="americanos">
+    </app-sidebar>
+
+    <main class="main-content">
+
+        <div class="dashboard-container">
+            <div class="header-main">
+                <h1>Gestión de Torneos</h1>
+                <p>Crea y administra tus torneos americanos.</p>
+            </div>
+
+            <!-- TAB NAVIGATION -->
+            <div class="main-tabs-nav">
+                <button class="tab-btn" [class.active]="activeTab === 'list'" (click)="activeTab = 'list'">
+                    <span class="icon">🏆</span> Ver Mis Torneos
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'create'" (click)="activeTab = 'create'">
+                    <span class="icon">➕</span> Crear Nuevo Torneo
+                </button>
+                <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+                    <span class="icon">📜</span> Historial
+                </button>
+            </div>
+
+            <div class="main-grid">
+                <!-- VISTA: CREAR TORNEO -->
+                <div class="view-container" *ngIf="activeTab === 'create'">
+                    <div class="card glass-card">
+                        <div class="card-header">
+                            <h2>Configurar Nuevo Torneo Americano</h2>
+                        </div>
+                        <div class="form-section full-width">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label><span class="label-icon">🏢</span> Club</label>
+                                    <select [(ngModel)]="torneo.club_id">
+                                        <option *ngFor="let c of clubes" [value]="c.id">{{ c.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">📝</span> Nombre del Torneo</label>
+                                    <input type="text" [(ngModel)]="torneo.nombre"
+                                        placeholder="Ej: Americano Verano 2026">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">📅</span> Fecha</label>
+                                    <input type="date" [(ngModel)]="torneo.fecha">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">⏰</span> Hora Inicio</label>
+                                    <input type="time" [(ngModel)]="torneo.hora_inicio">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">🏆</span> Tipo de Torneo</label>
+                                    <select [(ngModel)]="torneo.tipo_torneo">
+                                        <option value="estandar">Americano Estándar (Todos contra todos)</option>
+                                        <option value="grupos">Americano Mini Torneo (8 Parejas + Semis)</option>
+                                    </select>
+                                    <small class="form-hint" *ngIf="torneo.tipo_torneo === 'grupos'">Ideal para 8
+                                        parejas con llaves finales.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">🏷️</span> Modalidad de Inscripción</label>
+                                    <select [(ngModel)]="torneo.modalidad">
+                                        <option value="unicategoria">Categoría Única</option>
+                                        <option value="suma">Suma "X" (Nivel Pareja)</option>
+                                        <option value="mixto">Mixtos (Hombre/Mujer)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group animate-in" *ngIf="torneo.modalidad === 'suma'">
+                                    <label><span class="label-icon">➕</span> Valor de Suma</label>
+                                    <input type="number" [(ngModel)]="torneo.valor_suma" placeholder="Ej: 9">
+                                </div>
+                                <div class="form-group animate-in" *ngIf="torneo.modalidad !== 'mixto'">
+                                    <label><span class="label-icon">🚻</span> Género</label>
+                                    <select [(ngModel)]="torneo.genero">
+                                        <option value="Varones">Varones</option>
+                                        <option value="Damas">Damas</option>
+                                    </select>
+                                </div>
+                                <div class="form-group animate-in" *ngIf="torneo.modalidad === 'unicategoria'">
+                                    <label><span class="label-icon">📊</span> Categoría</label>
+                                    <select [(ngModel)]="torneo.categoria">
+                                        <optgroup label="Open / Masculino" *ngIf="torneo.genero === 'Varones'">
+                                            <option value="Primera">Primera</option>
+                                            <option value="Segunda">Segunda</option>
+                                            <option value="Tercera">Tercera</option>
+                                            <option value="Cuarta">Cuarta</option>
+                                            <option value="Quinta">Quinta</option>
+                                            <option value="Sexta">Sexta</option>
+                                        </optgroup>
+                                        <optgroup label="Damas" *ngIf="torneo.genero === 'Damas'">
+                                            <option value="Primera Damas">1ª Damas</option>
+                                            <option value="Segunda Damas">2ª Damas</option>
+                                            <option value="Tercera Damas">3ª Damas</option>
+                                            <option value="Cuarta Damas">4ª Damas</option>
+                                            <option value="Quinta Damas">5ª Damas</option>
+                                            <option value="Sexta Damas">6ª Damas</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">🎾</span> Cantidad de Canchas</label>
+                                    <input type="number" [(ngModel)]="torneo.num_canchas" min="1" max="10">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">👥</span> Máximo de Parejas</label>
+                                    <input type="number" [(ngModel)]="torneo.max_parejas" placeholder="Ej: 8">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">⏱️</span> Minutos por Partido</label>
+                                    <input type="number" [(ngModel)]="torneo.tiempo_por_partido" placeholder="20">
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="label-icon">💵</span> Precio por Persona</label>
+                                    <input type="number" [(ngModel)]="torneo.precio" placeholder="Ej: 15000">
+                                </div>
+                            </div>
+
+                            <div class="points-config-header">
+                                <span class="icon">⭐</span>
+                                <span>Puntos para el Ranking (APP)</span>
+                            </div>
+
+                            <div class="form-grid points-grid">
+                                <div class="form-group points-item">
+                                    <label>🥇 1° Lugar</label>
+                                    <input type="number" [(ngModel)]="torneo.puntos_1er_lugar">
+                                </div>
+                                <div class="form-group points-item">
+                                    <label>🥈 2° Lugar</label>
+                                    <input type="number" [(ngModel)]="torneo.puntos_2do_lugar">
+                                </div>
+                                <div class="form-group points-item">
+                                    <label>🥉 3° Lugar</label>
+                                    <input type="number" [(ngModel)]="torneo.puntos_3er_lugar">
+                                </div>
+                                <div class="form-group points-item">
+                                    <label>🎟️ Participación</label>
+                                    <input type="number" [(ngModel)]="torneo.puntos_participacion">
+                                </div>
+                            </div>
+
+                            <div class="actions-row-centered">
+                                <button class="btn-create-premium" (click)="crearTorneo()">
+                                    🚀 Crear y Publicar Torneo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA: LISTA DE TORNEOS -->
+                <!-- VISTA: LISTA DE TORNEOS (ACTIVOS) -->
+                <div class="view-container" *ngIf="activeTab === 'list'">
+
+                    <!-- TORNEOS ACTIVOS MENU (Horizontal) -->
+                    <div class="main-tabs-nav scroll-x">
+                        <ng-container *ngFor="let t of torneos">
+                            <button *ngIf="t.estado === 'Abierto'" class="tab-btn big-tab"
+                                [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
+                                <div class="btn-content">
+                                    <div class="frc" style="justify-content: space-between; width: 100%;">
+                                        <span class="btn-title">{{ t.nombre }}</span>
+                                        <span class="badge" [style.background]="'#dcfce7'" [style.color]="'#166534'"
+                                            style="font-size: 9px; padding: 2px 6px; border-radius: 10px;">
+                                            Abierto
+                                        </span>
+                                    </div>
+                                    <span class="btn-subtitle">
+                                        {{ t.fecha | date:'dd/MM' }} | {{ t.hora_inicio }}
+                                    </span>
+                                </div>
+                            </button>
+                        </ng-container>
+                        <div *ngIf="!hasActiveTournaments()" class="empty-state">No hay torneos activos.</div>
+                    </div>
+
+                    <!-- DETALLE (Full Width Below) -->
+                    <ng-container *ngTemplateOutlet="tournamentDetail"></ng-container>
+                </div>
+
+                <!-- VISTA: HISTORIAL (CERRADOS) -->
+                <div class="view-container" *ngIf="activeTab === 'history'">
+                    <div class="main-tabs-nav scroll-x">
+                        <ng-container *ngFor="let t of torneos">
+                            <button *ngIf="t.estado !== 'Abierto'" class="tab-btn big-tab"
+                                [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
+                                <div class="btn-content">
+                                    <div class="frc" style="justify-content: space-between; width: 100%;">
+                                        <span class="btn-title">{{ t.nombre }}</span>
+                                        <span class="badge" [style.background]="'#fee2e2'" [style.color]="'#991b1b'"
+                                            style="font-size: 9px; padding: 2px 6px; border-radius: 10px;">
+                                            Cerrado
+                                        </span>
+                                    </div>
+                                    <span class="btn-subtitle">
+                                        {{ t.fecha | date:'dd/MM' }} | {{ t.hora_inicio }}
+                                    </span>
+                                </div>
+                            </button>
+                        </ng-container>
+                        <div *ngIf="!hasHistoryTournaments()" class="empty-state">No hay torneos en el historial.
+                        </div>
+                    </div>
+
+                    <!-- DETALLE (Full Width Below) -->
+                    <ng-container *ngTemplateOutlet="tournamentDetail"></ng-container>
+                </div>
+
+                <!-- TEMPLATE REUTILIZABLE PARA EL DETALLE -->
+                <ng-template #tournamentDetail>
+                    <div class="detail-column full-width" *ngIf="selectedTorneo">
+                        <!-- SUB-TABS (ON TOP like main tabs) -->
+                        <div class="main-tabs-nav">
+                            <button class="tab-btn" [class.active]="activeDetailTab === 'editar'"
+                                (click)="activeDetailTab = 'editar'">
+                                <span class="icon">✏️</span> Editar
+                            </button>
+                            <button class="tab-btn" [class.active]="activeDetailTab === 'inscription'"
+                                (click)="activeDetailTab = 'inscription'">
+                                <span class="icon">📝</span> Inscripción
+                            </button>
+                            <button class="tab-btn" [class.active]="activeDetailTab === 'fixture'"
+                                (click)="activeDetailTab = 'fixture'">
+                                <span class="icon">📅</span> Fixture
+                            </button>
+                            <button class="tab-btn" [class.active]="activeDetailTab === 'ranking'"
+                                (click)="activeDetailTab = 'ranking'">
+                                <span class="icon">📊</span> Posiciones
+                            </button>
+                        </div>
+
+                        <div class="card glass-card detail-card">
+                            <div class="card-header">
+                                <div class="header-info">
+                                    <h2>{{ selectedTorneo.nombre }}</h2>
+                                    <div class="header-badges">
+                                        <span class="badge" [class.badge-open]="!isCerrado"
+                                            [class.badge-closed]="isCerrado">
+                                            {{ isCerrado ? 'Cerrado' : 'Abierto' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="header-actions" *ngIf="!isCerrado" style="display: flex; gap: 10px;">
+                                    <button class="btn-cancel-edit" (click)="cancelarTorneo(selectedTorneo.id)"
+                                        style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+                                        🗑️ Cancelar Torneo
+                                    </button>
+                                    <button class="btn-close-torneo" (click)="cerrarTorneo(selectedTorneo.id)">
+                                        🏁 Cerrar Americano
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- TAB: EDITAR -->
+                            <div class="tab-content" *ngIf="activeDetailTab === 'editar'">
+                                <div class="management-section" *ngIf="!isCerrado">
+                                    <h3>Editar Torneo Americano</h3>
+                                    <div class="form-grid">
+                                        <div class="form-group" style="grid-column: span 2;">
+                                            <label>Nombre del Torneo</label>
+                                            <input type="text" [(ngModel)]="selectedTorneo.nombre">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Fecha</label>
+                                            <input type="date" [(ngModel)]="selectedTorneo.fecha">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Hora Inicio</label>
+                                            <input type="time" [(ngModel)]="selectedTorneo.hora_inicio">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Precio por Persona</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.precio">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Minutos por Partido</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.tiempo_por_partido">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Cantidad de Canchas</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.num_canchas" min="1" max="10">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Máximo de Parejas</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.max_parejas">
+                                        </div>
+                                    </div>
+                                    <div class="form-footer" style="margin-top: 20px;">
+                                        <button class="btn-primary" (click)="actualizarAmericano()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                                    </div>
+                                </div>
+                                <div *ngIf="isCerrado" class="empty-state">
+                                    El torneo está cerrado, no se puede editar.
+                                </div>
+                            </div>
+
+                            <!-- TAB: INSCRIPCION -->
+                            <div class="tab-content" *ngIf="activeDetailTab === 'inscription'">
+                                <div class="management-section" *ngIf="!isCerrado">
+                                    <h3>Inscripción de Parejas</h3>
+
+                                    <!-- Búsqueda y Armado de Pareja -->
+                                    <div class="pair-builder-container">
+                                        <div class="search-section">
+                                            <input type="text" [(ngModel)]="searchTerm" (input)="searchPlayers()"
+                                                placeholder="Buscar jugador...">
+                                            <div class="search-results" *ngIf="searchTerm.length > 2 || filteredUsers.length > 0">
+                                                <!-- Listado de usuarios registrados coincidentes -->
+                                                <div *ngFor="let u of filteredUsers" class="search-item"
+                                                    (click)="selectPlayerForPair(u)">
+                                                    <span class="player-name">{{ u.nombre }}</span>
+                                                    <small class="player-email">📧 {{ u.usuario }}</small>
+                                                </div>
+
+                                                <!-- Divisor si hay ambos tipos de resultados -->
+                                                <div class="search-divider" *ngIf="filteredUsers.length > 0 && searchTerm.length > 2"></div>
+
+                                                <!-- Botón premium de agregar invitado manual -->
+                                                <div class="search-item manual-add-btn" *ngIf="searchTerm.length > 2" (click)="addManualPlayer(searchTerm)">
+                                                    <div class="manual-add-icon">👤</div>
+                                                    <div class="manual-add-details">
+                                                        <span class="manual-add-title">Agregar a <strong>"{{ searchTerm }}"</strong></span>
+                                                        <span class="manual-add-subtitle">Inscribir como jugador invitado (externo)</span>
+                                                        <span class="manual-add-badge">⚠️ No suma puntos para el ranking</span>
+                                                    </div>
+                                                    <div class="manual-add-action-icon">➕</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="slots-container">
+                                            <div class="pair-slot" [class.filled]="pairingSlot1">
+                                                <span class="slot-label">J1</span>
+                                                <span class="slot-value">{{ pairingSlot1 ? pairingSlot1.nombre : '...'
+                                                    }}</span>
+                                                <button class="remove-btn" *ngIf="pairingSlot1"
+                                                    (click)="removePlayerFromPair(1)">×</button>
+                                            </div>
+                                            <div class="vs-mini">&</div>
+                                            <div class="pair-slot" [class.filled]="pairingSlot2">
+                                                <span class="slot-label">J2</span>
+                                                <span class="slot-value">{{ pairingSlot2 ? pairingSlot2.nombre : '...'
+                                                    }}</span>
+                                                <button class="remove-btn" *ngIf="pairingSlot2"
+                                                    (click)="removePlayerFromPair(2)">×</button>
+                                            </div>
+                                            <button class="btn-add-pair" [disabled]="!pairingSlot1 && !pairingSlot2"
+                                                (click)="addPair()">
+                                                {{ editingParticipanteId ? 'Actualizar' : 'Inscribir' }}
+                                            </button>
+                                            <button class="btn-cancel-edit" *ngIf="editingParticipanteId"
+                                                (click)="cancelEdit()">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Listado de Inscritos -->
+                                <div class="management-section" style="margin-top: 2rem;">
+                                    <h3>Parejas Inscritas ({{ participantes.length }})</h3>
+                                    <div class="registered-list">
+                                        <div *ngFor="let p of participantes; let i = index" class="registered-item">
+                                            <div class="couple-info">
+                                                <span class="badge-number">P{{ i + 1 }}</span>
+                                                <div class="team-names-check">
+                                                    <span class="player-check" [class.present]="p.check_in_1" (click)="toggleCheckIn(p, 1)" title="Marcar/Desmarcar asistencia">
+                                                        <span class="check-icon">{{ p.check_in_1 ? '✅' : '⬜' }}</span>
+                                                        {{ p.jugador1_nombre }}
+                                                    </span>
+                                                    <span class="player-separator">/</span>
+                                                    <span class="player-check" [class.present]="p.check_in_2" (click)="toggleCheckIn(p, 2)" title="Marcar/Desmarcar asistencia">
+                                                        <span class="check-icon">{{ p.check_in_2 ? '✅' : '⬜' }}</span>
+                                                        {{ p.jugador2_nombre }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="item-actions" *ngIf="!isCerrado">
+                                                <button class="btn-edit-small" (click)="editPair(p)" title="Editar">
+                                                    ✏️
+                                                </button>
+                                                <button class="btn-delete-small" (click)="removePair(p.id)"
+                                                    title="Eliminar">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div *ngIf="participantes.length === 0" class="empty-msg">No hay parejas
+                                            inscritas.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: FIXTURE -->
+                            <div class="tab-content" *ngIf="activeDetailTab === 'fixture'">
+                                <div class="management-section">
+                                    <div class="section-header-row frc"
+                                        style="justify-content: space-between; margin-bottom: 30px;">
+                                        <div class="frc gap-10">
+                                            <span class="icon" style="font-size: 24px;">📅</span>
+                                            <h3 style="margin: 0; border: none; padding: 0;">Fixture del Torneo</h3>
+                                        </div>
+                                        <div class="actions frc gap-10">
+                                            <!-- ACCIONES DISPONIBLES CUANDO NO ESTÁ CERRADO -->
+                                            <ng-container *ngIf="!isCerrado">
+                                                <button *ngIf="matches.length === 0" class="btn-create-premium"
+                                                    style="padding: 10px 20px; font-size: 13px;"
+                                                    [disabled]="participantes.length < 2"
+                                                    (click)="generarPartidos(selectedTorneo.id)">
+                                                    ⚡ Generar Fixture
+                                                </button>
+
+                                                <button *ngIf="isGrupos && matches.length > 0 && !hasPhase('Semifinales')"
+                                                    class="btn-primary small" (click)="closeGroupsAndGeneratePlayoffs()">
+                                                    🏆 Generar Semifinales
+                                                </button>
+
+                                                <button *ngIf="isGrupos && hasPhase('Semifinales') && !hasPhase('Finales')"
+                                                    class="btn-primary small"
+                                                    style="background: #eab308; border-color: #ca8a04;"
+                                                    (click)="generateFinals()">
+                                                    🏁 Generar Finales
+                                                </button>
+
+                                                <button *ngIf="matches.length > 0" class="btn-cancel-edit"
+                                                    style="padding: 8px 15px; font-size: 11px;"
+                                                    (click)="generarPartidos(selectedTorneo.id)">
+                                                    🔄 Reiniciar Todo
+                                                </button>
+                                            </ng-container>
+
+                                            <!-- BOTÓN REVELACIÓN GANADORES -->
+                                            <button class="btn-reveal-winners animate-pulse" *ngIf="participantes.length > 0" (click)="startReveal()"
+                                                style="padding: 10px 20px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #1e293b; border: 1px solid #f59e0b; border-radius: 8px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); cursor: pointer;">
+                                                ✨ Revelar Ganadores (Animación)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="fixture-content animate-in" *ngIf="matches.length > 0">
+
+                                        <!-- Phase Tabs -->
+                                        <div class="round-mini-tabs"
+                                            style="background: #f1f5f9; padding: 4px; border-radius: 14px; margin-bottom: 30px;"
+                                            *ngIf="matchesGrouped.length > 1">
+                                            <button *ngFor="let fase of matchesGrouped" class="rm-btn"
+                                                [class.active]="activeFaseTab === fase.name"
+                                                (click)="activeFaseTab = fase.name">
+                                                {{ fase.name }}
+                                            </button>
+                                        </div>
+
+                                        <!-- Active Phase Content -->
+                                        <div *ngFor="let fase of matchesGrouped">
+                                            <div class="fase-container" *ngIf="activeFaseTab === fase.name">
+
+                                                <div class="groups-layout"
+                                                    [class.split-view]="fase.name === 'Grupos' && fase.groups.length === 2">
+                                                    <div *ngFor="let grupo of fase.groups" class="group-column">
+                                                        <div class="fase-header"
+                                                            style="margin-top: 20px; border-bottom: none;">
+                                                            <div class="fase-icon">
+                                                                {{ grupo.name === 'Oro' ? '🥇' : (grupo.name === 'Plata'
+                                                                ?
+                                                                '🥈' : '📊') }}
+                                                            </div>
+                                                            <h3 class="fase-title">
+                                                                {{ grupo.name === 'Oro' ? 'Copa de Oro' :
+                                                                (grupo.name === 'Plata' ? 'Copa de Plata' :
+                                                                (grupo.name === 'General' ? 'Tabla Única' : 'Grupo ' +
+                                                                grupo.name)) }}
+                                                            </h3>
+                                                        </div>
+
+                                                        <!-- Round Selectors -->
+                                                        <div class="round-mini-tabs" *ngIf="grupo.rounds.length > 1">
+                                                            <button *ngFor="let round of grupo.rounds" class="rm-btn"
+                                                                [class.active]="grupo.activeRound === round.number"
+                                                                (click)="grupo.activeRound = round.number">
+                                                                Ronda {{ round.number }}
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Round Content -->
+                                                        <div *ngFor="let round of grupo.rounds">
+                                                            <div class="round-group animate-in"
+                                                                *ngIf="grupo.activeRound === round.number || grupo.rounds.length === 1">
+                                                                <!-- Don't show redundant header in split view if tabs exist, but keeping for now -->
+                                                                <div class="round-header_premium"
+                                                                    *ngIf="!(fase.name === 'Grupos' && fase.groups.length === 2)">
+                                                                    <div class="rh-info">
+                                                                        <span class="rh-dot"></span>
+                                                                        <h4>Enfrentamientos - R{{ round.number }}</h4>
+                                                                    </div>
+                                                                    <button class="btn-save-round-glass frc gap-5"
+                                                                        (click)="saveRound(round.number)"
+                                                                        *ngIf="!isCerrado">
+                                                                        <span>💾</span> Guardar Ronda
+                                                                    </button>
+                                                                </div>
+
+                                                                <div class="match-list">
+                                                                    <div *ngFor="let m of round.matches"
+                                                                        class="match-card premium-card"
+                                                                        [class.mini-card]="fase.name === 'Grupos'"
+                                                                        [class.done]="m.finalizado">
+                                                                        <div class="match-header">
+                                                                            <div class="m-badge-row">
+                                                                                <span class="phase-tag">{{ m.fase
+                                                                                    }}</span>
+                                                                                <span class="group-tag"
+                                                                                    *ngIf="m.grupo_id && m.grupo_id !== 'General'">{{
+                                                                                    m.grupo_id }}</span>
+                                                                            </div>
+                                                                            <div class="m-info">
+                                                                                <span class="m-time">🕒 {{ m.hora_inicio | slice:0:5 }}</span>
+                                                                                <span class="m-court"><i class="fas fa-map-marker-alt"></i> CANCHA {{ m.num_cancha || '?' }}</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="score-grid">
+                                                                            <!-- Team 1 -->
+                                                                            <div class="score-row">
+                                                                                <div class="player-info">
+                                                                                    <span class="pair-tag">{{
+                                                                                        getCoupleLabel(m.jugador1_id,
+                                                                                        m.jugador1_nombre) }}</span>
+                                                                                    <div class="names-stack">
+                                                                                        <span class="name">{{
+                                                                                            m.jugador1_nombre }}</span>
+                                                                                        <span class="name">{{
+                                                                                            m.jugador2_nombre }}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                 <select class="score-box"
+                                                                                     [(ngModel)]="m.puntos_t1"
+                                                                                     [disabled]="isCerrado">
+                                                                                     <option *ngFor="let opt of [0,1,2,3,4,5,6,7,8,9,10]" [value]="opt">{{ opt }}</option>
+                                                                                 </select>
+                                                                            </div>
+
+                                                                            <div class="score-divider">VS</div>
+
+                                                                            <!-- Team 2 -->
+                                                                            <div class="score-row">
+                                                                                <div class="player-info right">
+                                                                                    <span class="pair-tag">{{
+                                                                                        getCoupleLabel(m.jugador3_id,
+                                                                                        m.jugador3_nombre) }}</span>
+                                                                                    <div class="names-stack">
+                                                                                        <span class="name">{{
+                                                                                            m.jugador3_nombre }}</span>
+                                                                                        <span class="name">{{
+                                                                                            m.jugador4_nombre }}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                 <select class="score-box"
+                                                                                     [(ngModel)]="m.puntos_t2"
+                                                                                     [disabled]="isCerrado">
+                                                                                     <option *ngFor="let opt of [0,1,2,3,4,5,6,7,8,9,10]" [value]="opt">{{ opt }}</option>
+                                                                                 </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="match-actions-center"
+                                                                            *ngIf="!isCerrado">
+                                                                            <button class="btn-update-premium"
+                                                                                (click)="saveScore(m, false)">
+                                                                                {{ m.finalizado ? 'Modificar' :
+                                                                                'Actualizar' }}
+                                                                            </button>
+                                                                        </div>
+                                                                        <div class="match-status-badge frc gap-5"
+                                                                            *ngIf="m.finalizado">
+                                                                            <span>✅</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div *ngIf="matches.length === 0" class="empty-msg"
+                                        style="padding: 60px; text-align: center;">
+                                        <div style="font-size: 40px; margin-bottom: 20px;">🎾</div>
+                                        <p style="font-weight: 600; color: #1e293b;">
+                                            {{ participantes.length < 2 ? 'Necesitas al menos 2 parejas para comenzar.'
+                                                : 'El fixture está listo para ser generado.' }} </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: POSICIONES (RANKING) -->
+                            <div class="tab-content animate-in" *ngIf="activeDetailTab === 'ranking'">
+                                <div class="ranking-table-container premium-ranking" style="margin-top: 20px;">
+                                    <!-- VISTA DE PODIO PARA AMERICANO MINI TORNEO (GRUPOS) -->
+                                    <div *ngIf="isGrupos; else standardRanking" class="podium-view">
+                                        <h3 class="podium-title">🏆 Cuadro de Honor</h3>
+
+                                        <div class="podium-grid">
+                                            <!-- COPA DE ORO -->
+                                            <div class="podium-card gold-card">
+                                                <div class="card-badge gold">🥇 Copa de Oro</div>
+
+                                                <div class="winner-row" *ngFor="let p of participantes"
+                                                    [hidden]="p.final_rank !== 1">
+                                                    <span class="crown">👑 CAMPEONES</span>
+                                                    <div class="pair-names-big">{{ p.jugador1_nombre }} & {{
+                                                        p.jugador2_nombre }}</div>
+                                                </div>
+
+                                                <div class="runner-row" *ngFor="let p of participantes"
+                                                    [hidden]="p.final_rank !== 2">
+                                                    <span class="sub-label">Subcampeones</span>
+                                                    <div class="pair-names-small">{{ p.jugador1_nombre }} & {{
+                                                        p.jugador2_nombre }}</div>
+                                                </div>
+
+                                                <div class="empty-state-mini" *ngIf="!hasRank(1) && !hasRank(2)">
+                                                    Final de Oro pendiente...
+                                                </div>
+                                            </div>
+
+                                            <!-- COPA DE PLATA -->
+                                            <div class="podium-card silver-card">
+                                                <div class="card-badge silver">🥈 Copa de Plata</div>
+
+                                                <div class="winner-row" *ngFor="let p of participantes"
+                                                    [hidden]="p.final_rank !== 3">
+                                                    <span class="crown">👑 CAMPEONES</span>
+                                                    <div class="pair-names-big">{{ p.jugador1_nombre }} & {{
+                                                        p.jugador2_nombre }}</div>
+                                                </div>
+
+                                                <div class="runner-row" *ngFor="let p of participantes"
+                                                    [hidden]="p.final_rank !== 4">
+                                                    <span class="sub-label">Subcampeones</span>
+                                                    <div class="pair-names-small">{{ p.jugador1_nombre }} & {{
+                                                        p.jugador2_nombre }}</div>
+                                                </div>
+
+                                                <div class="empty-state-mini" *ngIf="!hasRank(3) && !hasRank(4)">
+                                                    Final de Plata pendiente...
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TABLA ESTÁNDAR PARA OTROS TORNEOS -->
+                                    <ng-template #standardRanking>
+                                        <table class="ranking-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 60px;">Pos</th>
+                                                    <th>Pareja</th>
+                                                    <th class="txt-center" title="Partidos Jugados">PJ</th>
+                                                    <th class="txt-center" title="Partidos Ganados">PG</th>
+                                                    <th class="txt-center" title="Juegos a Favor">JF</th>
+                                                    <th class="txt-center" title="Juegos en Contra">JC</th>
+                                                    <th class="txt-center" title="Diferencia de Games">Dif</th>
+                                                    <th class="txt-center" style="color: #2563eb;">Total Puntos</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr *ngFor="let p of participantes; let i = index">
+                                                    <td class="rank-pos">
+                                                        <div class="pos-badge" [class.gold]="i===0"
+                                                            [class.silver]="i===1" [class.bronze]="i===2">
+                                                            {{ i < 3 ? '' : i + 1 }} <span *ngIf="i===0">🥇</span>
+                                                                <span *ngIf="i===1">🥈</span>
+                                                                <span *ngIf="i===2">🥉</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="team-players-stack">
+                                                            <span class="p-main">{{ p.jugador1_nombre }}</span>
+                                                            <span class="p-main">{{ p.jugador2_nombre }}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="txt-center font-bold">{{ p.partidos_jugados || 0 }}</td>
+                                                    <td class="txt-center font-bold" style="color: #16a34a;">{{
+                                                        p.partidos_ganados || 0 }}</td>
+                                                    <td class="txt-center">{{ p.games_ganados || 0 }}</td>
+                                                    <td class="txt-center">{{ p.games_perdidos || 0 }}</td>
+                                                    <td class="txt-center font-bold"
+                                                        [style.color]="(p.diferencia_games > 0) ? '#16a34a' : ((p.diferencia_games < 0) ? '#dc2626' : '#64748b')">
+                                                        {{ p.diferencia_games > 0 ? '+' : ''}}{{ p.diferencia_games || 0
+                                                        }}
+                                                    </td>
+                                                    <td class="txt-center total-pts">
+                                                        <span class="pts-pill">{{ p.puntos_totales }}</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <div *ngIf="participantes.length === 0" class="empty-table">No hay registros
+                                            aún.</div>
+                                    </ng-template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-template>
+            </div>
+        </div>
+    </main>
+
+    <!-- OVERLAY DE REVELACIÓN DE PODIO -->
+    <div class="podium-reveal-overlay" *ngIf="showPodiumReveal" (click)="closeReveal()">
+        <!-- Cámara Flash Effect -->
+        <div class="camera-flash-layer" *ngIf="flashActive"></div>
+
+        <div class="reveal-container animate-fade-in" (click)="$event.stopPropagation()">
+            <!-- Confeti y estrellas flotantes de fondo -->
+            <div class="stars-container" *ngIf="revealStep > 0">
+                <div class="star s1">⭐</div>
+                <div class="star s2">✨</div>
+                <div class="star s3">🏅</div>
+                <div class="star s4">✨</div>
+                <div class="star s5">🎈</div>
+                <div class="star s6">🎉</div>
+                <div class="star s7">✨</div>
+                <div class="star s8">⭐</div>
+                <div class="star s9">⚡</div>
+                <div class="star s10">🎊</div>
+                <div class="star s11">🎈</div>
+                <div class="star s12">✨</div>
+                <div class="star s13">⭐</div>
+                <div class="star s14">🎉</div>
+                <div class="star s15">👑</div>
+                <div class="star s16">⚡</div>
+                <div class="star s17">✨</div>
+                <div class="star s18">🏆</div>
+            </div>
+
+            <button class="close-reveal-btn" (click)="closeReveal()">×</button>
+
+            <!-- VISTA PRINCIPAL: PODIO (Se mantiene siempre renderizado para conservar el alto) -->
+            <div class="podium-stage-container">
+                
+                <h2 class="podium-stage-title" *ngIf="revealStep === 0">🏆 PODIO DE GANADORES 🏆</h2>
+                <h2 class="podium-stage-title bronze-text animate-pulse" *ngIf="revealStep === 1">🥉 TERCER LUGAR REVELADO 🥉</h2>
+                <h2 class="podium-stage-title silver-text animate-pulse" *ngIf="revealStep === 2">🥈 SEGUNDO LUGAR REVELADO 🥈</h2>
+                <h2 class="podium-stage-title gold-text animate-pulse" *ngIf="revealStep === 3">🏆 ¡CAMPEONES DEL TORNEO! 🏆</h2>
+
+                <div class="podium-reveal-cards podium-spatial-layout">
+                    <!-- SEGUNDO LUGAR (Plata - Izquierda) -->
+                    <div class="reveal-card silver-glow" [class.hidden-names]="revealStep < 2" [class.animate-pop]="revealStep >= 2">
+                        <div class="card-halo silver-halo"></div>
+                        <div class="card-shimmer"></div>
+                        <div class="medal-circle silver">🥈</div>
+                        <h3>2º Lugar</h3>
+                        <div class="names" *ngIf="revealStep >= 2 && getWinners().second; else masked2">
+                            <span class="p-name">{{ getWinners().second.jugador1_nombre }}</span>
+                            <span class="amp">&</span>
+                            <span class="p-name">{{ getWinners().second.jugador2_nombre }}</span>
+                        </div>
+                        <ng-template #masked2>
+                            <div class="names masked">
+                                <span class="mask-char">🔒 Oculto</span>
+                            </div>
+                        </ng-template>
+                    </div>
+
+                    <!-- PRIMER LUGAR (Oro - Centro) -->
+                    <div class="reveal-card gold-glow" [class.hidden-names]="revealStep < 3" [class.animate-winner-pop]="revealStep >= 3">
+                        <div class="card-halo gold-halo"></div>
+                        <div class="card-shimmer"></div>
+                        <div class="winner-crown" *ngIf="revealStep >= 3">👑</div>
+                        <div class="medal-circle gold">🥇</div>
+                        <h3 class="gold-text">1º Lugar</h3>
+                        <div class="names" *ngIf="revealStep >= 3 && getWinners().first; else masked1">
+                            <span class="p-name">{{ getWinners().first.jugador1_nombre }}</span>
+                            <span class="amp">&</span>
+                            <span class="p-name">{{ getWinners().first.jugador2_nombre }}</span>
+                        </div>
+                        <ng-template #masked1>
+                            <div class="names masked">
+                                <span class="mask-char">🔒 Oculto</span>
+                            </div>
+                        </ng-template>
+                    </div>
+
+                    <!-- TERCER LUGAR (Bronce - Derecha) -->
+                    <div class="reveal-card bronze-glow" [class.hidden-names]="revealStep < 1" [class.animate-pop]="revealStep >= 1">
+                        <div class="card-halo bronze-halo"></div>
+                        <div class="card-shimmer"></div>
+                        <div class="medal-circle bronze">🥉</div>
+                        <h3>3º Lugar</h3>
+                        <div class="names" *ngIf="revealStep >= 1 && getWinners().third; else masked3">
+                            <span class="p-name">{{ getWinners().third.jugador1_nombre }}</span>
+                            <span class="amp">&</span>
+                            <span class="p-name">{{ getWinners().third.jugador2_nombre }}</span>
+                        </div>
+                        <ng-template #masked3>
+                            <div class="names masked">
+                                <span class="mask-char">🔒 Oculto</span>
+                            </div>
+                        </ng-template>
+                    </div>
+                </div>
+
+                <!-- CONTROLES -->
+                <div class="reveal-controls" style="margin-top: 30px;">
+                    <button class="btn-primary start-btn animate-pulse" *ngIf="revealStep === 0 && !isCountingDown" (click)="startCountdownFor(3)">
+                        Revelar Tercer Lugar 🥉
+                    </button>
+                    <button class="btn-primary start-btn animate-pulse" *ngIf="revealStep === 1 && !isCountingDown" (click)="startCountdownFor(2)">
+                        Revelar Segundo Lugar 🥈
+                    </button>
+                    <button class="btn-primary start-btn animate-pulse" *ngIf="revealStep === 2 && !isCountingDown" (click)="startCountdownFor(1)">
+                        Revelar Primer Lugar 🥇
+                    </button>
+                    <button class="btn-primary finish-btn animate-pulse" *ngIf="revealStep === 3 && !isCountingDown" (click)="closeReveal()">
+                        Finalizar Ceremonia 🎉
+                    </button>
+                </div>
+            </div>
+
+            <!-- OVERLAY DE CUENTA REGRESIVA (Cubre el podio mientras corre) -->
+            <div class="countdown-overlay animate-fade-in" *ngIf="isCountingDown">
+                <div class="countdown-box">
+                    <div class="countdown-number animate-beat">{{ countdownVal }}</div>
+                    
+                    <!-- Jugador de pádel en acción por golpes -->
+                    <div class="countdown-shot-container">
+                        <div class="shot-emoji animate-bounce">
+                            <!-- Emojis representativos de golpes de pádel -->
+                            <span *ngIf="countdownVal === 5" style="font-size: 80px;">🥎🏌️</span>
+                            <span *ngIf="countdownVal === 4" style="font-size: 80px;">🎾🏃</span>
+                            <span *ngIf="countdownVal === 3" style="font-size: 80px;">🎾🛡️</span>
+                            <span *ngIf="countdownVal === 2" style="font-size: 80px;">🎾⚔️</span>
+                            <span *ngIf="countdownVal === 1" style="font-size: 80px;">💥🔥</span>
+                        </div>
+                        <h3 class="shot-title">{{ countdownShot }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

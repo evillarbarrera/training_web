@@ -1,0 +1,314 @@
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <app-sidebar [userId]="userId" [jugadorNombre]="jugadorNombre" [jugadorFoto]="jugadorFoto" activePage="reservas">
+  </app-sidebar>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- Content -->
+    <div class="dashboard-grid">
+
+      <!-- 1. Discovery Section: Trainers -->
+      <section class="discovery-section animate-fade-in">
+        <h2 class="section-title">Elige a tu Coach</h2>
+
+        <!-- Filters Row (Region & Comuna) - Updated -->
+        <div class="discovery-filters-grid">
+          <div class="filter-item">
+            <label>Región</label>
+            <div class="select-wrapper">
+              <select [(ngModel)]="regionSeleccionada" (change)="updateComunas()">
+                <option value="">Todas las regiones</option>
+                <option *ngFor="let r of regions" [value]="r.name">{{ r.name }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-item">
+            <label>Comuna</label>
+            <div class="select-wrapper">
+              <select [(ngModel)]="comunaSeleccionada" (change)="onComunaChange()">
+                <option value="">Todas las comunas</option>
+                <option *ngFor="let c of filteredComunas" [value]="c">{{ c }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="trainers-scroll-container" *ngIf="!isLoadingDiscovery; else loadingT">
+          <div class="trainer-card-home" *ngFor="let t of entrenadores" [class.active]="selectedEntrenador === t.id"
+            (click)="selectedEntrenador = t.id; onEntrenadorChange()">
+            <div class="trainer-photo-wrapper">
+              <img [src]="t.foto || 'assets/images/placeholder_coach.png'" class="trainer-img">
+              <div class="distance-badge" *ngIf="t.distancia">
+                📍 {{ t.distancia | number:'1.1-1' }} km
+              </div>
+            </div>
+            <div class="trainer-info">
+              <h4 class="trainer-name">{{ t.nombre }}</h4>
+              <p class="trainer-comuna">{{ t.comuna || 'Club local' }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="entrenadores.length === 0" class="no-trainers-msg">
+            <div class="empty-icon">🔎</div>
+            <p>No se encontraron entrenadores disponibles en esta zona.</p>
+            <span>Prueba seleccionando otra comuna o región.</span>
+          </div>
+        </div>
+
+        <ng-template #loadingT>
+          <div class="loading-discovery-msg">
+            <div class="spinner-small"></div>
+            Buscando entrenadores en {{ comunaSeleccionada || 'la zona' }}...
+          </div>
+        </ng-template>
+      </section>
+
+      <!-- 2. Availability Section: Columns per Day -->
+      <section id="availability-section" class="availability-section animate-slide-up" *ngIf="selectedEntrenador">
+        <div class="section-header-row">
+          <h2 class="section-title">Disponibilidad de {{ getCoachName(selectedEntrenador) }}</h2>
+          <div class="recurrencia-container" *ngIf="packsDelEntrenador.length > 0">
+            <span class="recurrencia-label">REPETIR RESERVA:</span>
+            <div class="recurrencia-chips">
+              <button class="chip" [class.active]="recurrencia == 1" (click)="recurrencia = 1">SOLO HOY</button>
+              <button class="chip" [class.active]="recurrencia == 2" (click)="recurrencia = 2">2 SEM.</button>
+              <button class="chip" [class.active]="recurrencia == 4" (click)="recurrencia = 4">1 MES</button>
+              <button class="chip" [class.active]="recurrencia == 8" (click)="recurrencia = 8">2 MESES</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-context-box animate-fade-in" *ngIf="!isLoading">
+          <div class="context-grid">
+            <div class="coach-summary card-flat">
+              <span class="label-premium">COACH SELECCIONADO</span>
+              <div class="summary-details">
+                <img [src]="currentCoachPhoto || 'assets/images/placeholder_coach.png'" class="mini-avatar">
+                <div class="text-group">
+                  <h4>{{ selectedCoachName }}</h4>
+                  <div class="contact-pill" *ngIf="entrenadorTelefono">
+                    <span class="icon">📞</span>
+                    <span>{{ entrenadorTelefono }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="club-summary card-flat" *ngIf="clubesDisponibles.length > 0">
+              <span class="label-premium">¿DÓNDE ENTRENAMOS?</span>
+              <div class="selector-container">
+                <select [(ngModel)]="selectedClubId" (change)="onClubFilterChange()" class="premium-select-web">
+                  <option [value]="null">TODOS LOS CLUBES</option>
+                  <option *ngFor="let club of clubesDisponibles" [value]="club.id">{{ club.nombre }}</option>
+                </select>
+              </div>
+              <div class="location-extra animate-up" *ngIf="selectedClubId">
+                <div *ngIf="getSelectedClub()?.direccion; else noDir">
+                  <p class="address-mini">{{ getSelectedClub()?.direccion }}</p>
+                  <a [href]="getSelectedClub()?.maps" target="_blank" class="maps-btn-web"
+                    *ngIf="getSelectedClub()?.maps">
+                    VER EN MAPA
+                  </a>
+                </div>
+                <ng-template #noDir>
+                  <p class="no-dir-msg">⚠️ Dirección no registrada por el coach.</p>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filters-bar animate-fade-in" *ngIf="!isLoading && dias.length > 0">
+          <div class="filter-group">
+            <span class="filter-label">TIPO DE SESIÓN:</span>
+            <div class="filter-chips">
+              <button class="filter-chip" [class.active]="tipoEntrenamiento === 'todos'" (click)="setFilter('todos')">✨
+                TODAS</button>
+              <button class="filter-chip" [class.active]="tipoEntrenamiento === 'individual'"
+                (click)="setFilter('individual')">👤 INDIVIDUAL</button>
+              <button class="filter-chip" [class.active]="tipoEntrenamiento === 'multiplayer'"
+                (click)="setFilter('multiplayer')">👥 MULTI (+1)</button>
+              <button class="filter-chip" [class.active]="tipoEntrenamiento === 'grupal'"
+                (click)="setFilter('grupal')">🎾 GRUPAL</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="availability-columns-container" *ngIf="!isLoading; else loadingB">
+          <!-- Day Navigation Timeline -->
+          <div class="timeline-wrapper animate-fade-in" *ngIf="filteredDias.length > 0">
+            <div class="timeline-scroll">
+              <div *ngFor="let dia of filteredDias" class="timeline-item" [class.active]="diaSeleccionado === dia"
+                (click)="diaSeleccionado = dia">
+                <span class="day-label">{{ dia | date:'EEE' : '' : 'es-ES' | uppercase }}</span>
+                <span class="day-number">{{ dia | date:'dd' }}</span>
+                <div class="active-dot"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Single Day Focus View -->
+          <div class="day-focus-view animate-slide-up" *ngIf="diaSeleccionado">
+            <div class="focus-header">
+              <h3>Disponibilidad para el {{ diaSeleccionado | date:'EEEE d \'de\' MMMM' : '' : 'es-ES' }}</h3>
+              <p>Selecciona el bloque que mejor te acomode</p>
+            </div>
+
+            <div class="categories-stack">
+              <!-- Morning Group -->
+              <div class="category-block" *ngIf="getSlotsByCategory(diaSeleccionado, 'morning').length > 0">
+                <div class="group-title">
+                  <span class="icon">🌅</span>
+                  <span>BLOQUES DE MAÑANA</span>
+                </div>
+                <div class="slots-grid-premium">
+                  <button *ngFor="let slot of getSlotsByCategory(diaSeleccionado, 'morning')" class="slot-premium-card"
+                    [class.occupied]="slot.ocupado" [disabled]="slot.ocupado" (click)="reservarHorario(slot)">
+                    <span class="slot-tag" *ngIf="slot.tipo === 'grupal'">{{ slot.nombre || 'Clase Grupal' }}</span>
+                    <span class="time">{{ slot.hora_inicio | date:'HH:mm' }}</span>
+                    <div class="slot-info">
+                      <span class="status">{{ slot.ocupado ? 'Ocupado' : 'Disponible' }}</span>
+                      <span class="enrollment-info" *ngIf="slot.tipo === 'grupal' && slot.capacidad > 1">
+                        ({{ slot.inscritos }}/{{ slot.capacidad }})
+                      </span>
+                    </div>
+                    <span class="club-label" *ngIf="slot.club_nombre"
+                      style="font-size: 0.75rem; color: #666; margin-top: 4px; display: block;">
+                      {{ slot.club_nombre | slice:0:20 }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Afternoon Group -->
+              <div class="category-block" *ngIf="getSlotsByCategory(diaSeleccionado, 'afternoon').length > 0">
+                <div class="group-title">
+                  <span class="icon">☀️</span>
+                  <span>BLOQUES DE TARDE</span>
+                </div>
+                <div class="slots-grid-premium">
+                  <button *ngFor="let slot of getSlotsByCategory(diaSeleccionado, 'afternoon')"
+                    class="slot-premium-card" [class.occupied]="slot.ocupado" [disabled]="slot.ocupado"
+                    (click)="reservarHorario(slot)">
+                    <span class="slot-tag" *ngIf="slot.tipo === 'grupal'">{{ slot.nombre || 'Clase Grupal' }}</span>
+                    <span class="time">{{ slot.hora_inicio | date:'HH:mm' }}</span>
+                    <div class="slot-info">
+                      <span class="status">{{ slot.ocupado ? 'Ocupado' : 'Disponible' }}</span>
+                      <span class="enrollment-info" *ngIf="slot.tipo === 'grupal' && slot.capacidad > 1">
+                        ({{ slot.inscritos }}/{{ slot.capacidad }})
+                      </span>
+                    </div>
+                    <span class="club-label" *ngIf="slot.club_nombre"
+                      style="font-size: 0.75rem; color: #666; margin-top: 4px; display: block;">
+                      {{ slot.club_nombre | slice:0:20 }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Evening Group -->
+              <div class="category-block" *ngIf="getSlotsByCategory(diaSeleccionado, 'evening').length > 0">
+                <div class="group-title">
+                  <span class="icon">🌙</span>
+                  <span>BLOQUES DE NOCHE</span>
+                </div>
+                <div class="slots-grid-premium">
+                  <button *ngFor="let slot of getSlotsByCategory(diaSeleccionado, 'evening')" class="slot-premium-card"
+                    [class.occupied]="slot.ocupado" [disabled]="slot.ocupado" (click)="reservarHorario(slot)">
+                    <span class="slot-tag" *ngIf="slot.tipo === 'grupal'">{{ slot.nombre || 'Clase Grupal' }}</span>
+                    <span class="time">{{ slot.hora_inicio | date:'HH:mm' }}</span>
+                    <div class="slot-info">
+                      <span class="status">{{ slot.ocupado ? 'Ocupado' : 'Disponible' }}</span>
+                      <span class="enrollment-info" *ngIf="slot.tipo === 'grupal' && slot.capacidad > 1">
+                        ({{ slot.inscritos }}/{{ slot.capacidad }})
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="horariosPorDia[diaSeleccionado]?.length === 0" class="empty-day-state">
+              <div class="empty-icon">📅</div>
+              <p>No hay bloques disponibles para este día</p>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #loadingB>
+          <div class="loading-discovery-msg">Cargando agenda...</div>
+        </ng-template>
+      </section>
+
+    </div>
+
+    <!-- Pack Selection Modal (High Performance UI) -->
+    <div class="picker-overlay secondary-blur" *ngIf="showPackModal" (click)="showPackModal = false">
+      <div class="pack-modal-container animate-premium-up" (click)="$event.stopPropagation()">
+        <div class="modal-header-premium">
+          <div class="title-group">
+            <span class="subtitle">Opciones de Entrenamiento</span>
+            <h4>ELIGE TU PACK PARA {{ getCoachName(selectedEntrenador) | uppercase }}</h4>
+          </div>
+          <button class="close-luxury-btn" (click)="showPackModal = false">✕</button>
+        </div>
+
+        <div class="coupon-section-web"
+          style="background: #f8fafc; padding: 15px 25px; border-bottom: 1px solid #edf2f7;">
+          <div class="coupon-input-group" style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" [(ngModel)]="couponCode" placeholder="¿TIENES UN CUPÓN?"
+              style="flex: 1; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-weight: 700; text-transform: uppercase;">
+            <button (click)="applyCoupon()"
+              style="background: #000; color: white; padding: 12px 20px; border-radius: 10px; font-weight: 800; border: none; cursor: pointer;">
+              APLICAR
+            </button>
+          </div>
+          <p *ngIf="couponMessage" [style.color]="couponApplied ? '#38a169' : '#e53e3e'"
+            style="margin: 8px 0 0; font-size: 0.8rem; font-weight: 700;">
+            {{ couponMessage }}
+          </p>
+        </div>
+
+        <div class="pack-scroll-area">
+          <div class="pack-grid-luxury" *ngIf="availablePacks.length > 0">
+            <div *ngFor="let pack of availablePacks" class="pack-luxury-card" (click)="comprarPackYReservar(pack)">
+              <div class="card-content">
+                <div class="info-section">
+                  <span class="sessions-badge">{{ pack.sesiones_totales }} SESIONES</span>
+                  <h5 class="pack-title">{{ pack.nombre }}</h5>
+                  <p class="pack-desc">Ideal para mejorar tu técnica y constancia.</p>
+                </div>
+                <div class="price-section">
+                  <ng-container *ngIf="couponApplied; else normalPrice">
+                    <span class="price-val original-price"
+                      style="text-decoration: line-through; font-size: 0.9rem; color: #a0aec0; margin-right: 8px;">
+                      {{ pack.precio | currency:'CLP':'$':'1.0-0' }}
+                    </span>
+                    <span class="price-val final-price" style="color: #000; font-weight: 900;">
+                      {{ getDiscountedPrice(pack.precio) | currency:'CLP':'$':'1.0-0' }}
+                    </span>
+                  </ng-container>
+                  <ng-template #normalPrice>
+                    <span class="price-val">{{ pack.precio | currency:'CLP':'$':'1.0-0' }}</span>
+                  </ng-template>
+                  <span class="per-session">Pago único</span>
+                </div>
+              </div>
+              <div class="action-footer">
+                <span>ELEGIR Y RESERVAR AHORA</span>
+                <span class="arrow">→</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="availablePacks.length === 0" class="no-packs-luxury">
+            <div class="empty-icon">🎾</div>
+            <p>No hay packs individuales disponibles para este entrenador en este momento.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

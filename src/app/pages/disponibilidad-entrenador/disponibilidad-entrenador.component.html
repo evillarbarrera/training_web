@@ -1,0 +1,303 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="coachNombre" [jugadorFoto]="coachFoto" [role]="'entrenador'"
+    activePage="disponibilidad">
+  </app-sidebar>
+
+  <main class="main-content">
+    <div class="dashboard-grid">
+      
+      <!-- HEADER CON ACCIÓN PRINCIPAL DE GUARDADO -->
+      <div class="command-header animate-down">
+        <div class="ch-left">
+          <h2>Disponibilidad de Entrenador</h2>
+          <p>Configura tus recintos y horarios de clases</p>
+        </div>
+        
+        <div class="ch-right" style="display: flex; gap: 12px; align-items: center;">
+          <button class="btn-help-circle" (click)="startTutorial()" title="Ayuda / Tutorial">?</button>
+          <button class="btn-util primary-save" (click)="guardarDisponibilidad()">
+            <i class="fas fa-save"></i> 💾 GUARDAR CAMBIOS
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Sincronizando disponibilidad...</p>
+      </div>
+
+      <ng-container *ngIf="!isLoading">
+        
+        <!-- ESTRUCTURA DE 2 COLUMNAS: IZQUIERDA (PASO 1 + 2) / DERECHA (PASO 3) -->
+        <div class="two-column-guided-layout animate-up">
+
+          <!-- COLUMNA IZQUIERDA: CONTROLES (PASO 1 + PASO 2) -->
+          <aside class="left-config-column">
+            
+            <!-- PASO 1: SELECCIONAR RECINTO -->
+            <div class="step-card">
+              <div class="step-header">
+                <span class="step-badge">PASO 1</span>
+                <div>
+                  <h3>🏢 Recinto / Club de Entrenamiento</h3>
+                  <p>Selecciona el club en el que impartirás tus clases</p>
+                </div>
+              </div>
+
+              <div class="step-content">
+                <!-- Selector desplegable de TODOS los clubes registrados en la plataforma -->
+                <div class="all-clubs-selector-group">
+                  <label class="club-input-label">Elegir de recintos del sistema:</label>
+                  <select [(ngModel)]="selectedClubId" (change)="onClubChange()" class="select-all-clubes">
+                    <option [ngValue]="null" disabled selected>-- Selecciona un club ingresado --</option>
+                    <option *ngFor="let club of clubes" [value]="club.id">
+                      🏢 {{ club.nombre }} {{ club.comuna ? '(' + club.comuna + ')' : '' }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Lista rápida de clubes activos -->
+                <div class="active-clubs-section" *ngIf="activeClubes.length > 0">
+                  <span class="sub-label">Tus recintos frecuentes:</span>
+                  <div class="club-tabs-container vertical">
+                    <button *ngFor="let club of activeClubes" 
+                            class="club-tab" 
+                            [class.active]="selectedClubId == club.id"
+                            (click)="selectClub(club.id)">
+                      <span class="c-icon">🏢</span> {{ club.nombre }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="add-new-club-footer" style="margin-top: 10px;">
+                  <button class="btn-add-club-pill" (click)="abrirModalNuevoClub()">
+                    <i class="fas fa-plus"></i> + Registrar Nuevo Recinto
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PASO 2: ELEGIR MODO DE CONFIGURACIÓN -->
+            <div class="step-card">
+              <div class="step-header">
+                <span class="step-badge">PASO 2</span>
+                <div>
+                  <h3>⚙️ Modo de Ajuste</h3>
+                  <p>¿Cómo prefieres configurar?</p>
+                </div>
+              </div>
+
+              <div class="step-content">
+                <div class="mode-tabs-container vertical">
+                  <button class="mode-tab-btn" 
+                          [class.active]="viewMode === 'calendar'" 
+                          (click)="viewMode = 'calendar'">
+                    📅 Días Específicos (Calendario)
+                  </button>
+                  <button class="mode-tab-btn" 
+                          [class.active]="viewMode === 'template'" 
+                          (click)="viewMode = 'template'; openDefaultModal()">
+                    ⚡ Plantilla Semanal (Repetir)
+                  </button>
+                </div>
+
+                <!-- Selector de Meses si está en modo Calendario -->
+                <div class="month-selector-box" *ngIf="viewMode === 'calendar'">
+                  <div class="sidebar-label">MES A EDITAR</div>
+                  <div class="month-list">
+                    <button *ngFor="let m of mesesDisponibles" 
+                            class="month-item" 
+                            [class.active]="selectedMonthLabel === m.label"
+                            (click)="selectedMonthLabel = m.label; onMonthChange()">
+                      <span class="m-name">{{ m.label.split(' ')[0] }}</span>
+                      <span class="m-year">{{ m.label.split(' ')[1] }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leyenda de colores -->
+            <div class="availability-legend-vertical">
+              <div class="legend-item"><span class="dot available"></span> Cerrado / Disponible</div>
+              <div class="legend-item"><span class="dot selected"></span> Horario Activo</div>
+              <div class="legend-item"><span class="dot occupied"></span> Reservado Alumno</div>
+            </div>
+
+          </aside>
+
+          <!-- COLUMNA DERECHA: PASO 3 (WORKSPACES Y BLOQUES DE HORARIOS) -->
+          <section class="right-workspace-column">
+            
+            <div class="step-card paso-3-card">
+              <div class="step-header">
+                <span class="step-badge">PASO 3</span>
+                <div>
+                  <h3>⏰ Selecciona tus Horarios y Turnos</h3>
+                  <p>Usa turnos rápidos (Mañana / Tarde) o marca horas libres directamente</p>
+                </div>
+              </div>
+
+              <!-- MODO 1: CALENDARIO -->
+              <div class="workspace-main" *ngIf="viewMode === 'calendar'">
+                <!-- Cinta de Días -->
+                <div class="day-ribbon-wrapper">
+                  <div class="day-ribbon">
+                    <div *ngFor="let dia of diasFiltrados" class="ribbon-card" 
+                      [class.active]="diaSeleccionado === dia.fecha"
+                      [class.has-data]="isDiaCompleto(dia.fecha)"
+                      (click)="seleccionarDia(dia.fecha)">
+                      <span class="r-day">{{ dia.nombre | slice:0:3 }}</span>
+                      <span class="r-date">{{ dia.fecha | date:'dd' }}</span>
+                      <div class="r-indicator" *ngIf="isDiaCompleto(dia.fecha)"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Detalle Diario y Acciones Rápidas -->
+                <div class="focus-detail-area" *ngIf="diaSeleccionado">
+                  <div class="focus-header">
+                    <div class="fh-info">
+                      <h3>{{ diaSeleccionado | date:'EEEE dd' : '' : 'es' }} de {{ selectedMonthLabel }}</h3>
+                      <p>Marca tus horas o usa un turno rápido:</p>
+                    </div>
+                    <div class="fh-presets">
+                      <button class="btn-shift-preset" (click)="aplicarTurnoManana(diaSeleccionado)" title="08:00 a 13:00">
+                        🌅 Mañana (8-13)
+                      </button>
+                      <button class="btn-shift-preset" (click)="aplicarTurnoTarde(diaSeleccionado)" title="16:00 a 21:00">
+                        🌇 Tarde (16-21)
+                      </button>
+                      <button class="btn-shift-preset" (click)="aplicarDiaCompleto(diaSeleccionado)" title="08:00 a 21:00">
+                        ⚡ Completo
+                      </button>
+                      <button class="btn-shift-preset copy" (click)="abrirCopiarDiaModal(diaSeleccionado)">
+                        📋 Copiar a...
+                      </button>
+                      <button class="btn-focus-action secondary" (click)="toggleTodoDia(diaSeleccionado)">
+                        {{ isDiaCompleto(diaSeleccionado) ? '✕ Limpiar' : '✅ Todo' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="focus-blocks-grid">
+                    <div *ngFor="let bloque of bloquesPorDia[diaSeleccionado]" class="block-card-modern" 
+                      [class.selected]="bloque.seleccionado"
+                      [class.occupied]="bloque.ocupado" 
+                      [class.locked-other]="bloque.lockedByOtherClub"
+                      (click)="toggleBloque(bloque)">
+                      
+                      <div class="b-info">
+                        <span class="b-time">{{ bloque.hora_inicio }}</span>
+                        <span class="b-status">
+                          <ng-container *ngIf="bloque.ocupado">RESERVADO</ng-container>
+                          <ng-container *ngIf="!bloque.ocupado && bloque.lockedByOtherClub">OTRO RECINTO</ng-container>
+                          <ng-container *ngIf="!bloque.ocupado && !bloque.lockedByOtherClub">
+                            {{ bloque.seleccionado ? 'DISPONIBLE' : 'CERRADO' }}
+                          </ng-container>
+                        </span>
+                      </div>
+                      
+                      <div class="b-toggle" [class.active]="bloque.seleccionado" *ngIf="!bloque.lockedByOtherClub && !bloque.ocupado">
+                        <div class="b-switch"></div>
+                      </div>
+
+                      <div class="b-locked-icon" *ngIf="bloque.lockedByOtherClub">
+                        <i class="fas fa-lock"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MODO 2: PLANTILLA SEMANAL DIRECTA -->
+              <div class="template-direct-panel" *ngIf="viewMode === 'template'">
+                <div class="template-header-bar">
+                  <div class="t-title-info">
+                    <h4>Configuración de Semana Base</h4>
+                    <p>Define las horas que trabajas de Lunes a Domingo y replícalas en 1 clic</p>
+                  </div>
+                  <button class="btn-util neon" (click)="applyDefaultConfig()">
+                    <i class="fas fa-magic"></i> 🪄 Aplicar plantilla a {{ selectedMonthLabel }}
+                  </button>
+                </div>
+
+                <!-- Selector de día de la semana en la plantilla -->
+                <div class="template-day-tabs">
+                  <button *ngFor="let d of diasSemana" 
+                          class="t-day-tab"
+                          [class.active]="selectedDayTemplate === d.id"
+                          (click)="selectedDayTemplate = d.id">
+                    {{ d.name }}
+                  </button>
+                </div>
+
+                <!-- Presets de turnos para la plantilla -->
+                <div class="template-presets-bar">
+                  <button class="btn-tp-preset" (click)="aplicarTurnoMananaTemplate(selectedDayTemplate)">🌅 Turno Mañana (8-13)</button>
+                  <button class="btn-tp-preset" (click)="aplicarTurnoTardeTemplate(selectedDayTemplate)">🌇 Turno Tarde (16-21)</button>
+                  <button class="btn-tp-preset" (click)="aplicarDiaCompletoTemplate(selectedDayTemplate)">⚡ Día Completo</button>
+                  <button class="btn-tp-preset copy" (click)="copiarTemplateAOtrosDias(selectedDayTemplate)">📋 Copiar a toda la semana</button>
+                  <button class="btn-tp-preset clear" (click)="deseleccionarTodoDiaTemplate(selectedDayTemplate)">🧹 Limpiar</button>
+                </div>
+
+                <!-- Grilla de bloques para el día seleccionado -->
+                <div class="template-blocks-grid">
+                  <div *ngFor="let b of templateBlocks[selectedDayTemplate]" 
+                       class="template-block-card"
+                       [class.selected]="b.selected"
+                       (click)="toggleTemplateBlock(selectedDayTemplate, b)">
+                    <span class="tb-time">{{ b.time }}</span>
+                    <span class="tb-status">{{ b.selected ? 'ACTIVO' : 'CERRADO' }}</span>
+                  </div>
+                </div>
+
+                <div class="template-footer-actions">
+                  <button class="btn-primary-neon" (click)="saveDefaultConfig()">💾 Guardar Plantilla Semanal</button>
+                </div>
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+      </ng-container>
+
+      <!-- Modal Copiar Día a Otras Fechas en Calendario -->
+      <div class="picker-overlay" *ngIf="showCopyDayModal" (click)="showCopyDayModal = false">
+        <div class="picker-content copy-day-modal animate-slide-up" (click)="$event.stopPropagation()">
+          <div class="picker-header">
+            <h3>📋 Copiar Horario del Día {{ copySourceFecha | date:'dd/MM' }}</h3>
+            <button class="close-btn" (click)="showCopyDayModal = false">✕</button>
+          </div>
+          <div class="modal-body-fixed">
+            <p class="copy-hint">Selecciona las fechas de {{ selectedMonthLabel }} a las que deseas copiar el horario:</p>
+            <div class="copy-actions-bar">
+              <button class="btn-text-action" (click)="seleccionarTodosTargetFechas()">✅ Seleccionar Todos</button>
+              <button class="btn-text-action" (click)="deseleccionarTodosTargetFechas()">✕ Limpiar Selección</button>
+            </div>
+            <div class="target-days-grid">
+              <ng-container *ngFor="let dia of diasFiltrados">
+                <div class="target-day-card"
+                     *ngIf="dia.fecha !== copySourceFecha"
+                     [class.selected]="copyTargetFechas.includes(dia.fecha)"
+                     (click)="toggleCopyTargetFecha(dia.fecha)">
+                  <span class="td-name">{{ dia.nombre | slice:0:3 }}</span>
+                  <span class="td-date">{{ dia.fecha | date:'dd' }}</span>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" (click)="showCopyDayModal = false">Cancelar</button>
+            <button class="btn-primary-neon" (click)="ejecutarCopiarDia()">Copiar a {{ copyTargetFechas.length }} días</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>

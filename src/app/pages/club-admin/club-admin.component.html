@@ -1,0 +1,490 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="club-admin">
+    </app-sidebar>
+
+    <main class="main-content">
+        <!-- DASHBOARD CONTAINER -->
+        <div class="admin-container animate-in">
+            <!-- LEFT SIDEBAR: CLUB LIST -->
+            <div class="admin-sidebar-list glass-card">
+                <div class="section-title">
+                    <h3>🏠 Mis Sedes</h3>
+                    <button class="btn-add-circle" (click)="openCreateModal()" title="Añadir Club">+</button>
+                </div>
+                
+                <div class="search-box">
+                    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar sede...">
+                </div>
+
+                <div class="club-scroll-list">
+                    <div *ngFor="let club of filteredClubes" 
+                          class="club-item-card" 
+                          [class.selected]="selectedClub?.id === club.id"
+                          (click)="selectClub(club)">
+                        <div class="club-avatar-mini">
+                            <img *ngIf="club.logo; else initials" [src]="assetService.getAssetUrl(club.logo, 'club')" alt="Logo" class="club-logo-img">
+                            <ng-template #initials>
+                                <div class="club-initials">{{ club.nombre.substring(0, 2).toUpperCase() }}</div>
+                            </ng-template>
+                        </div>
+                        <div class="club-info-mini">
+                            <span class="club-name">{{ club.nombre }}</span>
+                            <span class="club-loc">{{ club.comuna }}</span>
+                        </div>
+                        <div class="club-chevron" *ngIf="selectedClub?.id === club.id">❯</div>
+                    </div>
+                    
+                    <!-- Empty state if no clubes -->
+                    <div class="empty-list" *ngIf="clubes.length === 0">
+                        <p>No tienes sedes aún.</p>
+                        <button class="btn-primary-mini" (click)="openCreateModal()">Crear Primera Sede</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN ACTION AREA (RIGHT) -->
+            <div class="detail-view">
+                <!-- MODAL CREAR/EDITAR CLUB -->
+                <div class="modal-overlay" *ngIf="showClubModal" (click)="cancelEditClub()">
+                    <div class="modal-card card glass-card form-card animate-in" (click)="$event.stopPropagation()">
+                        <div class="card-header-actions">
+                            <h3>{{ editingClubId ? 'Editar Sede' : '+ Nueva Sede' }}</h3>
+                            <button class="btn-close-mini" (click)="cancelEditClub()">✕</button>
+                        </div>
+
+                        <div class="form-inputs-deck">
+                            <!-- Logo Upload Group -->
+                            <div class="input-group logo-upload-group">
+                                <label>Imagen de Perfil / Logo de la Sede</label>
+                                <div class="logo-preview-container" (click)="fileInput.click()">
+                                    <img [src]="assetService.getAssetUrl(newClub.logo, 'club')" alt="Preview" class="logo-preview-img">
+                                    <div class="logo-upload-overlay">
+                                        <span class="icon">📷</span>
+                                        <span>Subir Logo</span>
+                                    </div>
+                                </div>
+                                <input type="file" #fileInput (change)="onLogoSelected($event)" accept="image/*" style="display: none;">
+                            </div>
+
+                            <div class="input-group">
+                                <label>Nombre del Club</label>
+                                <input type="text" [(ngModel)]="newClub.nombre" placeholder="Nombre oficial del club">
+                            </div>
+
+                            <div class="form-row-inner">
+                                <div class="input-group">
+                                    <label>Región</label>
+                                    <select [(ngModel)]="newClub.region" (change)="updateComunas()">
+                                        <option value="">Selecciona región</option>
+                                        <option *ngFor="let r of regions" [value]="r.name">{{r.name}}</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Comuna</label>
+                                    <select [(ngModel)]="newClub.comuna" [disabled]="!newClub.region">
+                                        <option value="">Selecciona comuna</option>
+                                        <option *ngFor="let c of filteredComunas" [value]="c">{{c}}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Dirección Exacta</label>
+                                <input type="text" [(ngModel)]="newClub.direccion" placeholder="Calle, número, etc.">
+                            </div>
+
+                            <div class="form-row-inner">
+                                <div class="input-group">
+                                    <label>Teléfono de Contacto</label>
+                                    <input type="text" [(ngModel)]="newClub.telefono" placeholder="+56 9 ...">
+                                </div>
+                                <div class="input-group">
+                                    <label>Instagram</label>
+                                    <input type="text" [(ngModel)]="newClub.instagram" placeholder="@tu_club">
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label>Email Administrativo (Opcional)</label>
+                                <input type="email" [(ngModel)]="newClub.email" placeholder="contacto@club.com">
+                            </div>
+
+                            <!-- NUEVA SECCIÓN: ACTIVACIÓN MODULAR -->
+                            <div class="form-section-divider"></div>
+                            <div class="module-activation-section">
+                                <label class="section-label">Configuración de Servicios</label>
+                                <div class="toggles-container">
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="icon">🎾</span>
+                                            <div class="text">
+                                                <strong>Reservas de Pistas</strong>
+                                                <small>Permitir arriendos al público</small>
+                                            </div>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" [(ngModel)]="newClub.reservas_activas" [checked]="newClub.reservas_activas === 1" (change)="newClub.reservas_activas = ($event.target.checked ? 1 : 0)">
+                                            <span class="slider round"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="toggle-item">
+                                        <div class="toggle-info">
+                                            <span class="icon">🎓</span>
+                                            <div class="text">
+                                                <strong>Módulo de Academia</strong>
+                                                <small>Habilitar entrenadores y clases</small>
+                                            </div>
+                                        </div>
+                                        <label class="switch">
+                                            <input type="checkbox" [(ngModel)]="newClub.academia_activa" [checked]="newClub.academia_activa === 1" (change)="newClub.academia_activa = ($event.target.checked ? 1 : 0)">
+                                            <span class="slider round"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="actions-footer-modal">
+                                <button class="btn-primary" (click)="createClub()">
+                                    {{ isLoading ? 'Guardando...' : (editingClubId ? 'Guardar Cambios' : 'Crear Sede') }}
+                                </button>
+                                <button class="btn-ghost" (click)="cancelEditClub()">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA DETALLE CLUB + CANCHAS + STAFF -->
+                <div *ngIf="selectedClub" class="animate-in detail-content-wrapper">
+                    
+                    <!-- HERO BANNER -->
+                    <div class="club-hero-card glass-card">
+                        <div class="hero-main">
+                            <div class="club-avatar-large">
+                                <img *ngIf="selectedClub.logo; else initialsLarge" [src]="assetService.getAssetUrl(selectedClub.logo, 'club')" alt="Logo" class="club-logo-img-large">
+                                <ng-template #initialsLarge>
+                                    <div class="club-initials-large">{{ selectedClub.nombre.substring(0, 1).toUpperCase() }}</div>
+                                </ng-template>
+                            </div>
+                            <div class="hero-text">
+                                <span class="hero-tag">Sede Administrada</span>
+                                <h1>{{ selectedClub.nombre }}</h1>
+                                <div class="hero-meta">
+                                    <span><i class="fas fa-map-marker-alt"></i> {{ selectedClub.direccion }}, {{ selectedClub.comuna }}</span>
+                                    <span><i class="fas fa-phone-alt"></i> {{ selectedClub.telefono || 'Sin teléfono' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hero-actions" *ngIf="selectedClub.admin_id === userId">
+                            <button class="btn-action-outline" (click)="editClub(selectedClub)">
+                                <span class="icon">✏️</span> Editar Perfil
+                            </button>
+                            <button class="btn-action-danger" (click)="deleteClub(selectedClub, $event)">
+                                <span class="icon">🗑️</span> Borrar Sede
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="admin-grid-layout">
+                        <!-- COLUMNA IZQUIERDA: CANCHAS -->
+                        <div class="grid-column">
+                            <div class="section-header">
+                                <div class="title-wrap">
+                                    <span class="dot"></span>
+                                    <h2>Gestión de Canchas</h2>
+                                </div>
+                                <button class="btn-add-primary" (click)="openCanchaModal()">+ Nueva Cancha</button>
+                            </div>
+
+                            <div class="courts-masonry">
+                                <div *ngFor="let cancha of canchas" class="court-card-premium">
+                                    <div class="card-top">
+                                        <div class="type-tag" [class.indoor]="cancha.tipo === 'Indoor'">
+                                            {{ cancha.tipo === 'Indoor' ? '🏠' : '🌳' }} {{ cancha.tipo }}
+                                        </div>
+                                        <div class="card-actions-float">
+                                            <button (click)="editCancha(cancha)"><i class="fas fa-pen"></i></button>
+                                            <button class="del" (click)="deleteCancha(cancha)"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <h3>{{ cancha.nombre }}</h3>
+                                        <p class="surface-text">{{ cancha.superficie }}</p>
+                                        
+                                        <div class="pricing-summary-card">
+                                            <div class="pricing-tier-row">
+                                                <span class="tier-label">🌿 Bajo</span>
+                                                <div class="price-pills">
+                                                    <div class="pill"><span>60m</span> <strong>${{ cancha.precio_60 | number }}</strong></div>
+                                                    <div class="pill"><span>90m</span> <strong>${{ cancha.precio_90 | number }}</strong></div>
+                                                    <div class="pill" *ngIf="cancha.precio_120 > 0"><span>120m</span> <strong>${{ cancha.precio_120 | number }}</strong></div>
+                                                </div>
+                                            </div>
+                                            <div class="pricing-tier-row peak" *ngIf="cancha.precio_60_alto > 0 || cancha.precio_90_alto > 0">
+                                                <span class="tier-label">⚡ Alto</span>
+                                                <div class="price-pills">
+                                                    <div class="pill peak"><span>60m</span> <strong>${{ cancha.precio_60_alto | number }}</strong></div>
+                                                    <div class="pill peak"><span>90m</span> <strong>${{ cancha.precio_90_alto | number }}</strong></div>
+                                                    <div class="pill peak" *ngIf="cancha.precio_120_alto > 0"><span>120m</span> <strong>${{ cancha.precio_120_alto | number }}</strong></div>
+                                                </div>
+                                            </div>
+                                            <div class="schedule-range-note">
+                                                <span>🌿 Bajo: {{ (cancha.hora_inicio_bajo || '07:00').substring(0,5) }} - {{ (cancha.hora_fin_bajo || '18:00').substring(0,5) }}</span>
+                                                <br>
+                                                <span>⚡ Alto: {{ (cancha.hora_inicio_alto || '18:00').substring(0,5) }} - {{ (cancha.hora_fin_alto || '23:30').substring(0,5) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div *ngIf="canchas.length === 0" class="empty-state-card">
+                                    <div class="icon">🎾</div>
+                                    <p>No hay canchas registradas</p>
+                                    <button class="btn-link" (click)="openCanchaModal()">Crear primera cancha</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLUMNA DERECHA: STAFF (Solo visible/editable por el dueño) -->
+                        <div class="grid-column staff-col" *ngIf="selectedClub.admin_id === userId">
+                            <div class="section-header">
+                                <div class="title-wrap">
+                                    <span class="dot blue"></span>
+                                    <h2>Equipo del Club</h2>
+                                </div>
+                                <button class="btn-add-secondary" (click)="openStaffModal()">+ Añadir</button>
+                            </div>
+
+                            <div class="staff-compact-list">
+                                <div *ngFor="let s of staff" class="staff-row-card">
+                                    <div class="staff-avatar">{{ s.nombre.substring(0, 1) }}</div>
+                                    <div class="staff-info">
+                                        <span class="name">{{ s.nombre }}</span>
+                                        <div class="meta">
+                                            <span class="role-badge">{{ s.rol === 'administrador_club' ? 'Admin' : 'Staff' }}</span>
+                                            <span class="email">{{ s.email }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="staff-action" *ngIf="s.id !== userId">
+                                        <button class="btn-remove" (click)="deleteStaff(s.id)" title="Remover acceso">✕</button>
+                                    </div>
+                                </div>
+
+                                <div *ngIf="staff.length === 0" class="empty-staff-box">
+                                    <p>Solo tú tienes acceso administrativo. Puedes añadir colaboradores para delegar tareas.</p>
+                                    <button class="btn-secondary-outline" (click)="openStaffModal()">Añadir Colaborador</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODAL CREAR STAFF -->
+                <div class="modal-overlay" *ngIf="showStaffModal" (click)="showStaffModal = false">
+                    <div class="modal-card card glass-card form-card animate-in" (click)="$event.stopPropagation()">
+                        <div class="card-header-actions">
+                            <h3>Añadir Usuario Staff</h3>
+                            <button class="btn-close-mini" (click)="showStaffModal = false">✕</button>
+                        </div>
+                        <div class="form-inputs-deck">
+                            <p class="form-info">Este usuario podrá ver las reservas, torneos y configuración de <strong>{{selectedClub?.nombre}}</strong>.</p>
+                            
+                            <div class="input-group">
+                                <label>Nombre Completo</label>
+                                <input type="text" [(ngModel)]="newStaff.nombre" placeholder="Ej: Juan Staff">
+                            </div>
+                            <div class="input-group">
+                                <label>Email (será su usuario)</label>
+                                <input type="email" [(ngModel)]="newStaff.email" placeholder="staff@ejemplo.com">
+                            </div>
+                            <div class="input-group">
+                                <label>Contraseña Inicial</label>
+                                <input type="password" [(ngModel)]="newStaff.password" placeholder="Crear contraseña">
+                            </div>
+
+                            <div class="actions-footer-modal">
+                                <button class="btn-primary" (click)="createStaff()" [disabled]="isLoading">
+                                    {{ isLoading ? 'Creando...' : 'Crear Usuario' }}
+                                </button>
+                                <button class="btn-ghost" (click)="showStaffModal = false">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODAL CANCHAS (DENTRO DE detail-view PERO FUERA DE VISTA DETALLE PARA QUE NO DESAPAREZCA) -->
+                <!-- MODAL CANCHAS UX IMPROVED (SIDE-BY-SIDE 2 COLUMNS) -->
+                <div class="modal-overlay" *ngIf="showCanchaModal" (click)="cancelEditCancha()">
+                    <div class="modal-card cancha-modal-pro animate-in" (click)="$event.stopPropagation()">
+                        
+                        <!-- STICKY HEADER -->
+                        <div class="card-header-actions-pro">
+                            <div class="header-title-box">
+                                <div class="header-icon-pill">🎾</div>
+                                <div>
+                                    <h3>{{ editingCanchaId ? 'Editar Cancha' : 'Nueva Cancha' }}</h3>
+                                    <p class="header-subtitle">Configura los datos, tarifas y rangos horarios de la pista</p>
+                                </div>
+                            </div>
+                            <button class="btn-close-mini-pro" (click)="cancelEditCancha()">✕</button>
+                        </div>
+
+                        <div class="modal-body-scroll">
+                            <!-- DATOS GENERALES (TOP CARD) -->
+                            <div class="pro-section-card">
+                                <span class="pro-section-label">DATOS PRINCIPALES</span>
+                                
+                                <div class="form-grid-top">
+                                    <div class="input-field-group col-full">
+                                        <label class="field-label">Nombre de la Pista</label>
+                                        <input type="text" class="custom-pro-input" [(ngModel)]="newCancha.nombre" placeholder="Ej: Pista 1 - Central">
+                                    </div>
+                                    
+                                    <div class="input-field-group">
+                                        <label class="field-label">Tipo</label>
+                                        <select class="custom-pro-select" [(ngModel)]="newCancha.tipo">
+                                            <option value="Outdoor">🌳 Outdoor</option>
+                                            <option value="Indoor">🏠 Indoor</option>
+                                            <option value="Cubierta">🌤️ Cubierta</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="input-field-group">
+                                        <label class="field-label">Superficie</label>
+                                        <select class="custom-pro-select" [(ngModel)]="newCancha.superficie">
+                                            <option value="Césped Sintético">Césped Sintético</option>
+                                            <option value="Cemento">Cemento</option>
+                                            <option value="Arcilla">Arcilla</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BOTON COPIAR HORARIOS DE LA PRIMERA CANCHA -->
+                            <div class="copy-schedule-banner" *ngIf="canCopyFromFirstCancha()">
+                                <div class="copy-info">
+                                    <span class="icon">📋</span>
+                                    <span>¿Deseas aplicar el mismo horario y tarifas que en <strong>{{ canchas[0].nombre }}</strong>?</span>
+                                </div>
+                                <button type="button" class="btn-copy-schedule" (click)="copyHorariosFromFirstCancha()">
+                                    Copiar Horarios de {{ canchas[0].nombre }}
+                                </button>
+                            </div>
+
+                            <!-- DYNAMIC HORARIOS GRID -->
+                            <div class="tier-cards-grid">
+                                <div class="tier-card" 
+                                     *ngFor="let tramo of newCancha.tramos_horarios; let i = index"
+                                     [class.tier-offpeak]="i === 0"
+                                     [class.tier-peak]="i === 1"
+                                     [class.tier-custom]="i > 1">
+                                    
+                                    <div class="tier-card-header">
+                                        <input type="text" 
+                                               class="tier-name-input" 
+                                               [(ngModel)]="tramo.nombre" 
+                                               [placeholder]="'Horario ' + (i + 1)">
+                                        
+                                        <button type="button" 
+                                                class="btn-delete-tier" 
+                                                *ngIf="newCancha.tramos_horarios.length > 1" 
+                                                (click)="removeTramoHorario(i)" 
+                                                title="Eliminar este horario">
+                                            🗑️
+                                        </button>
+                                    </div>
+
+                                    <!-- HORARIOS ITEM -->
+                                    <div class="schedule-inputs-box">
+                                        <span class="sub-label">Rango Horario</span>
+                                        <div class="time-range-row">
+                                            <div class="time-input-item">
+                                                <span class="mini-tag">Inicio</span>
+                                                <input type="time" class="pro-time-input" [(ngModel)]="tramo.hora_inicio">
+                                            </div>
+                                            <span class="sep-dash">—</span>
+                                            <div class="time-input-item">
+                                                <span class="mini-tag">Fin</span>
+                                                <input type="time" class="pro-time-input" [(ngModel)]="tramo.hora_fin">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tier-divider"></div>
+
+                                    <!-- TARIFAS ITEM -->
+                                    <div class="pricing-inputs-box">
+                                        <span class="sub-label">Tarifas (CLP)</span>
+                                        <div class="tier-pricing-grid">
+                                            <div class="tier-price-box">
+                                                <label>60 Min</label>
+                                                <div class="price-input-wrapper">
+                                                    <span class="currency-prefix">$</span>
+                                                    <input type="number" class="pro-price-input" [(ngModel)]="tramo.precio_60" placeholder="0">
+                                                </div>
+                                            </div>
+                                            <div class="tier-price-box">
+                                                <label>90 Min</label>
+                                                <div class="price-input-wrapper">
+                                                    <span class="currency-prefix">$</span>
+                                                    <input type="number" class="pro-price-input" [(ngModel)]="tramo.precio_90" placeholder="0">
+                                                </div>
+                                            </div>
+                                            <div class="tier-price-box">
+                                                <label>120 Min</label>
+                                                <div class="price-input-wrapper">
+                                                    <span class="currency-prefix">$</span>
+                                                    <input type="number" class="pro-price-input" [(ngModel)]="tramo.precio_120" placeholder="0">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- BOTON AGREGAR HORARIO -->
+                            <div class="add-tier-btn-row">
+                                <button type="button" class="btn-add-tier-pro" (click)="addTramoHorario()">
+                                    <span>➕</span>
+                                    <span>Agregar Nuevo Horario / Tramo</span>
+                                </button>
+                            </div>
+
+                            <!-- ALERTA DE CONFLICTO DE HORARIOS -->
+                            <div class="schedule-overlap-alert" *ngIf="hasScheduleOverlap()">
+                                <span>⚠️</span>
+                                <span><strong>Conflicto de Horarios:</strong> Hay horarios que se están traslapando entre sí o contienen horas de inicio mayores o iguales al fin. Ajusta los rangos para continuar.</span>
+                            </div>
+
+                            <!-- RESUMEN DE RANGOS HORARIOS -->
+                            <div class="timeline-summary-bar" *ngIf="!hasScheduleOverlap() && newCancha.tramos_horarios">
+                                <div class="t-segment" *ngFor="let tramo of newCancha.tramos_horarios; let i = index" [class.offpeak]="i===0" [class.peak]="i===1" [class.custom]="i>1">
+                                    <span class="icon">{{ i === 0 ? '🌿' : (i === 1 ? '⚡' : '🕒') }}</span>
+                                    <span>{{ tramo.nombre }}: {{ tramo.hora_inicio || '00:00' }} a {{ tramo.hora_fin || '00:00' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FOOTER ACTIONS -->
+                        <div class="actions-footer-pro">
+                            <button class="btn-ghost-pro" (click)="cancelEditCancha()">Cancelar</button>
+                            <button class="btn-primary-pro" (click)="saveCancha()" [disabled]="isLoading">
+                                {{ isLoading ? 'Guardando...' : (editingCanchaId ? 'Actualizar Cancha' : 'Añadir Cancha') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EMPTY STATE (NO SELECTION) -->
+                <div *ngIf="!selectedClub && activeTab === 'list'" class="no-selection-state">
+                    <div class="state-content">
+                        <div class="state-icon">🏢</div>
+                        <h2>Gestiona tus Sedes</h2>
+                        <p>Selecciona un club de la lista lateral para administrar sus canchas, precios y configuraciones.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

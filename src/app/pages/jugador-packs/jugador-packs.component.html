@@ -1,0 +1,183 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="jugadorNombre" [jugadorFoto]="jugadorFoto" activePage="packs">
+    </app-sidebar>
+
+    <main class="main-content">
+
+        <div class="dashboard-grid">
+
+            <!-- STEP 1: SELECT TRAINER -->
+            <ng-container *ngIf="viewMode === 'trainers'">
+                <div class="page-header animate-up">
+                    <h2 class="section-title">Elige a tu entrenador ideal y descubre sus mejores programas</h2>
+
+                    <div class="location-controls">
+                        <div class="location-status" [class.active]="useLocation">
+                            <span class="icon">{{ useLocation ? '📍' : '🌍' }}</span>
+                            <span *ngIf="!isLoadingLocation">{{ useLocation ? 'Cercanos a ti' : 'Buscando en todo Chile'
+                                }}</span>
+                            <span *ngIf="isLoadingLocation" class="spinner-small"></span>
+                        </div>
+                        <div class="radius-slider" *ngIf="useLocation">
+                            <label>Radio: <strong>{{ searchRadius }} km</strong></label>
+                            <input type="range" min="10" max="200" step="10" [value]="searchRadius"
+                                (change)="onRadiusChange($event)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="trainers-grid" *ngIf="entrenadores.length > 0; else noPacks">
+                    <div class="trainer-card animate-up" *ngFor="let t of entrenadores; let i = index"
+                        [style.animation-delay]="(i * 0.05) + 's'" (click)="selectTrainer(t)">
+                        <div class="trainer-photo">
+                            <img [src]="t.foto || 'assets/img/default-avatar.png'" [alt]="t.nombre">
+                            <div class="distance-tag" *ngIf="t.distancia !== null">
+                                📍 {{ t.distancia }}km
+                            </div>
+                        </div>
+                        <div class="trainer-info">
+                            <h3>{{ t.nombre }}</h3>
+                            <p class="comuna" *ngIf="t.comuna">{{ t.comuna }}</p>
+                            <button class="btn-see-packs">Ver Packs 🎾</button>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- STEP 2: SHOW TRAINER PACKS -->
+            <ng-container *ngIf="viewMode === 'packs' && selectedTrainer">
+                <div class="trainer-header animate-up">
+                    <button class="btn-back" (click)="backToTrainers()">← Volver a la selección</button>
+
+                    <div class="trainer-bio-card">
+                        <div class="bio-main">
+                            <img [src]="selectedTrainer.foto || 'assets/img/default-avatar.png'" class="bio-photo">
+                            <div class="bio-text">
+                                <h2>{{ selectedTrainer.nombre }}</h2>
+                                <p class="bio-subtitle">Curriculum / Resumen</p>
+                                <div class="bio-description">{{ selectedTrainer.descripcion }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="categories-container animate-up">
+
+                    <div class="tabs-header">
+                        <button class="tab-btn" [class.active]="activeCategoryTab === 'individual'"
+                            (click)="activeCategoryTab = 'individual'">
+                            🎾 Individual
+                            <span class="count" *ngIf="packsIndividual.length > 0">{{ packsIndividual.length }}</span>
+                        </button>
+                        <button class="tab-btn" [class.active]="activeCategoryTab === 'multi'"
+                            (click)="activeCategoryTab = 'multi'">
+                            👥 Multijugador
+                            <span class="count" *ngIf="packsSmallGroups.length > 0">{{ packsSmallGroups.length }}</span>
+                        </button>
+                        <button class="tab-btn" [class.active]="activeCategoryTab === 'grupal'"
+                            (click)="activeCategoryTab = 'grupal'">
+                            🔥 Grupal / Academia
+                            <span class="count" *ngIf="packsGrupales.length > 0">{{ packsGrupales.length }}</span>
+                        </button>
+                    </div>
+
+                    <div class="tab-content">
+                        <!-- INDIVIDUAL PACKS -->
+                        <section class="pack-category" *ngIf="activeCategoryTab === 'individual'">
+                            <div class="category-header">
+                                <h3 class="category-title">Entrenamientos Individuales</h3>
+                                <p class="category-sub">Mejora tu técnica de forma personalizada (1 persona)</p>
+                            </div>
+                            <div class="packs-row" *ngIf="packsIndividual.length > 0; else noCategoryPacks">
+                                <div class="pack-card-v2" *ngFor="let pack of packsIndividual">
+                                    <ng-container
+                                        *ngTemplateOutlet="packTemplate; context: { $implicit: pack }"></ng-container>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- DUOS, TRIOS, QUADS -->
+                        <section class="pack-category" *ngIf="activeCategoryTab === 'multi'">
+                            <div class="category-header">
+                                <h3 class="category-title">Entrenamientos Multijugador</h3>
+                                <p class="category-sub">Comparte la pista con amigos (2 a 4 personas)</p>
+                            </div>
+                            <div class="packs-row" *ngIf="packsSmallGroups.length > 0; else noCategoryPacks">
+                                <div class="pack-card-v2" *ngFor="let pack of packsSmallGroups">
+                                    <ng-container
+                                        *ngTemplateOutlet="packTemplate; context: { $implicit: pack }"></ng-container>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- GROUP TRAINING -->
+                        <section class="pack-category" *ngIf="activeCategoryTab === 'grupal'">
+                            <div class="category-header">
+                                <h3 class="category-title">Entrenamientos Grupales</h3>
+                                <p class="category-sub">Únete a grupos de tu nivel y compite cada semana (Academia)</p>
+                                <div class="next-session-info">
+                                    <span class="pulse-icon"></span>
+                                    Próxima sesión: <strong>Sábado {{ nextSaturday }}</strong>
+                                </div>
+                            </div>
+                            <div class="packs-row" *ngIf="packsGrupales.length > 0; else noCategoryPacks">
+                                <div class="pack-card-v2" *ngFor="let pack of packsGrupales">
+                                    <ng-container
+                                        *ngTemplateOutlet="packTemplate; context: { $implicit: pack }"></ng-container>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <ng-template #noCategoryPacks>
+                        <div class="empty-category animate-up">
+                            <div class="empty-icon">🎾</div>
+                            <p>No hay packs disponibles en esta categoría para este entrenador.</p>
+                        </div>
+                    </ng-template>
+
+                </div>
+            </ng-container>
+
+            <ng-template #noPacks>
+                <div class="no-packs">
+                    <p>No hay entrenadores disponibles en tu zona en este momento.</p>
+                </div>
+            </ng-template>
+
+            <!-- REUSABLE PACK TEMPLATE -->
+            <ng-template #packTemplate let-pack>
+                <div class="pack-inner">
+                    <div class="pack-badge" [ngClass]="pack.tipo">
+                        {{ pack.tipo === 'grupal' ? 'GRUPAL' : (pack.cantidad_personas > 1 ? 'MULTI' : 'PERSONAL') }}
+                    </div>
+                    <h4 class="p-title">{{ pack.nombre }}</h4>
+                    
+                    <div class="p-price" *ngIf="!isInternational">
+                        ${{ pack.precio | number:'1.0-0':'es' }} <small>CLP</small>
+                    </div>
+
+                    <div class="p-price-usd" *ngIf="isInternational">
+                        <div class="usd-amount">${{ usdPrice }} <small>USD</small></div>
+                        <div class="clp-ref">Aprox. ${{ pack.precio | number:'1.0-0':'es' }} CLP</div>
+                    </div>
+
+                    <ul class="p-features">
+                        <li><strong>{{ pack.sesiones_totales }}</strong> clases</li>
+                        <li>Duración: <strong>{{ pack.duracion_sesion_min }}min</strong></li>
+                        <li *ngIf="pack.cantidad_personas > 1">Para <strong>{{ pack.cantidad_personas }}</strong> personas</li>
+                    </ul>
+
+                    <div id="paypal-button-container" *ngIf="isInternational && selectedPackForPaypal?.id === pack.id"></div>
+
+                    <button class="btn-buy-v2" [class.btn-enroll]="pack.tipo === 'grupal'" 
+                            *ngIf="!isInternational || selectedPackForPaypal?.id !== pack.id"
+                            (click)="comprarPack(pack)">
+                        {{ isInternational ? 'Pagar con PayPal' : (pack.tipo === 'grupal' ? 'Inscribirme' : 'Comprar Ahora') }}
+                    </button>
+                </div>
+            </ng-template>
+
+        </div>
+    </main>
+</div>

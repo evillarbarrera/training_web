@@ -1,0 +1,489 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+        activePage="club-reportes">
+    </app-sidebar>
+
+    <main class="main-content">
+        <header class="content-header">
+            <div class="header-title">
+                <h1>Reportes y Analítica</h1>
+                <div class="header-subtitle">
+                    <p>Monitorea el rendimiento del club en tiempo real</p>
+                    <div class="time-badge">
+                        <span class="pulse"></span> SISTEMA EN VIVO
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div class="club-select-wrapper" *ngIf="clubes.length > 1">
+                    <label>Seleccionar Club</label>
+                    <select [(ngModel)]="clubId" (change)="onClubChange()" class="club-dropdown">
+                        <option *ngFor="let c of clubes" [value]="c.id">{{ c.nombre }}</option>
+                    </select>
+                </div>
+                <div class="club-info-single" *ngIf="clubes.length <= 1 && clubes.length > 0">
+                    <span class="club-label">
+                        🏢 {{ clubes[0].nombre }}
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <div class="reports-container">
+            <div class="tabs-nav">
+                <button [class.active]="activeTab === 'ventas'" (click)="switchTab('ventas')">
+                    <span class="icon">💰</span> Ventas
+                </button>
+                <button [class.active]="activeTab === 'reservas'" (click)="switchTab('reservas')">
+                    <span class="icon">🎾</span> Reservas
+                </button>
+                <button [class.active]="activeTab === 'listado-ventas'" (click)="switchTab('listado-ventas')">
+                    <span class="icon">📋</span> Listado Ventas
+                </button>
+                <button [class.active]="activeTab === 'listado-reservas'" (click)="switchTab('listado-reservas')">
+                    <span class="icon">📅</span> Lista de Reservas
+                </button>
+                <button [class.active]="activeTab === 'top-partidos'" (click)="switchTab('top-partidos')">
+                    <span class="icon">🏆</span> Más Partidos
+                </button>
+                <button [class.active]="activeTab === 'top-reservas'" (click)="switchTab('top-reservas')">
+                    <span class="icon">👑</span> Más Reservas
+                </button>
+            </div>
+
+            <!-- SALES SECTION -->
+            <div class="tab-content" *ngIf="activeTab === 'ventas'">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <label>Ventas Hoy</label>
+                        <div class="value">$ {{ getTodayValue(salesData.daily) | number:'1.0-0' }}</div>
+                        <span class="trend">Ingresos diarios</span>
+                    </div>
+                    <div class="stat-card">
+                        <label>Ventas esta Semana</label>
+                        <div class="value">$ {{ getCurrentWeekValue(salesData.weekly) | number:'1.0-0' }}</div>
+                        <span class="trend">Semana en curso</span>
+                    </div>
+                    <div class="stat-card">
+                        <label>Ventas este Mes</label>
+                        <div class="value">$ {{ getCurrentMonthValue(salesData.monthly) | number:'1.0-0' }}</div>
+                        <span class="trend">Proyectado vs Mes Ant.</span>
+                    </div>
+                </div>
+
+                <div class="chart-container-large">
+                    <div class="chart-header">
+                        <h3>Comparativa Mensual de Ventas</h3>
+                        <p>Visualización del histórico de ingresos de los últimos 12 meses</p>
+                    </div>
+                    <canvas #salesChart></canvas>
+                </div>
+            </div>
+
+            <!-- DETALLE DE VENTAS CON FILTROS Y EXPORTAR (Pestaña Listado Ventas) -->
+            <div class="tab-content animate-in" *ngIf="activeTab === 'listado-ventas'">
+                <div class="chart-container-large" style="margin-top: 10px;">
+                    <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">Detalle de Ventas Registradas</h3>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Filtra, revisa e importa tu historial a Excel o PDF.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button (click)="exportToExcel()" style="all: unset; cursor: pointer; background: #22c55e; color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2); transition: all 0.2s;">
+                                <i class="fas fa-file-excel" style="font-size: 14px;"></i> Exportar a Excel
+                            </button>
+                            <button (click)="exportToPdf()" style="all: unset; cursor: pointer; background: #ef4444; color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); transition: all 0.2s;">
+                                <i class="fas fa-file-pdf" style="font-size: 14px;"></i> Exportar a PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros del Listado -->
+                    <div style="display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Desde:</label>
+                            <input type="date" [(ngModel)]="fechaInicioFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Hasta:</label>
+                            <input type="date" [(ngModel)]="fechaFinFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Método:</label>
+                            <select [(ngModel)]="metodoPagoFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #fff; cursor: pointer;">
+                                <option value="Todos">Todos</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Reserva">Reserva</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Vendedor:</label>
+                            <select [(ngModel)]="vendedorFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #fff; cursor: pointer;">
+                                <option value="Todos">Todos</option>
+                                <option *ngFor="let v of vendedoresList" [value]="v">{{v}}</option>
+                            </select>
+                        </div>
+                        <button (click)="loadSalesList()" class="btn-search-report-trigger">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        
+                        <div *ngIf="filteredSalesList.length > 0" style="margin-left: auto; display: flex; align-items: center; gap: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 16px; border-radius: 12px;">
+                            <span style="font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase;">Total Periodo:</span>
+                            <span style="font-size: 14px; font-weight: 950; color: #14532d;">$ {{ totalSalesListAmount | number:'1.0-0' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Ventas -->
+                    <div style="margin-top: 15px; overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 650px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fecha / Hora</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Vendedor</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Producto</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Precio Unit.</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Cantidad</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Impuesto (19%)</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Total</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Método</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let s of paginatedReportSales" style="border-bottom: 1px solid #f1f5f9; font-size: 13px; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{s.fecha | date:'dd/MM/yyyy'}} {{ s.hora_inicio ? s.hora_inicio.substring(0,5) : (s.fecha | date:'HH:mm') }}</td>
+                                    <td style="padding: 14px 18px; font-weight: 600; color: #475569;">{{s.vendedor || 'Staff'}}</td>
+                                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{s.producto_nombre}}</td>
+                                    <td style="padding: 14px 18px; text-align: right; font-weight: 600; color: #475569;">$ {{s.precio_unitario | number:'1.0-0'}}</td>
+                                    <td style="padding: 14px 18px; text-align: center; font-weight: 700; color: #475569;">{{s.cantidad}}</td>
+                                    <td style="padding: 14px 18px; text-align: right; font-weight: 600; color: #a855f7;">$ {{ (s.total - (s.total / 1.19)) | number:'1.0-0' }}</td>
+                                    <td style="padding: 14px 18px; font-weight: 950; color: #0f172a; text-align: right;">$ {{s.total | number:'1.0-0'}}</td>
+                                    <td style="padding: 14px 18px;">
+                                        <span style="font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 30px; text-transform: uppercase;"
+                                              [style.background]="s.metodo_pago === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : (s.metodo_pago === 'Tarjeta' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)')"
+                                              [style.color]="s.metodo_pago === 'Efectivo' ? '#059669' : (s.metodo_pago === 'Tarjeta' ? '#2563eb' : '#7c3aed')">
+                                            {{s.metodo_pago}}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr *ngIf="filteredSalesList.length === 0">
+                                    <td colspan="8" style="text-align: center; padding: 50px 20px; color: #94a3b8; font-style: italic; font-weight: 800; font-size: 13px;">
+                                        No hay ventas registradas que coincidan con los filtros.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Controles de Paginación -->
+                    <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px; margin-top: 10px; border-radius: 0 0 16px 16px;" *ngIf="filteredSalesList.length > 0">
+                        <div class="pagination-info" style="display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 600; color: #64748b;">
+                            <span>{{ pageRangeTextReport }}</span>
+                            <div class="page-size-selector" style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 13px; color: #94a3b8; font-weight: 700;">Mostrar:</label>
+                                <select [(ngModel)]="pageSizeReport" (ngModelChange)="currentPageReport = 1" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; background: #f8fafc;">
+                                    <option *ngFor="let size of pageSizeOptionsReport" [value]="size">{{ size }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pagination-controls" style="display: flex; align-items: center; gap: 6px;">
+                            <button [disabled]="currentPageReport === 1" (click)="currentPageReport = currentPageReport - 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button *ngFor="let page of pagesArrayReport" 
+                                    [class.active]="currentPageReport === page" 
+                                    (click)="currentPageReport = page"
+                                    [style.background]="currentPageReport === page ? '#0f172a' : 'transparent'"
+                                    [style.color]="currentPageReport === page ? '#ccff00' : '#64748b'"
+                                    [style.border-color]="currentPageReport === page ? '#0f172a' : 'transparent'"
+                                    style="border: 1px solid transparent; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 8px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                {{ page }}
+                            </button>
+                            <button [disabled]="currentPageReport === totalPagesReport" (click)="currentPageReport = currentPageReport + 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESERVATIONS SECTION -->
+            <div class="tab-content" *ngIf="activeTab === 'reservas'">
+                <div class="stats-grid">
+                    <div class="stat-card res">
+                        <label>Reservas Hoy</label>
+                        <div class="value">{{ getTodayValue(resData.daily) }}</div>
+                        <span class="trend">Uso de canchas</span>
+                    </div>
+                    <div class="stat-card res">
+                        <label>Reservas esta Semana</label>
+                        <div class="value">{{ getCurrentWeekValue(resData.weekly) }}</div>
+                        <span class="trend">Flujo semanal</span>
+                    </div>
+                    <div class="stat-card res">
+                        <label>Reservas este Mes</label>
+                        <div class="value">{{ getCurrentMonthValue(resData.monthly) }}</div>
+                        <span class="trend">Demanda mensual</span>
+                    </div>
+                </div>
+
+                <div class="chart-container-large">
+                    <div class="chart-header">
+                        <h3>Tendencia de Reservas Diarias</h3>
+                        <p>Ocupación de canchas durante los últimos 30 días</p>
+                    </div>
+                    <canvas #resChart></canvas>
+                </div>
+            </div>
+
+            <!-- JUGADORES CON MÁS PARTIDOS JUGADOS -->
+            <div class="tab-content animate-in" *ngIf="activeTab === 'top-partidos'">
+                <div class="chart-container-large" style="margin-top: 10px; padding: 35px;">
+                    <div class="chart-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 900; color: #0f172a;"><i class="fas fa-trophy" style="color: #eab308; margin-right: 8px;"></i> Jugadores con más partidos jugados</h3>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Top 10 jugadores con mayor participación en cancha (titular o invitado)</p>
+                    </div>
+
+                    <!-- Filtros del Listado -->
+                    <div style="display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Desde:</label>
+                            <input type="date" [(ngModel)]="fechaInicioFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Hasta:</label>
+                            <input type="date" [(ngModel)]="fechaFinFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <button (click)="loadTopJugadores()" class="btn-search-report-trigger">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase;">POSICIÓN</th>
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase;">JUGADOR</th>
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase; text-align: right;">CANTIDAD DE PARTIDOS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let p of topPartidos; let idx = index" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 14px 18px; font-weight: 900; color: #94a3b8;">
+                                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 900;"
+                                              [style.background]="idx === 0 ? '#fef08a' : (idx === 1 ? '#e2e8f0' : (idx === 2 ? '#ffedd5' : 'transparent'))"
+                                              [style.color]="idx < 3 ? '#000' : '#94a3b8'">
+                                            {{ idx + 1 }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">
+                                        {{ p.nombre }}
+                                        <div style="font-size: 11px; font-weight: 500; color: #94a3b8; margin-top: 2px;">{{ p.email }}</div>
+                                    </td>
+                                    <td style="padding: 14px 18px; font-weight: 950; text-align: right; color: #10b981; font-size: 15px;">{{ p.value }}</td>
+                                </tr>
+                                <tr *ngIf="topPartidos.length === 0">
+                                    <td colspan="3" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic; font-weight: 800;">
+                                        Sin datos suficientes en el club.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JUGADORES CON MÁS CANCHAS RESERVADAS -->
+            <div class="tab-content animate-in" *ngIf="activeTab === 'top-reservas'">
+                <div class="chart-container-large" style="margin-top: 10px; padding: 35px;">
+                    <div class="chart-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 900; color: #0f172a;"><i class="fas fa-calendar-check" style="color: #2563eb; margin-right: 8px;"></i> Jugadores con más canchas reservadas</h3>
+                        <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">Top 10 jugadores creadores del arriendo / reserva de la cancha</p>
+                    </div>
+
+                    <!-- Filtros del Listado -->
+                    <div style="display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Desde:</label>
+                            <input type="date" [(ngModel)]="fechaInicioFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Hasta:</label>
+                            <input type="date" [(ngModel)]="fechaFinFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <button (click)="loadTopJugadores()" class="btn-search-report-trigger">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase;">POSICIÓN</th>
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase;">JUGADOR</th>
+                                    <th style="padding: 14px 18px; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase; text-align: right;">CANTIDAD DE RESERVAS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let p of topReservas; let idx = index" style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 14px 18px; font-weight: 900; color: #94a3b8;">
+                                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 900;"
+                                              [style.background]="idx === 0 ? '#fef08a' : (idx === 1 ? '#e2e8f0' : (idx === 2 ? '#ffedd5' : 'transparent'))"
+                                              [style.color]="idx < 3 ? '#000' : '#94a3b8'">
+                                            {{ idx + 1 }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">
+                                        {{ p.nombre }}
+                                        <div style="font-size: 11px; font-weight: 500; color: #94a3b8; margin-top: 2px;">{{ p.email }}</div>
+                                    </td>
+                                    <td style="padding: 14px 18px; font-weight: 950; text-align: right; color: #2563eb; font-size: 15px;">{{ p.value }}</td>
+                                </tr>
+                                <tr *ngIf="topReservas.length === 0">
+                                    <td colspan="3" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic; font-weight: 800;">
+                                        Sin datos suficientes en el club.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DETALLE DE RESERVAS CON FILTROS Y EXPORTAR (Pestaña Listado Reservas) -->
+            <div class="tab-content animate-in" *ngIf="activeTab === 'listado-reservas'">
+                <div class="chart-container-large" style="margin-top: 10px;">
+                    <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">Detalle de Reservas Registradas</h3>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Filtra, revisa e importa tu historial de reservas a Excel o PDF.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button (click)="exportReservasToExcel()" style="all: unset; cursor: pointer; background: #22c55e; color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2); transition: all 0.2s;">
+                                <i class="fas fa-file-excel" style="font-size: 14px;"></i> Exportar a Excel
+                            </button>
+                            <button (click)="exportReservasToPdf()" style="all: unset; cursor: pointer; background: #ef4444; color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); transition: all 0.2s;">
+                                <i class="fas fa-file-pdf" style="font-size: 14px;"></i> Exportar a PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros del Listado -->
+                    <div style="display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Desde:</label>
+                            <input type="date" [(ngModel)]="fechaInicioFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Hasta:</label>
+                            <input type="date" [(ngModel)]="fechaFinFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #f8fafc;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Cancha:</label>
+                            <select [(ngModel)]="canchaFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #fff; cursor: pointer;">
+                                <option value="Todas">Todas</option>
+                                <option *ngFor="let c of canchasFiltroList" [value]="c">{{c}}</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Pago:</label>
+                            <select [(ngModel)]="estadoPagoFiltro" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #fff; cursor: pointer;">
+                                <option value="Todos">Todos</option>
+                                <option value="Pagadas">Pagadas</option>
+                                <option value="Pendientes">Pendientes</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                            <label style="font-size: 10px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Buscar:</label>
+                            <input type="text" [(ngModel)]="clienteFiltro" placeholder="Nombre de jugador..." style="width: 100%; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; outline: none; background: #fff;">
+                        </div>
+                        <button (click)="loadReservasList()" class="btn-search-report-trigger">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+
+                    <!-- Tabla de Reservas -->
+                    <div style="margin-top: 15px; overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fecha</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Horario</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Cancha</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Jugadores</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Cobro</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Estado</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Precio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let r of paginatedReportReservas" style="border-bottom: 1px solid #f1f5f9; font-size: 13px; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{r.fecha | date:'dd/MM/yyyy'}}</td>
+                                    <td style="padding: 14px 18px; font-weight: 600; color: #475569;">{{r.hora_inicio.substring(0,5)}} - {{r.hora_fin.substring(0,5)}}</td>
+                                    <td style="padding: 14px 18px; font-weight: 600; color: #0f172a;">{{r.cancha_nombre}}</td>
+                                    <td style="padding: 14px 18px;">
+                                        <div style="font-size: 11px; font-weight: 700; color: #475569;">
+                                            {{ getPlayersText(r) }}
+                                        </div>
+                                    </td>
+                                    <td style="padding: 14px 18px;">
+                                        <span style="font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 30px; text-transform: uppercase; background: #e2e8f0; color: #475569;">
+                                            {{ r.metodo_pago === 'proporcional' ? 'Por Jugador' : 'Total Sede' }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 18px;">
+                                        <span style="font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 30px; text-transform: uppercase;"
+                                              [style.background]="getPaymentStatus(r) === 'total' ? 'rgba(16, 185, 129, 0.1)' : (getPaymentStatus(r) === 'parcial' ? 'rgba(234, 179, 8, 0.1)' : (getPaymentStatus(r) === 'no_aplica' ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)'))"
+                                              [style.color]="getPaymentStatus(r) === 'total' ? '#059669' : (getPaymentStatus(r) === 'parcial' ? '#d97706' : (getPaymentStatus(r) === 'no_aplica' ? '#64748b' : '#dc2626'))">
+                                            {{ getPaymentStatus(r) === 'total' ? 'PAGADA' : (getPaymentStatus(r) === 'parcial' ? 'PARCIAL' : (getPaymentStatus(r) === 'no_aplica' ? 'NO APLICA' : 'DEBE')) }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 18px; font-weight: 950; color: #0f172a; text-align: right;">$ {{r.precio | number:'1.0-0'}}</td>
+                                </tr>
+                                <tr *ngIf="filteredReservasList.length === 0">
+                                    <td colspan="7" style="text-align: center; padding: 50px 20px; color: #94a3b8; font-style: italic; font-weight: 800; font-size: 13px;">
+                                        No hay reservas registradas que coincidan con los filtros.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Controles de Paginación -->
+                    <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px; margin-top: 10px; border-radius: 0 0 16px 16px;" *ngIf="filteredReservasList.length > 0">
+                        <div class="pagination-info" style="display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 600; color: #64748b;">
+                            <span>{{ pageRangeTextResReport }}</span>
+                            <div class="page-size-selector" style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 13px; color: #94a3b8; font-weight: 700;">Mostrar:</label>
+                                <select [(ngModel)]="pageSizeResReport" (ngModelChange)="currentPageResReport = 1" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; background: #f8fafc;">
+                                    <option *ngFor="let size of pageSizeOptionsReport" [value]="size">{{ size }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pagination-controls" style="display: flex; align-items: center; gap: 6px;">
+                            <button [disabled]="currentPageResReport === 1" (click)="currentPageResReport = currentPageResReport - 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button *ngFor="let page of pagesArrayResReport" 
+                                    [class.active]="currentPageResReport === page" 
+                                    (click)="currentPageResReport = page"
+                                    [style.background]="currentPageResReport === page ? '#0f172a' : 'transparent'"
+                                    [style.color]="currentPageResReport === page ? '#ccff00' : '#64748b'"
+                                    [style.border-color]="currentPageResReport === page ? '#0f172a' : 'transparent'"
+                                    style="border: 1px solid transparent; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 8px; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                {{ page }}
+                            </button>
+                            <button [disabled]="currentPageResReport === totalPagesResReport" (click)="currentPageResReport = currentPageResReport + 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

@@ -1,0 +1,2004 @@
+// ===== VARIABLES =====
+@use '../../theme/colors' as *;
+@use '../../theme/animations' as *;
+@use 'sass:color';
+
+$gold: #ccff00;
+$dark-navy: #0a0f1a;
+$red: #ff3366;
+$mobile: 480px;
+$tablet: 768px;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: $dark-navy;
+  -webkit-text-size-adjust: 100%;
+}
+
+:host {
+  --font-family: 'Outfit', sans-serif;
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  background-color: $dark-navy;
+  color: white;
+  font-family: var(--font-family);
+}
+
+.dashboard-container {
+  display: block !important;
+  width: 100% !important;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+// ===== UTILITIES =====
+.container {
+  width: 100%;
+  max-width: 1350px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  position: relative;
+  z-index: 5;
+}
+
+.text-gradient {
+  background: linear-gradient(90deg, #fff, $gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.highlight {
+  color: $gold;
+}
+
+// ===== NAV BAR =====
+.nike-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  z-index: 1000;
+  background: rgba($dark-navy, 0.85);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+
+  .navbar-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    .logo-wrapper {
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+
+      img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+    }
+
+    .text {
+      font-weight: 900;
+      font-size: 1.3rem;
+      color: white;
+      letter-spacing: -1px;
+
+      span {
+        color: $gold;
+        font-weight: 400;
+      }
+    }
+  }
+
+  .menu {
+    display: flex;
+    gap: 1.5rem;
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: 0.3s;
+
+      &:hover {
+        color: $gold;
+      }
+    }
+  }
+
+  .auth-buttons {
+    display: flex;
+    gap: 0.6rem;
+    flex-shrink: 0;
+
+    button {
+      padding: 0.55rem 1.2rem;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn-login {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .btn-register {
+      background: $gold;
+      color: $dark-navy;
+      border: none;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+  }
+}
+
+// ===== HERO SECTION =====
+.nike-hero {
+  position: relative;
+  min-height: 100vh;
+  padding: 120px 0 80px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background-color: $dark-navy;
+
+  .hero-background {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+
+    .bg-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.55;
+      filter: saturate(1.2) brightness(0.85);
+      animation: slowPan 25s infinite alternate linear;
+    }
+
+    .overlay-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 40% center, transparent 0%, rgba($dark-navy, 0.4) 40%, rgba($dark-navy, 0.9) 85%, $dark-navy 100%);
+    }
+  }
+
+  .hero-container {
+    width: 100%;
+  }
+
+  .hero-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+
+    .hero-text-content {
+      .slides-wrapper {
+        position: relative;
+        width: 100%;
+        margin-bottom: 2rem;
+
+        .slide-item {
+          opacity: 0;
+          visibility: hidden;
+          transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          transform: translateY(20px);
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+
+          &.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            position: relative;
+          }
+
+          .badge-new {
+            background: rgba($gold, 0.1);
+            color: $gold;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            border: 1px solid rgba($gold, 0.3);
+            margin-bottom: 2rem;
+            display: inline-block;
+          }
+
+          h1 {
+            font-size: 4.8rem;
+            font-weight: 950;
+            line-height: 0.95;
+            margin-bottom: 2rem;
+            text-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+          }
+
+          p {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            max-width: 550px;
+          }
+        }
+      }
+
+      .slider-dot {
+        &.active {
+          background: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.3) !important;
+        }
+      }
+
+      .cta-group {
+        display: flex;
+        gap: 1.2rem;
+        margin-bottom: 3.5rem;
+
+        button {
+          padding: 1.1rem 2.6rem;
+          border-radius: 50px;
+          font-weight: 950;
+          font-size: 1.05rem;
+          cursor: pointer;
+          transition: 0.3s;
+        }
+
+        .btn-primary-large {
+          background: white;
+          color: $dark-navy;
+          border: none;
+
+          &:hover {
+            background: $gold;
+            transform: translateY(-3px);
+          }
+        }
+
+        .btn-secondary-large {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.2);
+          }
+        }
+      }
+
+      .app-buttons {
+        display: flex;
+        gap: 1rem;
+
+        .btn-store {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 0.6rem 1.2rem;
+          border-radius: 12px;
+          color: white;
+          text-decoration: none;
+          transition: 0.3s;
+
+          .icon {
+            font-size: 1.2rem;
+          }
+
+          .text {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+
+            .small {
+              font-size: 0.55rem;
+              opacity: 0.6;
+            }
+
+            .large {
+              font-size: 0.85rem;
+              font-weight: 700;
+            }
+          }
+
+          &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: $gold;
+          }
+        }
+      }
+    }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+
+      .iphone-17 {
+        width: 300px;
+        height: 610px;
+        position: relative;
+
+        .phone-frame {
+          width: 100%;
+          height: 100%;
+          background: #080808;
+          border-radius: 54px;
+          padding: 12px;
+          border: 3px solid #282828;
+          box-shadow: 0 50px 100px rgba(0, 0, 0, 0.7);
+          position: relative;
+          overflow: hidden;
+          transform: rotate(-3deg);
+          animation: float 8s infinite ease-in-out;
+
+          .dynamic-island {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 30px;
+            background: black;
+            border-radius: 20px;
+            z-index: 100;
+          }
+
+          .phone-screen {
+            width: 100%;
+            height: 100%;
+            border-radius: 42px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+
+            .screen-header {
+              position: absolute;
+              top: 0;
+              width: 100%;
+              height: 44px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0 32px;
+              z-index: 90;
+              color: white;
+              font-weight: 700;
+              font-size: 0.7rem;
+
+              .time {
+                margin-top: 2px;
+              }
+
+              .status-icons {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+
+                .icon-wifi {
+                  font-size: 0.75rem;
+                  margin-top: -2px;
+                }
+
+                .icon-battery {
+                  font-size: 0.95rem;
+                }
+              }
+            }
+
+            .phone-slider-wrapper {
+              width: 100%;
+              height: 100%;
+              position: relative;
+
+              .slider-img {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                opacity: 0;
+                transition: 1s ease-in-out;
+
+                &.active {
+                  opacity: 1;
+                }
+              }
+            }
+          }
+        }
+
+        .phone-buttons {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+
+          .btn-action,
+          .btn-volume-up,
+          .btn-volume-down {
+            position: absolute;
+            left: -4px;
+            width: 4px;
+            background: #333;
+            border-radius: 2px 0 0 2px;
+          }
+
+          .btn-action {
+            top: 110px;
+            height: 22px;
+          }
+
+          .btn-volume-up {
+            top: 155px;
+            height: 45px;
+          }
+
+          .btn-volume-down {
+            top: 210px;
+            height: 45px;
+          }
+
+          .btn-power {
+            position: absolute;
+            right: -4px;
+            top: 175px;
+            width: 4px;
+            height: 70px;
+            background: #333;
+            border-radius: 0 2px 2px 0;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ===== COMMON SECTIONS =====
+.nike-features,
+.nike-trainers,
+.nike-tech,
+.nike-testimonials,
+.nike-pricing {
+  padding: 8rem 0;
+
+  .section-header {
+    margin-bottom: 5rem;
+
+    .overline {
+      color: $gold;
+      font-weight: 800;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: 3.5rem;
+      font-weight: 950;
+      line-height: 1.1;
+      margin: 0;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 1.5rem;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    &.text-center {
+      text-align: center;
+
+      .subtitle {
+        margin: 1.5rem auto 0;
+      }
+    }
+  }
+}
+
+// ===== FEATURES =====
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2.5rem;
+
+  .feature-card {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4rem 2.5rem;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: 0.4s;
+
+    .icon-wrapper {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      margin-bottom: 2.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      color: $gold;
+    }
+
+    h3 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 1.2rem;
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+
+    &:hover {
+      transform: translateY(-12px);
+      border-color: $gold;
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+}
+
+// ===== TRAINERS =====
+.trainers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+
+  .trainer-card {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 32px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: 0.4s;
+
+    .trainer-image {
+      height: 450px;
+      position: relative;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: 0.6s;
+      }
+    }
+
+    .trainer-info {
+      padding: 2.5rem;
+
+      h3 {
+        font-size: 1.9rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+      }
+
+      .specialty {
+        color: $gold;
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .curriculum {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 1rem;
+        line-height: 1.6;
+      }
+    }
+
+    &:hover {
+      transform: translateY(-10px);
+
+      .trainer-image img {
+        transform: scale(1.05);
+      }
+
+      border-color: rgba($gold, 0.3);
+    }
+  }
+}
+
+// ===== TECH SECTION =====
+.nike-tech {
+  .tech-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5.5rem;
+    align-items: center;
+
+    .tech-text {
+      .badge-ai {
+        background: rgba($gold, 0.1);
+        color: $gold;
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+        font-weight: 800;
+        font-size: 0.8rem;
+        margin-bottom: 2rem;
+        display: inline-block;
+        border: 1px solid rgba($gold, 0.3);
+      }
+
+      h2 {
+        font-size: 4rem;
+        font-weight: 950;
+        line-height: 1;
+        margin-bottom: 2.5rem;
+      }
+
+      p {
+        font-size: 1.3rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 3.5rem;
+        line-height: 1.6;
+      }
+
+      .tech-features {
+        list-style: none;
+        padding: 0;
+
+        li {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          font-weight: 700;
+          margin-bottom: 1.5rem;
+          font-size: 1.1rem;
+
+          .check {
+            color: $gold;
+          }
+        }
+      }
+    }
+
+    .tech-visual {
+      .radar-card {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 3rem;
+        border-radius: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+
+        h3 {
+          font-size: 1.5rem;
+          font-weight: 800;
+          margin-bottom: 2.5rem;
+          text-align: center;
+        }
+
+        .radar-wrapper {
+          height: 400px;
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+      }
+
+      .video-mockup {
+        height: 280px;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 32px;
+        border: 1px solid rgba($gold, 0.3);
+        margin-top: 3.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+
+        .video-badge {
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          background: $gold;
+          color: black;
+          padding: 0.5rem 1.2rem;
+          border-radius: 50px;
+          font-weight: 900;
+          font-size: 0.75rem;
+        }
+
+        .video-play {
+          font-size: 4.5rem;
+          color: white;
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+}
+
+// ===== CLUB MANAGEMENT SECTION =====
+.nike-club {
+  background: #000;
+  padding: 8rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+
+  .club-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 5.5rem;
+    align-items: center;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+      gap: 4rem;
+    }
+  }
+
+  .club-text {
+    .badge-club {
+      background: rgba(#ccff00, 0.1);
+      color: #ccff00;
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      margin-bottom: 2rem;
+      display: inline-block;
+      border: 1px solid rgba(#ccff00, 0.3);
+    }
+
+    h2 {
+      font-size: 4rem;
+      font-weight: 950;
+      line-height: 1;
+      margin-bottom: 2.5rem;
+      text-transform: uppercase;
+
+      @media (max-width: 768px) {
+        font-size: 2.8rem;
+      }
+    }
+
+    p {
+      font-size: 1.3rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 3.5rem;
+      line-height: 1.6;
+    }
+
+    .club-features-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+
+      li {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+
+        .icon {
+          font-size: 2.2rem;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          width: 56px;
+          height: 56px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 16px;
+          flex-shrink: 0;
+          transition: 0.3s;
+        }
+
+        .feat-details {
+          strong {
+            font-size: 1.2rem;
+            color: #fff;
+            display: block;
+            margin-bottom: 0.4rem;
+          }
+
+          p {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin: 0;
+            line-height: 1.5;
+          }
+        }
+
+        &:hover {
+          .icon {
+            transform: scale(1.1);
+            border-color: #ccff00;
+            color: #ccff00;
+          }
+        }
+      }
+    }
+  }
+
+  .club-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+
+    .dashboard-mockup {
+      width: 100%;
+      max-width: 520px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(20px);
+
+      .mockup-header {
+        background: rgba(255, 255, 255, 0.02);
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+        .mockup-dots {
+          display: flex;
+          gap: 6px;
+          margin-right: 1.5rem;
+
+          span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: block;
+          }
+          .dot-red { background: #ff5f56; }
+          .dot-yellow { background: #ffbd2e; }
+          .dot-green { background: #27c93f; }
+        }
+
+        .mockup-title {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.5);
+          letter-spacing: 0.5px;
+        }
+      }
+
+      .mockup-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+
+        .mockup-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1.2rem;
+        }
+
+        .mockup-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 1.2rem;
+          display: flex;
+          flex-direction: column;
+          transition: 0.3s;
+
+          &:hover {
+            border-color: rgba(#ccff00, 0.2);
+            background: rgba(255, 255, 255, 0.04);
+          }
+
+          .card-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
+            margin-bottom: 0.8rem;
+          }
+
+          .stat-value {
+            font-size: 2rem;
+            font-weight: 950;
+            line-height: 1.1;
+            margin-bottom: 0.2rem;
+          }
+
+          .stat-sub {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.4);
+          }
+
+          .text-green {
+            color: #27c93f;
+          }
+        }
+
+        .radial-progress-mock {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          margin: 0.5rem auto;
+
+          .circular-chart {
+            display: block;
+            width: 100%;
+            height: 100%;
+
+            .circle-bg {
+              fill: none;
+              stroke: rgba(255, 255, 255, 0.05);
+              stroke-width: 3.8;
+            }
+
+            .circle {
+              fill: none;
+              stroke: #ccff00;
+              stroke-width: 3.8;
+              stroke-linecap: round;
+            }
+          }
+
+          .progress-val {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #fff;
+          }
+        }
+
+        .tournament-card {
+          .card-header-mock {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+
+            .t-badge {
+              background: #ff3366;
+              color: white;
+              font-size: 0.65rem;
+              font-weight: 900;
+              padding: 2px 6px;
+              border-radius: 4px;
+              letter-spacing: 0.5px;
+            }
+
+            strong {
+              font-size: 0.9rem;
+              color: #fff;
+            }
+          }
+
+          .match-score-mock {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .team-score {
+              display: flex;
+              justify-content: space-between;
+              font-size: 0.85rem;
+              color: rgba(255, 255, 255, 0.8);
+
+              strong {
+                color: #ccff00;
+                font-weight: 900;
+              }
+              .text-dim {
+                color: rgba(255, 255, 255, 0.3);
+                font-weight: 400;
+              }
+            }
+          }
+        }
+
+        .inventory-card {
+          .inv-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .inv-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 0.8rem;
+              color: rgba(255, 255, 255, 0.7);
+
+              .badge-crit {
+                background: rgba(#ff5f56, 0.15);
+                color: #ff5f56;
+                border: 1px solid rgba(#ff5f56, 0.3);
+                font-size: 0.7rem;
+                padding: 1px 6px;
+                border-radius: 4px;
+                font-weight: 700;
+              }
+            }
+          }
+        }
+
+        .ranking-card {
+          .rank-list-mock {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            .rank-row {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 0.75rem;
+              color: rgba(255, 255, 255, 0.7);
+
+              .num {
+                width: 14px;
+                font-weight: 900;
+                color: #ccff00;
+              }
+              .name {
+                flex-grow: 1;
+              }
+              .pts {
+                color: rgba(255, 255, 255, 0.4);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ===== TESTIMONIALS =====
+.testimonials-scroller {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+
+  .testimonial-card {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4rem 3rem;
+    border-radius: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    transition: 0.4s;
+
+    .quote-icon {
+      font-size: 2.8rem;
+      color: $gold;
+      opacity: 0.15;
+      position: absolute;
+      top: 2rem;
+      left: 2rem;
+    }
+
+    .quote {
+      font-size: 1.2rem;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 3rem;
+      font-style: italic;
+      z-index: 5;
+      position: relative;
+    }
+
+    .author {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+
+      .avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: $gold;
+        color: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 950;
+        font-size: 1.2rem;
+      }
+
+      .info {
+        h5 {
+          margin: 0;
+          font-size: 1.2rem;
+          font-weight: 800;
+        }
+
+        span {
+          font-size: 0.85rem;
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 600;
+        }
+      }
+    }
+
+    &:hover {
+      transform: translateY(-10px);
+      border-color: $gold;
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+// ===== PRICING =====
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .p-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 40px;
+    padding: 3rem 1.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+
+    &.featured {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: $gold;
+      transform: scale(1.05);
+      z-index: 10;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+
+      .badge-best {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: $gold;
+        color: black;
+        padding: 6px 18px;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 950;
+      }
+    }
+
+    .p-header {
+      margin-bottom: 2.5rem;
+      text-align: center;
+
+      .p-name {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: rgba(255,255,255,0.4);
+        margin-bottom: 1.2rem;
+        text-transform: uppercase;
+      }
+
+      .p-price {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        margin-bottom: 1rem;
+
+        .currency { font-size: 1.5rem; font-weight: 800; margin-right: 4px; }
+        .amount { font-size: 4rem; font-weight: 950; line-height: 1; }
+        .period { font-size: 1rem; color: rgba(255,255,255,0.4); margin-left: 6px; }
+      }
+
+      .p-desc {
+        color: rgba(255,255,255,0.5);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+    }
+
+    .p-features {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      margin-bottom: 3rem;
+
+      .f-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.8);
+
+        span { color: $gold; }
+        &.promo { color: $gold; }
+      }
+    }
+
+    .btn-p-card {
+      width: 100%;
+      padding: 1.25rem;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: white;
+      font-weight: 950;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.3s;
+
+      &:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: white;
+      }
+
+      &.active {
+        background: $gold;
+        color: black;
+        border: none;
+        &:hover { transform: scale(1.05); }
+      }
+    }
+
+    &:hover:not(.featured) {
+      transform: translateY(-10px);
+      border-color: rgba(255,255,255,0.2);
+    }
+  }
+}
+
+@media (max-width: $tablet) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 4rem;
+    padding: 0 1rem;
+    .p-card.featured { transform: scale(1); }
+  }
+}
+
+// ===== CTA & FOOTER =====
+.nike-cta {
+  padding: 10rem 0;
+  background: $gold;
+  color: black;
+  text-align: center;
+
+  h2 {
+    font-size: 5.5rem;
+    font-weight: 950;
+    line-height: 0.9;
+    margin-bottom: 2rem;
+  }
+
+  p {
+    font-size: 1.7rem;
+    font-weight: 800;
+    margin-bottom: 4.5rem;
+    max-width: 650px;
+    margin: 0 auto;
+  }
+
+  .btn-primary-large {
+    background: black;
+    color: white;
+    padding: 1.8rem 5rem;
+    border-radius: 100px;
+    font-weight: 900;
+    font-size: 1.3rem;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+  }
+}
+
+.nike-footer {
+  padding: 10rem 0 5rem;
+  background: black;
+
+  .footer-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 8rem;
+
+    .brand-col {
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+
+        .logo-img {
+          height: 45px;
+          filter: grayscale(1) brightness(5);
+        }
+
+        h3 {
+          font-size: 2.2rem;
+          font-weight: 950;
+          letter-spacing: -1px;
+        }
+      }
+
+      p {
+        color: rgba(255, 255, 255, 0.5);
+        line-height: 1.7;
+        margin-bottom: 3rem;
+        max-width: 400px;
+        font-size: 1.1rem;
+      }
+
+      .socials {
+        display: flex;
+        gap: 2.5rem;
+
+        .social-link {
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 800;
+          text-decoration: none;
+          font-size: 0.95rem;
+          text-transform: uppercase;
+
+          &:hover {
+            color: white;
+          }
+        }
+      }
+    }
+
+    .links-col {
+      h4 {
+        font-size: 1.1rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 2.5rem;
+      }
+
+      a {
+        display: block;
+        color: rgba(255, 255, 255, 0.5);
+        text-decoration: none;
+        margin-bottom: 1.2rem;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: 0.3s;
+
+        &:hover {
+          color: $gold;
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 8rem;
+    padding-top: 4rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 800;
+  }
+}
+
+// ===== RESPONSIVE =====
+@media (max-width: $tablet) {
+  .nike-navbar {
+    height: 70px;
+
+    .logo .text {
+      font-size: 1.2rem;
+    }
+
+    .menu {
+      display: none;
+    }
+
+    .auth-buttons {
+      gap: 0.4rem;
+
+      button {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.65rem;
+      }
+    }
+  }
+
+  .nike-hero {
+    padding: 110px 0 60px;
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      gap: 3.5rem;
+      width: 100%;
+
+      .hero-text-content {
+        order: 1;
+        width: 100%;
+        padding: 0 0.5rem;
+
+        h1 {
+          font-size: 2.8rem;
+          line-height: 1;
+          margin-bottom: 1.5rem;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
+        p {
+          font-size: 1.1rem;
+          margin: 0 auto 3rem;
+          width: 100%;
+        }
+
+        .cta-group {
+          flex-direction: column;
+          gap: 0.8rem;
+
+          button {
+            width: 100%;
+            padding: 1.2rem;
+          }
+        }
+
+        .app-buttons {
+          justify-content: center;
+          flex-direction: row;
+          flex-wrap: wrap;
+          gap: 0.8rem;
+
+          .btn-store {
+            width: calc(50% - 0.4rem);
+            min-width: 140px;
+            justify-content: center;
+            padding: 0.6rem 0.8rem;
+
+            .text .large {
+              font-size: 0.75rem;
+            }
+          }
+        }
+      }
+
+      .hero-visual {
+        order: 2;
+        width: 100%;
+
+        .iphone-17 {
+          width: 260px;
+          height: 530px;
+          margin: 0 auto;
+        }
+      }
+    }
+  }
+
+  .nike-features,
+  .nike-trainers,
+  .nike-tech,
+  .nike-testimonials,
+  .nike-pricing {
+    padding: 4.5rem 0;
+
+    .section-header {
+      margin-bottom: 3.5rem;
+
+      h2 {
+        font-size: 2.2rem;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+      }
+    }
+  }
+
+  .nike-tech .tech-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+
+    .tech-text {
+      width: 100%;
+      text-align: center;
+      padding: 0 0.5rem;
+
+      h2 {
+        font-size: 2.2rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+
+      p {
+        font-size: 1.1rem;
+        margin: 0 auto 2.5rem;
+        width: 100%;
+      }
+
+      .tech-features {
+        display: inline-block;
+        text-align: left;
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto 3rem;
+
+        li {
+          font-size: 1rem;
+        }
+      }
+
+      .chart-mini-container {
+        width: 100%;
+
+        .chart-card {
+          padding: 1.5rem 1rem;
+
+          h4 {
+            font-size: 1rem;
+          }
+
+          .canvas-wrapper {
+            height: 260px;
+          }
+        }
+      }
+    }
+
+    .tech-visual {
+      width: 100%;
+
+      .radar-card {
+        padding: 1.5rem;
+        width: 100%;
+
+        .radar-wrapper {
+          height: 350px;
+        }
+
+        h3 {
+          font-size: 1.2rem;
+        }
+      }
+
+      .video-mockup {
+        width: 100%;
+      }
+    }
+  }
+
+  .features-grid,
+  .trainers-grid,
+  .testimonials-scroller,
+  .nike-footer .footer-content {
+    grid-template-columns: 1fr !important;
+    gap: 3rem;
+  }
+
+  .nike-pricing .pricing-card {
+    width: 100%;
+    padding: 3rem 1.25rem;
+
+    .pricing-content {
+      flex-direction: column;
+      gap: 2.5rem;
+
+      .divider {
+        display: none;
+      }
+
+      .price-item .amount {
+        font-size: 3rem;
+      }
+    }
+  }
+
+  .nike-footer {
+    text-align: center;
+
+    .footer-logo,
+    .socials {
+      justify-content: center;
+    }
+
+    .brand-col p {
+      margin-inline: auto;
+      width: 100%;
+    }
+  }
+
+  .nike-club {
+    padding: 4.5rem 0;
+
+    .club-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 3.5rem;
+
+      .club-text {
+        width: 100%;
+        text-align: center;
+        padding: 0 0.5rem;
+
+        h2 {
+          font-size: 2.2rem;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
+        p {
+          font-size: 1.1rem;
+          margin: 0 auto 2.5rem;
+          width: 100%;
+        }
+
+        .club-features-list {
+          display: inline-block;
+          text-align: left;
+          width: 100%;
+          margin: 0 auto;
+
+          li {
+            margin-bottom: 2rem;
+          }
+        }
+      }
+
+      .club-visual {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+@media (max-width: 450px) {
+  .nike-navbar .logo .text {
+    font-size: 1rem;
+  }
+
+  .nike-navbar .auth-buttons button {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.6rem;
+  }
+
+  .nike-hero .hero-text-content h1 {
+    font-size: 2.3rem;
+  }
+
+  .nike-hero .hero-text-content p {
+    font-size: 1rem;
+  }
+
+  .nike-hero .hero-content .hero-text-content .app-buttons .btn-store {
+    width: 100%;
+    max-width: 250px;
+  }
+
+  .nike-tech .tech-layout .tech-text h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .nike-navbar .logo .text {
+    display: none;
+  }
+
+  .nike-hero .hero-text-content h1 {
+    font-size: 2.1rem;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+
+  50% {
+    transform: translateY(-30px) rotate(-1deg);
+  }
+}
+
+@keyframes slowPan {
+  from {
+    transform: scale(1.05) translate(0, 0);
+  }
+
+  to {
+    transform: scale(1.15) translate(-2%, -2%);
+  }
+}
+
+// ===== CONTACT MODAL =====
+.contact-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  
+  .contact-modal {
+    background: #0f172a;
+    border: 1px solid rgba(204, 255, 0, 0.3);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 450px;
+    padding: 2.5rem;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: 0.2s;
+      
+      &:hover {
+        color: #fff;
+        transform: scale(1.1);
+      }
+    }
+
+    .modal-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      
+      h3 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        color: #fff;
+      }
+      
+      p {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.5;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      
+      label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 0.5rem;
+      }
+      
+      .form-control {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        color: white;
+        font-family: inherit;
+        font-size: 0.95rem;
+        transition: 0.3s;
+        
+        &:focus {
+          outline: none;
+          border-color: #ccff00;
+          background: rgba(204, 255, 0, 0.02);
+        }
+        
+        &::placeholder {
+          color: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: #ccff00;
+      color: #000;
+      border: none;
+      padding: 1rem;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 1rem;
+      
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(204, 255, 0, 0.2);
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .modal-success {
+      text-align: center;
+      padding: 2rem 0;
+      
+      .success-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(204, 255, 0, 0.1);
+        color: #ccff00;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0 auto 1.5rem;
+        border: 2px solid #ccff00;
+      }
+      
+      h4 {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+      }
+      
+      p {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 💬 FLOATING WHATSAPP BUTTON */
+.whatsapp-float-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: #25D366;
+    color: #ffffff !important;
+    border-radius: 50px;
+    padding: 12px 20px 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
+    z-index: 99999;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: waPulse 2.5s infinite;
+
+    .wa-icon {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+    }
+
+    .wa-label {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        font-family: 'Inter', sans-serif;
+    }
+
+    &:hover {
+        transform: translateY(-4px) scale(1.05);
+        background: #20ba5a;
+        box-shadow: 0 14px 35px rgba(37, 211, 102, 0.6);
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 768px) {
+        bottom: 20px;
+        right: 20px;
+        padding: 14px;
+        border-radius: 50%;
+        .wa-label {
+            display: none;
+        }
+        .wa-icon {
+            width: 30px;
+            height: 30px;
+        }
+    }
+}
+
+@keyframes waPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+}
