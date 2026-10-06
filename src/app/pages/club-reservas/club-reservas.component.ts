@@ -60,6 +60,49 @@ export class ClubReservasComponent implements OnInit {
 
     activeDragReserva: any = null;
 
+    // Resource Category Filter
+    activeCategoryFilter: string = 'all';
+
+    get filteredCanchas(): any[] {
+        if (!this.canchas || this.canchas.length === 0) return [];
+        if (this.activeCategoryFilter === 'all') return this.canchas;
+        return this.canchas.filter(c => {
+            const cat = c.categoria || 'cancha_padel';
+            const meta = this.clubesService.getCategoryMeta(cat);
+            return meta.grupo === this.activeCategoryFilter;
+        });
+    }
+
+    getCategoryCount(grupo: string): number {
+        if (!this.canchas) return 0;
+        return this.canchas.filter(c => {
+            const cat = c.categoria || 'cancha_padel';
+            const meta = this.clubesService.getCategoryMeta(cat);
+            return meta.grupo === grupo;
+        }).length;
+    }
+
+    getCategoryMeta(canchaOrCat: any) {
+        const catId = typeof canchaOrCat === 'string' ? canchaOrCat : (canchaOrCat?.categoria || 'cancha_padel');
+        return this.clubesService.getCategoryMeta(catId);
+    }
+
+    get selectedCanchaInModal(): any {
+        if (!this.newReserva?.cancha_id || !this.canchas) return null;
+        return this.canchas.find(c => Number(c.id) === Number(this.newReserva.cancha_id));
+    }
+
+    get selectedCategoryMeta(): any {
+        const cancha = this.selectedCanchaInModal;
+        const cat = cancha?.categoria || 'cancha_padel';
+        return this.clubesService.getCategoryMeta(cat);
+    }
+
+    get isCourtResource(): boolean {
+        const cat = this.selectedCanchaInModal?.categoria || 'cancha_padel';
+        return cat === 'cancha_padel' || cat === 'cancha_pickleball';
+    }
+
     weekDays: any[] = [];
     timeSlots: string[] = [];
 
@@ -343,6 +386,18 @@ export class ClubReservasComponent implements OnInit {
         }
     }
 
+    onHoraInicioOrDuracionChange() {
+        if (this.newReserva.estado !== 'Bloqueada' || this.newReserva.tipo_bloqueo !== 'rango' || !this.newReserva.hora_fin_bloqueo) {
+            const [hS, mS] = (this.newReserva.hora_inicio || '08:00').split(':').map(Number);
+            const dur = Number(this.newReserva.duracion) || 90;
+            const totalMin = (hS * 60 + mS) + dur;
+            const hEnd = Math.floor(totalMin / 60);
+            const mEnd = totalMin % 60;
+            this.newReserva.hora_fin = (hEnd >= 24) ? '24:00' : `${hEnd.toString().padStart(2, '0')}:${mEnd.toString().padStart(2, '0')}`;
+        }
+        this.updateCanchaPrice();
+    }
+
     onPrecioInputChange(val: any) {
         if (this.newReserva.precio !== null && this.newReserva.precio !== undefined) {
             const rawStr = String(this.newReserva.precio).replace(/[\.,]/g, '');
@@ -407,7 +462,7 @@ export class ClubReservasComponent implements OnInit {
         this.startLoadingTextRotation();
         this.clubesService.getClubReservas(this.selectedClub.id, this.selectedFecha).subscribe({
             next: (res) => {
-                this.reservas = res || [];
+                this.reservas = this.consolidateReservas(res || []);
                 this.loadingReservas = false;
                 if (!this.isLoading) this.stopLoadingTextRotation();
             },
@@ -419,9 +474,85 @@ export class ClubReservasComponent implements OnInit {
         });
     }
 
+    consolidateReservas(resList: any[]): any[] {
+        if (!resList || !resList.length) return [];
+        
+        const nonAmericano: any[] = [];
+        const americanoMap = new Map<string, any>();
+
+        for (const r of resList) {
+            if (this.isAmericanoReserva(r)) {
+                // Agrupar por cancha y torneo para generar un solo bloque continuo
+                const key = `${r.cancha_id}_${r.torneo_id || r.nombre_externo || 'americano'}`;
+                if (americanoMap.has(key)) {
+                    const existing = americanoMap.get(key);
+                    
+                    const [hS1, mS1] = existing.hora_inicio.split(':').map(Number);
+                    const s1 = (hS1 === 0 && mS1 === 0 && existing.hora_inicio.startsWith('00:00')) ? 1440 : (hS1 * 60 + mS1);
+                    
+                    const [hS2, mS2] = r.hora_inicio.split(':').map(Number);
+                    const s2 = (hS2 === 0 && mS2 === 0 && r.hora_inicio.startsWith('00:00')) ? 1440 : (hS2 * 60 + mS2);
+
+                    const [hE1, mE1] = existing.hora_fin.split(':').map(Number);
+                    let e1 = (hE1 === 24 || (hE1 === 0 && mE1 === 0) || hE1 < hS1) ? 1440 : (hE1 * 60 + mE1);
+
+                    const [hE2, mE2] = r.hora_fin.split(':').map(Number);
+                    let e2 = (hE2 === 24 || (hE2 === 0 && mE2 === 0) || hE2 < hS2) ? 1440 : (hE2 * 60 + mE2);
+
+                    if (s2 < s1) {
+                        existing.hora_inicio = r.hora_inicio;
+                    }
+                    if (e2 > e1) {
+                        existing.hora_fin = r.hora_fin;
+                    }
+                    if (r.torneo_nombre && !existing.torneo_nombre) {
+                        existing.torneo_nombre = r.torneo_nombre;
+                    }
+                } else {
+                    americanoMap.set(key, { ...r });
+                }
+            } else {
+                nonAmericano.push(r);
+            }
+        }
+
+        const americanList = Array.from(americanoMap.values()).map(item => {
+            return {
+                ...item,
+                hora_fin: this.roundUpToSlot30(item.hora_fin)
+            };
+        });
+
+        return [...nonAmericano, ...americanList];
+    }
+
+    roundUpToSlot30(time: string): string {
+        if (!time) return '00:00';
+        const clean = time.substring(0, 5);
+        if (clean === '24:00' || clean === '00:00') return '24:00';
+        const [h, m] = clean.split(':').map(Number);
+        let newH = h;
+        let newM = m;
+        if (m > 0 && m <= 30) {
+            newM = 30;
+        } else if (m > 30) {
+            newM = 0;
+            newH += 1;
+        }
+        if (newH >= 24) return '24:00';
+        return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
+    }
+
+    formatTime(time: string): string {
+        if (!time) return '';
+        const clean = time.substring(0, 5);
+        if (clean === '24:00') return '00:00';
+        return clean;
+    }
+
     getReservaInSlot(canchaId: number, hora: string) {
         const [h, m] = hora.split(':').map(Number);
-        const slotMinutes = h * 60 + (m || 0);
+        const slotMinutes = (h === 0 && m === 0 && hora === '00:00') ? 1440 : (h * 60 + (m || 0));
         const slotEnd = slotMinutes + 30; // Each slot represents 30 minutes
 
         return this.reservas.find(r => {
@@ -429,32 +560,128 @@ export class ClubReservasComponent implements OnInit {
             if (r.estado === 'Cancelada') return false;
 
             const [hStart, mStart] = r.hora_inicio.split(':').map(Number);
-            const startMinutes = hStart * 60 + mStart;
+            const startMinutes = (hStart === 0 && mStart === 0 && r.hora_inicio.startsWith('00:00')) ? 1440 : (hStart * 60 + mStart);
 
             const [hEnd, mEnd] = r.hora_fin.split(':').map(Number);
-            const endMinutes = hEnd * 60 + mEnd;
+            let endMinutes = (hEnd === 24 || (hEnd === 0 && mEnd === 0) || hEnd < hStart) ? 1440 : (hEnd * 60 + mEnd);
 
             // Overlap: reservation overlaps with this slot's 30-minute block
             return startMinutes < slotEnd && endMinutes > slotMinutes;
         });
     }
 
+    hasReservaInSlot(canchaId: number, hora: string): boolean {
+        return !!this.getReservaInSlot(canchaId, hora);
+    }
+
+    getReservasStartingInSlot(canchaId: number, hora: string): any[] {
+        return this.reservas.filter(r => {
+            if (Number(r.cancha_id) !== Number(canchaId)) return false;
+            if (r.estado === 'Cancelada') return false;
+            return this.isStartOfReserva(r, hora);
+        });
+    }
+
+    hasOverlap(res: any): boolean {
+        if (!res || res.estado === 'Cancelada' || !res.hora_inicio || !res.hora_fin) return false;
+        const [hS, mS] = res.hora_inicio.split(':').map(Number);
+        const startM = (hS === 0 && mS === 0 && res.hora_inicio.startsWith('00:00')) ? 1440 : (hS * 60 + (mS || 0));
+        const [hE, mE] = res.hora_fin.split(':').map(Number);
+        let endM = (hE === 24 || (hE === 0 && mE === 0) || hE < hS) ? 1440 : (hE * 60 + (mE || 0));
+
+        return this.reservas.some(other => {
+            if (!other || other.id === res.id) return false;
+            if (Number(other.cancha_id) !== Number(res.cancha_id)) return false;
+            if (other.estado === 'Cancelada' || !other.hora_inicio || !other.hora_fin) return false;
+
+            const [ohS, omS] = other.hora_inicio.split(':').map(Number);
+            const oStartM = (ohS === 0 && omS === 0 && other.hora_inicio.startsWith('00:00')) ? 1440 : (ohS * 60 + (omS || 0));
+            const [ohE, omE] = other.hora_fin.split(':').map(Number);
+            let oEndM = (ohE === 24 || (ohE === 0 && omE === 0) || ohE < ohS) ? 1440 : (ohE * 60 + (omE || 0));
+
+            return startM < oEndM && endM > oStartM;
+        });
+    }
+
     isStartOfReserva(res: any, hora: string): boolean {
         const [hSlot, mSlot] = hora.split(':').map(Number);
-        const slotMinutes = hSlot * 60 + (mSlot || 0);
+        const slotMinutes = (hSlot === 0 && mSlot === 0 && hora === '00:00') ? 1440 : (hSlot * 60 + (mSlot || 0));
         const slotEnd = slotMinutes + 30; // Each slot represents 30 minutes
 
         const [hRes, mRes] = res.hora_inicio.split(':').map(Number);
-        const startMinutes = hRes * 60 + mRes;
+        const startMinutes = (hRes === 0 && mRes === 0 && res.hora_inicio.startsWith('00:00')) ? 1440 : (hRes * 60 + mRes);
 
         // The reservation starts within this slot's 30-minute range
         return startMinutes >= slotMinutes && startMinutes < slotEnd;
+    }
+
+    isAmericanoReserva(res: any): boolean {
+        if (!res) return false;
+        const estadoLower = (res.estado || '').toString().toLowerCase();
+        const tipoLower = (res.tipo || '').toString().toLowerCase();
+        const tipoReservaLower = (res.tipo_reserva || '').toString().toLowerCase();
+        const reservaTipoLower = (res.reserva_tipo || '').toString().toLowerCase();
+        const nombreExtLower = (res.nombre_externo || '').toString().toLowerCase();
+        const jugadorNomLower = (res.jugador_nombre || '').toString().toLowerCase();
+
+        return (res.torneo_id && Number(res.torneo_id) > 0) ||
+               (res.torneo_americano_id && Number(res.torneo_americano_id) > 0) ||
+               estadoLower.includes('americano') ||
+               tipoLower.includes('americano') ||
+               tipoReservaLower.includes('americano') ||
+               reservaTipoLower.includes('americano') ||
+               nombreExtLower.includes('americano') ||
+               jugadorNomLower.includes('americano');
+    }
+
+    isLigaReserva(res: any): boolean {
+        if (!res) return false;
+        return (res.liga_partido_id && Number(res.liga_partido_id) > 0) ||
+               (res.liga_id && Number(res.liga_id) > 0) ||
+               (res.tipo && res.tipo.toString().toLowerCase().includes('liga')) ||
+               (res.tipo_reserva && res.tipo_reserva.toString().toLowerCase().includes('liga')) ||
+               (res.es_liga || res.reserva_tipo === 'liga');
+    }
+
+    getReservaTitleText(res: any): string {
+        if (!res) return '';
+        if (res.estado === 'Bloqueada') return 'HORARIO BLOQUEADO';
+
+        if (this.isAmericanoReserva(res)) {
+            if (res.torneo_nombre) return res.torneo_nombre.toUpperCase();
+            if (res.nombre_externo) return res.nombre_externo.toUpperCase();
+            return 'TORNEO AMERICANO';
+        }
+
+        if (this.isLigaReserva(res)) {
+            const j1 = res.jugador_nombre || res.nombre_externo || 'P1-J1';
+            const j2 = res.jugador2_nombre || res.nombre_externo2 || '';
+            const j3 = res.jugador3_nombre || res.nombre_externo3 || '';
+            const j4 = res.jugador4_nombre || res.nombre_externo4 || '';
+
+            const p1Text = j2 ? `${j1} / ${j2}` : j1;
+            const p2Text = j4 ? `${j3} / ${j4}` : (j3 || '');
+
+            if (p2Text) {
+                return `${p1Text} vs ${p2Text}`;
+            }
+            return p1Text;
+        }
+
+        const j1 = res.jugador_nombre || res.nombre_externo || 'Ocupado';
+        const j2 = res.jugador2_nombre || res.nombre_externo2;
+        if (j2) {
+            return `${j1} / ${j2}`;
+        }
+        return j1;
     }
 
     getReservaClass(res: any): string {
         if (res.estado === 'Bloqueada') return 'blocked-slot';
         
         let classes = '';
+        const isAmericano = this.isAmericanoReserva(res);
+        const isLiga = this.isLigaReserva(res);
         const isEntrenador = res.estado === 'Entrenamiento' ||
             res.tipo === 'entrenamiento' ||
             res.tipo_reserva === 'entrenamiento' ||
@@ -462,7 +689,11 @@ export class ClubReservasComponent implements OnInit {
             (res.reserva_tipo && res.reserva_tipo.toString().toLowerCase().includes('entrenamiento')) ||
             (res.entrenador_id && Number(res.entrenador_id) > 0);
 
-        if (isEntrenador) {
+        if (isAmericano) {
+            classes = 'americano-reserva';
+        } else if (isLiga) {
+            classes = 'liga-reserva';
+        } else if (isEntrenador) {
             classes = 'trainer-reserva';
         } else if ((!res.usuario_id || res.usuario_id === 0) && res.nombre_externo) {
             classes = 'admin-reserva';
@@ -476,6 +707,9 @@ export class ClubReservasComponent implements OnInit {
 
     getReservaTypeBadgeText(res: any): string {
         if (res.estado === 'Bloqueada') return '🔒 BLOQUEO';
+        if (this.isAmericanoReserva(res)) return '⚡ AMERICANO';
+        if (this.isLigaReserva(res)) return '🏆 LIGA';
+
         const isTrainer = res.estado === 'Entrenamiento' ||
             res.tipo === 'entrenamiento' ||
             res.tipo_reserva === 'entrenamiento' ||
@@ -490,6 +724,9 @@ export class ClubReservasComponent implements OnInit {
 
     getReservaTypeBadgeClass(res: any): string {
         if (res.estado === 'Bloqueada') return 'badge-block';
+        if (this.isAmericanoReserva(res)) return 'badge-americano';
+        if (this.isLigaReserva(res)) return 'badge-liga';
+
         const isTrainer = res.estado === 'Entrenamiento' ||
             res.tipo === 'entrenamiento' ||
             res.tipo_reserva === 'entrenamiento' ||
@@ -509,16 +746,16 @@ export class ClubReservasComponent implements OnInit {
         return 'Pago Pendiente / Debe';
     }
 
-    getReservaStyle(res: any, slot: string): any {
+    getReservaStyle(res: any, slot: string, index: number = 0, total: number = 1): any {
         try {
             const [hSlot, mSlot] = slot.split(':').map(Number);
-            const slotStartMinutes = hSlot * 60 + mSlot;
+            const slotStartMinutes = (hSlot === 0 && mSlot === 0 && slot === '00:00') ? 1440 : (hSlot * 60 + mSlot);
 
             const [hS, mS] = res.hora_inicio.split(':').map(Number);
-            const startMinutes = hS * 60 + mS;
+            const startMinutes = (hS === 0 && mS === 0 && res.hora_inicio.startsWith('00:00')) ? 1440 : (hS * 60 + mS);
 
             const [hE, mE] = res.hora_fin.split(':').map(Number);
-            const endMinutes = hE * 60 + mE;
+            let endMinutes = (hE === 24 || (hE === 0 && mE === 0) || hE < hS) ? 1440 : (hE * 60 + mE);
 
             const durationMinutes = endMinutes - startMinutes;
 
@@ -529,13 +766,17 @@ export class ClubReservasComponent implements OnInit {
             const heightPercent = (durationMinutes / 30) * 100;
             const topPercent = (offsetMinutes / 30) * 100;
 
+            const isMulti = total > 1;
+            const widthPercent = isMulti ? (100 / total) : 100;
+            const leftPercent = isMulti ? (index * widthPercent) : 0;
+
             return {
                 'height': `calc(${heightPercent}% - 2px)`,
                 'top': `calc(${topPercent}% + 1px)`,
                 'position': 'absolute',
-                'left': '1px',
-                'width': 'calc(100% - 2px)',
-                'z-index': '15'
+                'left': isMulti ? `calc(${leftPercent}% + 1px)` : '1px',
+                'width': isMulti ? `calc(${widthPercent}% - 2px)` : 'calc(100% - 2px)',
+                'z-index': `${15 + index}`
             };
         } catch (e) {
             return { height: '100%' };
@@ -589,6 +830,29 @@ export class ClubReservasComponent implements OnInit {
             if (!this.newReserva.nombre_externo4 && !this.newReserva.jugador4_id) this.newReserva.nombre_externo4 = 'Jugador 4';
         }
 
+        // Auto-sincronizar estado global pagado al cargar la reserva
+        // Si todos los pagos individuales marcados son true, el estado global debe ser PAGADO
+        {
+            const p = this.newReserva.pagos;
+            const slotsLoad = [
+                { name: this.newReserva.nombre_externo, id: this.newReserva.jugador_id || this.newReserva.usuario_id, pago: p.p1 },
+                { name: this.newReserva.nombre_externo2, id: this.newReserva.jugador2_id, pago: p.p2 },
+                { name: this.newReserva.nombre_externo3, id: this.newReserva.jugador3_id, pago: p.p3 },
+                { name: this.newReserva.nombre_externo4, id: this.newReserva.jugador4_id, pago: p.p4 },
+            ];
+            let activosLoad = 0;
+            let pagadosLoad = 0;
+            slotsLoad.forEach(s => {
+                if (!!(s.name || s.id) || s.pago === true) {
+                    activosLoad++;
+                    if (s.pago) pagadosLoad++;
+                }
+            });
+            if (activosLoad > 0 && pagadosLoad === activosLoad) {
+                this.newReserva.pagado = 1;
+            }
+        }
+
         // Forzar actualización de UI para que los botones se marquen
         setTimeout(() => {
             this.newReserva.metodo_pago = metodo;
@@ -597,21 +861,27 @@ export class ClubReservasComponent implements OnInit {
 
         // Limpiar formatos de hora
         const hRaw = String(res.hora_inicio || '');
-        const hStartClean = (hRaw && hRaw.length >= 5 && hRaw !== '00:00:00' && hRaw !== '00:00') ? hRaw.substring(0, 5) : '08:00';
+        const hStartClean = (hRaw && hRaw.length >= 5) ? (hRaw.substring(0, 5) === '24:00' ? '00:00' : hRaw.substring(0, 5)) : '08:00';
         const hEndRaw = String(res.hora_fin || '');
-        const hEndClean = (hEndRaw && hEndRaw.length >= 5 && hEndRaw !== '00:00:00' && hEndRaw !== '00:00') ? hEndRaw.substring(0, 5) : '09:30';
+        const hEndClean = (hEndRaw && hEndRaw.length >= 5) ? (hEndRaw.substring(0, 5) === '24:00' ? '00:00' : hEndRaw.substring(0, 5)) : '00:00';
 
         this.newReserva.hora_inicio = hStartClean;
         this.newReserva.hora_fin = hEndClean;
 
         if (this.newReserva.hora_inicio && !this.timeSlots.includes(this.newReserva.hora_inicio)) {
             this.timeSlots.push(this.newReserva.hora_inicio);
-            this.timeSlots.sort();
+            this.timeSlots.sort((a, b) => {
+                const minA = (a === '00:00' || a === '24:00') ? 1440 : (parseInt(a.split(':')[0]) * 60 + parseInt(a.split(':')[1]));
+                const minB = (b === '00:00' || b === '24:00') ? 1440 : (parseInt(b.split(':')[0]) * 60 + parseInt(b.split(':')[1]));
+                return minA - minB;
+            });
         }
 
         const [hS, mS] = this.newReserva.hora_inicio.split(':').map(Number);
         const [hE, mE] = this.newReserva.hora_fin.split(':').map(Number);
-        this.newReserva.duracion = (hE * 60 + mE) - (hS * 60 + mS);
+        let endMin = (hE === 24 || (hE === 0 && mE === 0) || hE < hS) ? 1440 : (hE * 60 + mE);
+        let startMin = (hS === 0 && mS === 0 && this.newReserva.hora_inicio === '00:00') ? 1440 : (hS * 60 + mS);
+        this.newReserva.duracion = endMin - startMin;
 
         if (res.estado === 'Bloqueada') {
             this.newReserva.hora_fin_bloqueo = this.newReserva.hora_fin;
@@ -641,13 +911,14 @@ export class ClubReservasComponent implements OnInit {
         const res = this.activeDragReserva;
         const [hOld, mOld] = res.hora_inicio.split(':').map(Number);
         const [hEndOld, mEndOld] = res.hora_fin.split(':').map(Number);
-        const duration = (hEndOld * 60 + mEndOld) - (hOld * 60 + mOld);
+        let endMinOld = (hEndOld === 24 || (hEndOld === 0 && mEndOld === 0) || hEndOld < hOld) ? 1440 : (hEndOld * 60 + mEndOld);
+        const duration = endMinOld - (hOld * 60 + mOld);
 
         const [hNew, mNew] = hora.split(':').map(Number);
         const totalMinEnd = (hNew * 60 + mNew) + duration;
         const hEnd = Math.floor(totalMinEnd / 60);
         const mEnd = totalMinEnd % 60;
-        const horaFinNew = `${hEnd.toString().padStart(2, '0')}:${mEnd.toString().padStart(2, '0')}`;
+        const horaFinNew = (hEnd === 24 || (hEnd === 0 && mEnd === 0)) ? '24:00' : `${(hEnd % 24).toString().padStart(2, '0')}:${mEnd.toString().padStart(2, '0')}`;
 
         const updatedRes = {
             ...res,
@@ -823,8 +1094,24 @@ export class ClubReservasComponent implements OnInit {
         const currentUserObj = currentUserStr ? JSON.parse(currentUserStr) : {};
         const loggedInUserId = this.userId || localStorage.getItem('userId') || currentUserObj.id || 0;
 
+        // Asegurar recálculo de hora_fin con base en hora_inicio y duración
+        let calculatedHoraFin = this.newReserva.hora_fin;
+        if (this.newReserva.estado !== 'Bloqueada' || this.newReserva.tipo_bloqueo !== 'rango' || !this.newReserva.hora_fin_bloqueo) {
+            const [hS, mS] = (this.newReserva.hora_inicio || '08:00').split(':').map(Number);
+            const dur = Number(this.newReserva.duracion) || 90;
+            const totalMin = (hS * 60 + mS) + dur;
+            const hEnd = Math.floor(totalMin / 60);
+            const mEnd = totalMin % 60;
+            calculatedHoraFin = (hEnd >= 24) ? '24:00' : `${hEnd.toString().padStart(2, '0')}:${mEnd.toString().padStart(2, '0')}`;
+        } else if (this.newReserva.estado === 'Bloqueada' && this.newReserva.tipo_bloqueo === 'rango' && this.newReserva.hora_fin_bloqueo) {
+            calculatedHoraFin = this.newReserva.hora_fin_bloqueo;
+        }
+
+        this.newReserva.hora_fin = calculatedHoraFin;
+
         const reservaData = {
             ...this.newReserva,
+            hora_fin: calculatedHoraFin,
             vendedor_id: Number(loggedInUserId),
             usuario_vendedor_id: Number(loggedInUserId),
             pagado: isFullyPaid ? 1 : 0,
@@ -905,8 +1192,13 @@ export class ClubReservasComponent implements OnInit {
                 
                 let message = 'No se pudo guardar la reserva';
                 if (err.status === 409) {
-                    message = 'La cancha ya se encuentra reservada en este intervalo.';
-                    Swal.fire('Choque de Horario', message, 'error');
+                    message = err.error?.error || 'La cancha ya se encuentra reservada en este intervalo.';
+                    Swal.fire({
+                        title: '⚠️ Choque de Horario',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonColor: '#0f172a'
+                    });
                 } else {
                     if (typeof err.error === 'string') {
                         message = err.error;
@@ -917,6 +1209,7 @@ export class ClubReservasComponent implements OnInit {
                     }
                     Swal.fire('Error', String(message), 'error');
                 }
+                this.loadReservas();
             }
         });
     }
@@ -929,18 +1222,48 @@ export class ClubReservasComponent implements OnInit {
         this.newReserva.pagos[key] = !this.newReserva.pagos[key];
         this.newReserva['pago_p' + i] = this.newReserva.pagos[key] ? 1 : 0;
 
+        // Un slot está activo si tiene jugador asignado O si tiene el pago toggleado
         let activos = 0;
         let pagados = 0;
-        if (this.newReserva.nombre_externo || this.newReserva.jugador_id || this.newReserva.usuario_id) { activos++; if (this.newReserva.pagos.p1) pagados++; }
-        if (this.newReserva.nombre_externo2 || this.newReserva.jugador2_id) { activos++; if (this.newReserva.pagos.p2) pagados++; }
-        if (this.newReserva.nombre_externo3 || this.newReserva.jugador3_id) { activos++; if (this.newReserva.pagos.p3) pagados++; }
-        if (this.newReserva.nombre_externo4 || this.newReserva.jugador4_id) { activos++; if (this.newReserva.pagos.p4) pagados++; }
+        const slots = [
+            { name: this.newReserva.nombre_externo, id: this.newReserva.jugador_id || this.newReserva.usuario_id, pago: this.newReserva.pagos.p1 },
+            { name: this.newReserva.nombre_externo2, id: this.newReserva.jugador2_id, pago: this.newReserva.pagos.p2 },
+            { name: this.newReserva.nombre_externo3, id: this.newReserva.jugador3_id, pago: this.newReserva.pagos.p3 },
+            { name: this.newReserva.nombre_externo4, id: this.newReserva.jugador4_id, pago: this.newReserva.pagos.p4 },
+        ];
 
+        slots.forEach(s => {
+            const hasPlayer = !!(s.name || s.id);
+            const hasPaymentToggled = s.pago === true;
+            if (hasPlayer || hasPaymentToggled) {
+                activos++;
+                if (s.pago) pagados++;
+            }
+        });
+
+        // Siempre sincronizar el estado global pagado independientemente del metodo_pago
         if (activos > 0 && pagados === activos) {
             this.newReserva.pagado = 1;
         } else {
             this.newReserva.pagado = 0;
         }
+    }
+
+    setPagoGlobal(val: number): void {
+        this.newReserva.pagado = val;
+        const isPaid = val === 1;
+        if (!this.newReserva.pagos) {
+            this.newReserva.pagos = { p1: isPaid, p2: isPaid, p3: isPaid, p4: isPaid };
+        } else {
+            this.newReserva.pagos.p1 = isPaid;
+            this.newReserva.pagos.p2 = isPaid;
+            this.newReserva.pagos.p3 = isPaid;
+            this.newReserva.pagos.p4 = isPaid;
+        }
+        this.newReserva.pago_p1 = val;
+        this.newReserva.pago_p2 = val;
+        this.newReserva.pago_p3 = val;
+        this.newReserva.pago_p4 = val;
     }
 
     realizarPagoCompleto(): void {
@@ -1227,21 +1550,62 @@ export class ClubReservasComponent implements OnInit {
     }
 
     addConsumo(producto: any) {
-        if (!this.activeReservaConsumo) return;
-        
-        const data = {
-            reserva_id: this.activeReservaConsumo.id,
-            jugador_n: this.activePlayerN,
-            producto_id: producto.id,
-            cantidad: 1
-        };
+        if (!this.activeReservaConsumo?.id) return;
 
-        this.inventarioService.addConsumoReserva(data).subscribe(res => {
+        // Buscar si ya existe una fila para este jugador + producto
+        const existing = this.currentConsumos.find(
+            c => Number(c.jugador_n) === Number(this.activePlayerN) && Number(c.producto_id) === Number(producto.id)
+        );
+
+        if (existing) {
+            // Si ya existe, incrementar cantidad en la BD
+            const nuevaCantidad = Number(existing.cantidad) + 1;
+            this.inventarioService.updateConsumo(existing.id, nuevaCantidad).subscribe(res => {
+                if (res.success) {
+                    this.loadConsumos(this.activeReservaConsumo.id);
+                }
+            });
+        } else {
+            // Si no existe, insertar nueva fila
+            const data = {
+                reserva_id: this.activeReservaConsumo.id,
+                jugador_n: this.activePlayerN,
+                producto_id: producto.id,
+                cantidad: 1
+            };
+            this.inventarioService.addConsumoReserva(data).subscribe(res => {
+                if (res.success) {
+                    this.loadConsumos(this.activeReservaConsumo.id);
+                }
+            });
+        }
+    }
+
+    incrementConsumo(consumo: any) {
+        const nuevaCantidad = Number(consumo.cantidad) + 1;
+        this.inventarioService.updateConsumo(consumo.id, nuevaCantidad).subscribe(res => {
             if (res.success) {
                 this.loadConsumos(this.activeReservaConsumo.id);
-                // Mini feedback (Toast) o nada para que sea fluido
             }
         });
+    }
+
+    decrementConsumo(consumo: any) {
+        const nuevaCantidad = Number(consumo.cantidad) - 1;
+        if (nuevaCantidad <= 0) {
+            // Eliminar directamente sin confirmar si viene del botón -
+            this.inventarioService.deleteConsumo(consumo.id).subscribe(res => {
+                if (res.success) {
+                    this.loadConsumos(this.activeReservaConsumo.id);
+                }
+            });
+        } else {
+            this.inventarioService.updateConsumo(consumo.id, nuevaCantidad).subscribe(res => {
+                if (res.success) {
+                    this.loadConsumos(this.activeReservaConsumo.id);
+                }
+            });
+        }
     }
 
     removeConsumo(consumoId: number) {
@@ -1274,6 +1638,18 @@ export class ClubReservasComponent implements OnInit {
 
     getConsumosByPlayer(playerN: number): any[] {
         return this.currentConsumos.filter(c => Number(c.jugador_n) === Number(playerN));
+    }
+
+    /** Retorna true si el slot N tiene jugador asignado (nombre o ID) */
+    slotHasPlayer(slotN: number): boolean {
+        if (!this.newReserva) return false;
+        switch (slotN) {
+            case 1: return !!(this.newReserva.nombre_externo || this.newReserva.jugador_id || this.newReserva.usuario_id);
+            case 2: return !!(this.newReserva.nombre_externo2 || this.newReserva.jugador2_id);
+            case 3: return !!(this.newReserva.nombre_externo3 || this.newReserva.jugador3_id);
+            case 4: return !!(this.newReserva.nombre_externo4 || this.newReserva.jugador4_id);
+            default: return false;
+        }
     }
 
     // WhatsApp Free Slots Methods
@@ -1350,7 +1726,7 @@ export class ClubReservasComponent implements OnInit {
                                 const startMinutes = hStart * 60 + mStart;
 
                                 const [hEnd, mEnd] = r.hora_fin.split(':').map(Number);
-                                const endMinutes = hEnd * 60 + mEnd;
+                                let endMinutes = (hEnd === 24 || (hEnd === 0 && mEnd === 0) || hEnd < hStart) ? 1440 : (hEnd * 60 + mEnd);
 
                                 return startMinutes < slotEnd && endMinutes > minutes;
                             });
