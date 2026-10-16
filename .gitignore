@@ -53,3 +53,4 @@ Thumbs.db
 .env.*
 *.local
 deploy-credentials.env
+deploy.py

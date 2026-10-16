@@ -8,8 +8,7 @@
     "build:dev": "ng build --configuration development",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "deploy:prod": "bash deploy-sftp.sh"
+    "deploy:prod": "npm run build:prod && python3 deploy_ferozo.py"
   },
   "private": true,
   "dependencies": {
