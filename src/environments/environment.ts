@@ -2,6 +2,6 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000',
-  mode: 'local'
+  apiUrl: 'https://api.padelmanager.cl/dev',
+  mode: 'dev'
 };
