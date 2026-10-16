@@ -7,6 +7,7 @@ No requiere dependencias externas (usa librería estándar ftplib de Python 3).
 import os
 import sys
 import ftplib
+import ssl
 from pathlib import Path
 
 # Cargar variables desde .env.deploy si existe
@@ -47,7 +48,10 @@ if not dist_dir.exists():
 print(f"🎾 Conectando a {SERVER}:{PORT} vía FTPS (TLS) como '{USERNAME}'...")
 
 try:
-    ftps = ftplib.FTP_TLS()
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    ftps = ftplib.FTP_TLS(context=context)
     ftps.connect(SERVER, PORT, timeout=30)
     ftps.auth()
     ftps.login(USERNAME, PASSWORD)

@@ -53,5 +53,5 @@ Thumbs.db
 .env.*
 !.env.deploy.example
 *.local
-deploy-credentials.env
 .env.deploy
+deploy*.py
