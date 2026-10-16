@@ -24,26 +24,25 @@ if env_path.exists():
 
 SERVER = os.environ.get("SFTP_SERVER", env_vars.get("SFTP_SERVER", "c2632100.ferozo.com"))
 USERNAME = os.environ.get("SFTP_USERNAME", env_vars.get("SFTP_USERNAME", "c2632100"))
-PASSWORD = os.environ.get("SFTP_PASSWORD", env_vars.get("SFTP_PASSWORD", ""))
+PASSWORD = os.environ.get("SFTP_PASSWORD", env_vars.get("SFTP_PASSWORD", "Ssvld2G9rit@IJA"))
 PORT = int(os.environ.get("SFTP_PORT", env_vars.get("SFTP_PORT", 21)))
 REMOTE_DIR = os.environ.get("SFTP_REMOTE_DIR", env_vars.get("SFTP_REMOTE_DIR", "/public_html/"))
-
-if not PASSWORD:
-    print("❌ Error: No se encontró la contraseña de Ferozo.")
-    print("Crea un archivo 'web/.env.deploy' con:")
-    print("-" * 40)
-    print(f"SFTP_SERVER={SERVER}")
-    print(f"SFTP_USERNAME={USERNAME}")
-    print("SFTP_PASSWORD=tu-contraseña-de-ferozo")
-    print(f"SFTP_PORT={PORT}")
-    print(f"SFTP_REMOTE_DIR={REMOTE_DIR}")
-    print("-" * 40)
-    sys.exit(1)
 
 dist_dir = Path(__file__).parent / "dist"
 if not dist_dir.exists():
     print("❌ Error: La carpeta 'dist' no existe. Compila primero con 'npm run build:prod'.")
     sys.exit(1)
+
+# Soporte de reutilización de sesión TLS para servidores ProFTPD / Ferozo
+class ExplicitFTP_TLS(ftplib.FTP_TLS):
+    def ntransfercmd(self, cmd, rest=None):
+        conn, size = ftplib.FTP.ntransfercmd(self, cmd, rest)
+        if self._prot_p:
+            session = getattr(self.sock, "session", None)
+            conn = self.context.wrap_socket(conn,
+                                             server_hostname=self.host,
+                                             session=session)
+        return conn, size
 
 print(f"🎾 Conectando a {SERVER}:{PORT} vía FTPS (TLS) como '{USERNAME}'...")
 
@@ -51,11 +50,12 @@ try:
     context = ssl.create_default_context()
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
-    ftps = ftplib.FTP_TLS(context=context)
+
+    ftps = ExplicitFTP_TLS(context=context)
     ftps.connect(SERVER, PORT, timeout=30)
     ftps.auth()
     ftps.login(USERNAME, PASSWORD)
-    ftps.prot_p()  # Proteger canal de datos con SSL/TLS
+    ftps.prot_p()
     print("✅ Conexión TLS establecida exitosamente.")
 except Exception as e:
     print(f"❌ Error conectando a Ferozo: {e}")
@@ -84,7 +84,7 @@ for root, _, files in os.walk(dist_dir):
     ensure_remote_dir(target_remote)
     ftps.cwd(target_remote)
 
-    for file in files:
+    for file in sorted(files):
         local_file = Path(root) / file
         with open(local_file, "rb") as fp:
             ftps.storbinary(f"STOR {file}", fp)
@@ -93,3 +93,4 @@ for root, _, files in os.walk(dist_dir):
 
 ftps.quit()
 print(f"\n🎉 ¡Despliegue completado con éxito! {uploaded} archivos subidos a {SERVER}.")
+print("🔗 Revisa en tu navegador: https://padelmanager.cl")
