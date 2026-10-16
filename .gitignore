@@ -51,6 +51,7 @@ Thumbs.db
 # Environment & secrets
 .env
 .env.*
+!.env.deploy.example
 *.local
 deploy-credentials.env
-deploy*.py
+.env.deploy
