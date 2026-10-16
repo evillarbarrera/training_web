@@ -29,12 +29,12 @@ PORT = int(os.environ.get("SFTP_PORT", env_vars.get("SFTP_PORT", 21)))
 REMOTE_DIR = os.environ.get("SFTP_REMOTE_DIR", env_vars.get("SFTP_REMOTE_DIR", "/public_html/"))
 
 if not PASSWORD:
-    print("❌ Error: No se encontró la contraseña SFTP_PASSWORD.")
+    print("❌ Error: No se encontró la contraseña de Ferozo.")
     print("Crea un archivo 'web/.env.deploy' con:")
     print("-" * 40)
     print(f"SFTP_SERVER={SERVER}")
     print(f"SFTP_USERNAME={USERNAME}")
-    print("SFTP_PASSWORD=tu-contraseña-aqui")
+    print("SFTP_PASSWORD=tu-contraseña-de-ferozo")
     print(f"SFTP_PORT={PORT}")
     print(f"SFTP_REMOTE_DIR={REMOTE_DIR}")
     print("-" * 40)
@@ -42,13 +42,16 @@ if not PASSWORD:
 
 dist_dir = Path(__file__).parent / "dist"
 if not dist_dir.exists():
-    print("❌ Error: La carpeta 'dist' no existe. Ejecuta primero 'npm run build:prod'.")
+    print("❌ Error: La carpeta 'dist' no existe. Compila primero con 'npm run build:prod'.")
     sys.exit(1)
 
 print(f"🎾 Conectando a {SERVER}:{PORT} vía FTPS (TLS) como '{USERNAME}'...")
 
 try:
-    ftps = ftplib.FTP_TLS()
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    ftps = ftplib.FTP_TLS(context=context)
     ftps.connect(SERVER, PORT, timeout=30)
     ftps.auth()
     ftps.login(USERNAME, PASSWORD)
@@ -71,7 +74,7 @@ def ensure_remote_dir(path):
             except Exception:
                 pass
 
-print(f"🚀 Subiendo archivos de '{dist_dir}' a '{REMOTE_DIR}'...")
+print(f"🚀 Sincronizando archivos desde '{dist_dir}' hacia '{REMOTE_DIR}'...")
 ensure_remote_dir(REMOTE_DIR)
 
 uploaded = 0
@@ -89,4 +92,4 @@ for root, _, files in os.walk(dist_dir):
             print(f"  ✓ {file}")
 
 ftps.quit()
-print(f"\n🎉 ¡Despliegue completado con éxito! {uploaded} archivos sincronizados en {SERVER}.")
+print(f"\n🎉 ¡Despliegue completado con éxito! {uploaded} archivos subidos a {SERVER}.")
