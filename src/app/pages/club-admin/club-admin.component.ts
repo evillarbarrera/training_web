@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ClubesService } from '../../services/clubes.service';
+import { ClubesService, RECURSOS_CATEGORIAS, RecursoCategoria } from '../../services/clubes.service';
 import { ApiService } from '../../services/api.service';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { AssetService } from '../../services/asset.service';
@@ -30,6 +30,10 @@ export class ClubAdminComponent implements OnInit {
     showClubModal: boolean = false;
     showCanchaModal: boolean = false;
     showStaffModal: boolean = false;
+
+    // Categorías de Recursos y Filtros
+    public readonly categoriasRecursos: RecursoCategoria[] = RECURSOS_CATEGORIAS;
+    activeCategoryFilter: 'all' | 'padel' | 'juegos' | 'amenities' | 'equipamiento' = 'all';
 
     staff: any[] = [];
     newStaff = {
@@ -96,6 +100,10 @@ export class ClubAdminComponent implements OnInit {
     newCancha: any = {
         club_id: 0,
         nombre: '',
+        categoria: 'cancha_padel',
+        icono: '🎾',
+        descripcion: '',
+        capacidad: 4,
         tipo: 'Outdoor',
         superficie: 'Césped Sintético',
         precio_60: 0,
@@ -107,7 +115,7 @@ export class ClubAdminComponent implements OnInit {
         hora_inicio_bajo: '07:00',
         hora_fin_bajo: '18:00',
         hora_inicio_alto: '18:00',
-        hora_fin_alto: '23:30',
+        hora_fin_alto: '24:00',
         tramos_horarios: [
             {
                 nombre: 'Horario Bajo (Normal)',
@@ -122,7 +130,7 @@ export class ClubAdminComponent implements OnInit {
                 nombre: 'Horario Alto (Peak)',
                 tipo: 'alto',
                 hora_inicio: '18:00',
-                hora_fin: '23:30',
+                hora_fin: '24:00',
                 precio_60: 15000,
                 precio_90: 21000,
                 precio_120: 28000
@@ -187,7 +195,12 @@ export class ClubAdminComponent implements OnInit {
     loadClubes() {
         if (!this.userId) return;
         this.clubesService.getClubes(this.userId).subscribe(res => {
-            this.clubes = res;
+            this.clubes = res || [];
+            if (this.clubes.length > 0 && !this.selectedClub) {
+                const savedId = localStorage.getItem('selectedClubId');
+                const matched = savedId ? this.clubes.find(c => String(c.id) === String(savedId)) : null;
+                this.selectClub(matched || this.clubes[0]);
+            }
         });
     }
 
@@ -206,6 +219,9 @@ export class ClubAdminComponent implements OnInit {
 
     selectClub(club: any) {
         this.selectedClub = club;
+        if (club && club.id) {
+            localStorage.setItem('selectedClubId', String(club.id));
+        }
         this.cancelEditCancha(); // Reset form
         this.newCancha.club_id = club.id;
         this.loadCanchas(club.id);
@@ -392,6 +408,54 @@ export class ClubAdminComponent implements OnInit {
         });
     }
 
+    get filteredCanchas() {
+        if (!this.canchas || this.canchas.length === 0) return [];
+        if (this.activeCategoryFilter === 'all') return this.canchas;
+
+        return this.canchas.filter(c => {
+            const meta = this.clubesService.getCategoryMeta(c.categoria);
+            return meta.grupo === this.activeCategoryFilter || meta.id === this.activeCategoryFilter;
+        });
+    }
+
+    getCategoryCount(filter: string): number {
+        if (!this.canchas || this.canchas.length === 0) return 0;
+        if (filter === 'all') return this.canchas.length;
+
+        return this.canchas.filter(c => {
+            const meta = this.clubesService.getCategoryMeta(c.categoria);
+            return meta.grupo === filter || meta.id === filter;
+        }).length;
+    }
+
+    getCategoryMeta(cancha: any): RecursoCategoria {
+        return this.clubesService.getCategoryMeta(cancha?.categoria);
+    }
+
+    onCategorySelect(catId: string) {
+        const meta = this.clubesService.getCategoryMeta(catId);
+        this.newCancha.categoria = meta.id;
+        this.newCancha.icono = meta.icono;
+
+        // Auto-sugerir nombre si está vacío o si tenía un nombre por defecto
+        const isDefaultOrEmpty = !this.newCancha.nombre || this.categoriasRecursos.some(c => this.newCancha.nombre.startsWith(c.defaultNombre));
+        if (isDefaultOrEmpty) {
+            const countSameCat = (this.canchas || []).filter(c => (c.categoria || 'cancha_padel') === meta.id).length;
+            this.newCancha.nombre = `${meta.defaultNombre} #${countSameCat + 1}`;
+        }
+
+        this.newCancha.tipo = meta.defaultTipo;
+        this.newCancha.superficie = meta.defaultSuperficie;
+        this.newCancha.capacidad = meta.capacidadSugerida;
+        if (!this.newCancha.descripcion) {
+            this.newCancha.descripcion = meta.descripcionSugerida;
+        }
+    }
+
+    get selectedCategoryMeta(): RecursoCategoria {
+        return this.clubesService.getCategoryMeta(this.newCancha.categoria);
+    }
+
     openCanchaModal() {
         this.cancelEditCancha(); 
         this.newCancha.club_id = this.selectedClub!.id;
@@ -427,7 +491,7 @@ export class ClubAdminComponent implements OnInit {
             let hInicioBajo = firstCancha.hora_inicio_bajo || '07:00';
             let hFinBajo = firstCancha.hora_fin_bajo || '18:00';
             let hInicioAlto = firstCancha.hora_inicio_alto || '18:00';
-            let hFinAlto = firstCancha.hora_fin_alto || '23:30';
+            let hFinAlto = firstCancha.hora_fin_alto || '24:00';
             if (hInicioBajo.length > 5) hInicioBajo = hInicioBajo.substring(0, 5);
             if (hFinBajo.length > 5) hFinBajo = hFinBajo.substring(0, 5);
             if (hInicioAlto.length > 5) hInicioAlto = hInicioAlto.substring(0, 5);
@@ -480,7 +544,7 @@ export class ClubAdminComponent implements OnInit {
             nombre: `Horario ${count}`,
             tipo: 'custom',
             hora_inicio: lastFin,
-            hora_fin: '23:30',
+            hora_fin: '24:00',
             precio_60: 0,
             precio_90: 0,
             precio_120: 0
@@ -512,7 +576,7 @@ export class ClubAdminComponent implements OnInit {
             let hInicioBajo = cancha.hora_inicio_bajo || '07:00';
             let hFinBajo = cancha.hora_fin_bajo || '18:00';
             let hInicioAlto = cancha.hora_inicio_alto || '18:00';
-            let hFinAlto = cancha.hora_fin_alto || '23:30';
+            let hFinAlto = cancha.hora_fin_alto || '24:00';
             if (hInicioBajo.length > 5) hInicioBajo = hInicioBajo.substring(0, 5);
             if (hFinBajo.length > 5) hFinBajo = hFinBajo.substring(0, 5);
             if (hInicioAlto.length > 5) hInicioAlto = hInicioAlto.substring(0, 5);
@@ -540,8 +604,13 @@ export class ClubAdminComponent implements OnInit {
             ];
         }
 
+        const meta = this.clubesService.getCategoryMeta(cancha.categoria);
         this.newCancha = { 
             ...cancha,
+            categoria: cancha.categoria || meta.id,
+            icono: cancha.icono || meta.icono,
+            descripcion: cancha.descripcion || meta.descripcionSugerida,
+            capacidad: cancha.capacidad !== undefined && cancha.capacidad !== null ? cancha.capacidad : meta.capacidadSugerida,
             tramos_horarios: tramos
         };
         this.showCanchaModal = true;
@@ -549,11 +618,16 @@ export class ClubAdminComponent implements OnInit {
 
     cancelEditCancha() {
         this.editingCanchaId = null;
+        const defaultMeta = this.categoriasRecursos[0];
         this.newCancha = {
             club_id: this.selectedClub?.id || 0,
             nombre: '',
-            tipo: 'Outdoor',
-            superficie: 'Césped Sintético',
+            categoria: defaultMeta.id,
+            icono: defaultMeta.icono,
+            descripcion: '',
+            capacidad: defaultMeta.capacidadSugerida,
+            tipo: defaultMeta.defaultTipo,
+            superficie: defaultMeta.defaultSuperficie,
             tramos_horarios: [
                 {
                     nombre: 'Horario Bajo (Normal)',
@@ -568,7 +642,7 @@ export class ClubAdminComponent implements OnInit {
                     nombre: 'Horario Alto (Peak)',
                     tipo: 'alto',
                     hora_inicio: '18:00',
-                    hora_fin: '23:30',
+                    hora_fin: '24:00',
                     precio_60: 15000,
                     precio_90: 21000,
                     precio_120: 28000
@@ -584,7 +658,7 @@ export class ClubAdminComponent implements OnInit {
 
         for (let i = 0; i < tramos.length; i++) {
             const startA = tramos[i].hora_inicio || '00:00';
-            const endA = tramos[i].hora_fin || '00:00';
+            const endA = (tramos[i].hora_fin === '00:00' || tramos[i].hora_fin === '24:00') ? '24:00' : (tramos[i].hora_fin || '00:00');
 
             if (startA >= endA) {
                 return true;
@@ -592,7 +666,7 @@ export class ClubAdminComponent implements OnInit {
 
             for (let j = i + 1; j < tramos.length; j++) {
                 const startB = tramos[j].hora_inicio || '00:00';
-                const endB = tramos[j].hora_fin || '00:00';
+                const endB = (tramos[j].hora_fin === '00:00' || tramos[j].hora_fin === '24:00') ? '24:00' : (tramos[j].hora_fin || '00:00');
 
                 if (startA < endB && startB < endA) {
                     return true;
@@ -604,7 +678,7 @@ export class ClubAdminComponent implements OnInit {
 
     saveCancha() {
         if (!this.newCancha.nombre || !this.newCancha.club_id) {
-            Swal.fire('Campos requeridos', 'El nombre de la pista es obligatorio', 'warning');
+            Swal.fire('Campos requeridos', 'El nombre del recurso / pista es obligatorio', 'warning');
             return;
         }
 
@@ -612,7 +686,7 @@ export class ClubAdminComponent implements OnInit {
         
         for (let i = 0; i < tramos.length; i++) {
             const s = tramos[i].hora_inicio || '00:00';
-            const e = tramos[i].hora_fin || '00:00';
+            const e = (tramos[i].hora_fin === '00:00' || tramos[i].hora_fin === '24:00') ? '24:00' : (tramos[i].hora_fin || '00:00');
             if (s >= e) {
                 Swal.fire('Rango Inválido', `En ${tramos[i].nombre || 'Horario ' + (i+1)}, la hora de inicio (${s}) debe ser menor que la de fin (${e}).`, 'warning');
                 return;
@@ -621,10 +695,10 @@ export class ClubAdminComponent implements OnInit {
 
         for (let i = 0; i < tramos.length; i++) {
             const sA = tramos[i].hora_inicio || '00:00';
-            const eA = tramos[i].hora_fin || '00:00';
+            const eA = (tramos[i].hora_fin === '00:00' || tramos[i].hora_fin === '24:00') ? '24:00' : (tramos[i].hora_fin || '00:00');
             for (let j = i + 1; j < tramos.length; j++) {
                 const sB = tramos[j].hora_inicio || '00:00';
-                const eB = tramos[j].hora_fin || '00:00';
+                const eB = (tramos[j].hora_fin === '00:00' || tramos[j].hora_fin === '24:00') ? '24:00' : (tramos[j].hora_fin || '00:00');
                 if (sA < eB && sB < eA) {
                     Swal.fire({
                         title: 'Horarios Traslapados',
@@ -641,13 +715,17 @@ export class ClubAdminComponent implements OnInit {
 
         const payload = {
             ...this.newCancha,
+            categoria: this.newCancha.categoria || 'cancha_padel',
+            icono: this.newCancha.icono || '🎾',
+            descripcion: this.newCancha.descripcion || '',
+            capacidad: this.newCancha.capacidad || 4,
             hora_inicio_bajo: t0.hora_inicio || '07:00',
             hora_fin_bajo: t0.hora_fin || '18:00',
             precio_60: t0.precio_60 || 0,
             precio_90: t0.precio_90 || 0,
             precio_120: t0.precio_120 || 0,
             hora_inicio_alto: t1.hora_inicio || '18:00',
-            hora_fin_alto: t1.hora_fin || '23:30',
+            hora_fin_alto: t1.hora_fin || '24:00',
             precio_60_alto: t1.precio_60 || 0,
             precio_90_alto: t1.precio_90 || 0,
             precio_120_alto: t1.precio_120 || 0,
@@ -658,20 +736,20 @@ export class ClubAdminComponent implements OnInit {
         if (this.editingCanchaId) {
             this.clubesService.updateCancha({ ...payload, id: this.editingCanchaId }).subscribe({
                 next: () => {
-                    Swal.fire('Actualizado', 'Cancha y horarios actualizados correctamente', 'success');
+                    Swal.fire('Actualizado', 'Recurso y horarios actualizados correctamente', 'success');
                     this.loadCanchas(this.newCancha.club_id);
                     this.cancelEditCancha();
                 },
-                error: (err) => Swal.fire('Error', err.error?.error || 'No se pudo actualizar la cancha', 'error')
+                error: (err) => Swal.fire('Error', err.error?.error || 'No se pudo actualizar el recurso', 'error')
             });
         } else {
             this.clubesService.addCancha(payload).subscribe({
                 next: () => {
-                    Swal.fire('Creada', 'Cancha y horarios creados correctamente', 'success');
+                    Swal.fire('Creado', 'Recurso y horarios creados correctamente', 'success');
                     this.loadCanchas(this.newCancha.club_id);
                     this.cancelEditCancha();
                 },
-                error: (err) => Swal.fire('Error', err.error?.error || 'No se pudo crear la cancha', 'error')
+                error: (err) => Swal.fire('Error', err.error?.error || 'No se pudo crear el recurso', 'error')
             });
         }
     }

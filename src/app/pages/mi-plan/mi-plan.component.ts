@@ -64,7 +64,7 @@ export class MiPlanComponent implements OnInit {
     this.isLoading = true;
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
-    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?coach_id=${this.coachId}`, {
+    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${this.coachId}&role=${this.userRole}`, {
       headers: {
         'Authorization': authValue,
         'X-Authorization': authValue
@@ -184,6 +184,7 @@ export class MiPlanComponent implements OnInit {
     
     const body = {
       coach_id: this.coachId,
+      user_id: this.coachId,
       plan_id: planId,
       origin: window.location.origin + window.location.pathname
     };

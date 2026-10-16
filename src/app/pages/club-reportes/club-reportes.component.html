@@ -52,8 +52,21 @@
                 </button>
             </div>
 
+            <!-- Animated Padel Ball Loader -->
+            <div class="padel-ball-container" *ngIf="isLoading" style="margin: 40px 0;">
+                <div class="padel-ball-wrapper">
+                    <div class="padel-ball">
+                        <div class="padel-ball-inner-lines"></div>
+                    </div>
+                    <div class="padel-ball-shadow"></div>
+                </div>
+                <div class="padel-loader-text">
+                    <span>🎾 Cargando estadísticas y reportes...</span>
+                </div>
+            </div>
+
             <!-- SALES SECTION -->
-            <div class="tab-content" *ngIf="activeTab === 'ventas'">
+            <div class="tab-content" *ngIf="activeTab === 'ventas' && !isLoading">
                 <div class="stats-grid">
                     <div class="stat-card">
                         <label>Ventas Hoy</label>
@@ -144,6 +157,7 @@
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fecha / Hora</th>
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Vendedor</th>
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Producto</th>
+                                    <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Precio Costo</th>
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Precio Unit.</th>
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Cantidad</th>
                                     <th style="padding: 14px 18px; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Impuesto (19%)</th>
@@ -156,6 +170,7 @@
                                     <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{s.fecha | date:'dd/MM/yyyy'}} {{ s.hora_inicio ? s.hora_inicio.substring(0,5) : (s.fecha | date:'HH:mm') }}</td>
                                     <td style="padding: 14px 18px; font-weight: 600; color: #475569;">{{s.vendedor || 'Staff'}}</td>
                                     <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{s.producto_nombre}}</td>
+                                    <td style="padding: 14px 18px; text-align: right; font-weight: 600; color: #475569;">$ {{s.precio_costo | number:'1.0-0'}}</td>
                                     <td style="padding: 14px 18px; text-align: right; font-weight: 600; color: #475569;">$ {{s.precio_unitario | number:'1.0-0'}}</td>
                                     <td style="padding: 14px 18px; text-align: center; font-weight: 700; color: #475569;">{{s.cantidad}}</td>
                                     <td style="padding: 14px 18px; text-align: right; font-weight: 600; color: #a855f7;">$ {{ (s.total - (s.total / 1.19)) | number:'1.0-0' }}</td>
@@ -169,7 +184,7 @@
                                     </td>
                                 </tr>
                                 <tr *ngIf="filteredSalesList.length === 0">
-                                    <td colspan="8" style="text-align: center; padding: 50px 20px; color: #94a3b8; font-style: italic; font-weight: 800; font-size: 13px;">
+                                    <td colspan="9" style="text-align: center; padding: 50px 20px; color: #94a3b8; font-style: italic; font-weight: 800; font-size: 13px;">
                                         No hay ventas registradas que coincidan con los filtros.
                                     </td>
                                 </tr>

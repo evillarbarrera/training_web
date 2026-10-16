@@ -415,7 +415,10 @@ export class TorneoGestionComponent implements OnInit {
     }
 
     loadInitialData() {
-        this.clubesService.getTorneosAdminV2(this.userId).subscribe(res => {
+        const storedClubId = localStorage.getItem('selectedClubId');
+        const clubId = storedClubId ? parseInt(storedClubId, 10) : undefined;
+
+        this.clubesService.getTorneosAdminV2(this.userId, clubId).subscribe(res => {
             console.log('Torneos recibidos del API:', res);
             this.torneos = res;
         });
@@ -423,7 +426,8 @@ export class TorneoGestionComponent implements OnInit {
         this.clubesService.getClubes(this.userId).subscribe(res => {
             this.clubes = res;
             if (this.clubes.length > 0) {
-                this.newTorneo.club_id = this.clubes[0].id;
+                const target = clubId ? this.clubes.find(c => Number(c.id) === Number(clubId)) : this.clubes[0];
+                this.newTorneo.club_id = target ? target.id : this.clubes[0].id;
             }
         });
     }
@@ -991,22 +995,25 @@ export class TorneoGestionComponent implements OnInit {
 
         if (!matches || matches.length === 0) return;
 
-        // 1. Separate Final
-        this.playoffRounds.final = matches.find(m => (m.ronda || '').toLowerCase().includes('final')) || null;
+        // 1. Separate Final - Exact matching to avoid false positives with Semifinal or 1/16 Final
+        this.playoffRounds.final = matches.find(m => {
+            const r = (m.ronda || '').toLowerCase().trim();
+            return m.nivel === 1 || r === 'final' || (r.includes('final') && !r.includes('semi') && !r.includes('dieciseis') && !r.includes('16') && !r.includes('cuart') && !r.includes('octav'));
+        }) || null;
 
         // 2. Helper to distribute rounds
         const distributeRound = (roundMatches: any[], targetKey: string) => {
-            roundMatches.sort((a, b) => a.id - b.id);
+            roundMatches.sort((a, b) => (a.posicion != null && b.posicion != null) ? (a.posicion - b.posicion) : (a.id - b.id));
             const mid = Math.ceil(roundMatches.length / 2);
             this.playoffRounds.left[targetKey] = roundMatches.slice(0, mid);
             this.playoffRounds.right[targetKey] = roundMatches.slice(mid);
         };
 
-        // 3. Process each round
-        const r16 = matches.filter(m => (m.ronda || '').toLowerCase().includes('dieciseis') || (m.ronda || '').includes('16'));
-        const r8 = matches.filter(m => (m.ronda || '').toLowerCase().includes('octavos') || (m.ronda || '').includes(' 8'));
-        const r4 = matches.filter(m => (m.ronda || '').toLowerCase().includes('cuartos') || (m.ronda || '').includes(' 4'));
-        const r2 = matches.filter(m => (m.ronda || '').toLowerCase().includes('semi'));
+        // 3. Process each round with robust level and string matching
+        const r16 = matches.filter(m => m.nivel === 5 || (m.ronda || '').toLowerCase().includes('dieciseis') || (m.ronda || '').includes('16') || (m.ronda || '').includes('1/16'));
+        const r8 = matches.filter(m => m.nivel === 4 || (((m.ronda || '').toLowerCase().includes('octav') || (m.ronda || '').includes('1/8')) && m.nivel !== 5));
+        const r4 = matches.filter(m => m.nivel === 3 || (((m.ronda || '').toLowerCase().includes('cuart') || (m.ronda || '').includes('1/4')) && m.nivel !== 4));
+        const r2 = matches.filter(m => m.nivel === 2 || (((m.ronda || '').toLowerCase().includes('semi')) && m.nivel !== 1));
 
         distributeRound(r16, 'dieciseisavos');
         distributeRound(r8, 'octavos');
@@ -1631,6 +1638,8 @@ export class TorneoGestionComponent implements OnInit {
             jugador2_id: this.manualInscripcion.jugador2_id || 0,
             jugador2_nombre_manual: this.manualInscripcion.jugador2_id ? '' : j2Name,
             nombre_pareja: this.manualInscripcion.nombre_pareja || `${j1Name} / ${j2Name}`,
+            es_semilla: this.manualInscripcion.es_semilla ? 1 : 0,
+            nro_siembra: this.manualInscripcion.nro_siembra || null,
             es_admin: true
         };
 
@@ -1647,7 +1656,9 @@ export class TorneoGestionComponent implements OnInit {
                 this.manualInscripcion = {
                     jugador1_id: 0, jugador1_nombre: '', jugador1_seleccionado: false,
                     jugador2_id: 0, jugador2_nombre: '', jugador2_seleccionado: false,
-                    nombre_pareja: ''
+                    nombre_pareja: '',
+                    es_semilla: 0,
+                    nro_siembra: null
                 };
             },
             error: (err) => {
@@ -1694,18 +1705,81 @@ export class TorneoGestionComponent implements OnInit {
 
     toggleSemilla(ins: any) {
         if (!ins.es_semilla) {
-            // Activar Semilla
             Swal.fire({
-                title: 'Asignar Cabecera de Serie',
-                text: 'Ingresa el número de siembra (ej: 1, 2, 3...)',
-                input: 'number',
-                inputAttributes: { min: '1', step: '1' },
+                title: '👑 Asignar Cabeza de Serie (Seed)',
+                html: `
+                    <div style="text-align: left; padding: 10px 0;">
+                        <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+                            Pareja: <strong>${ins.nombre_jugador_1} / ${ins.nombre_jugador_2}</strong>
+                        </p>
+                        <label style="font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase;">
+                            Número de Cabeza de Serie:
+                        </label>
+                        <input id="swal-seed-num-input" type="number" min="1" max="32" value="1" 
+                               class="swal2-input" style="font-size: 15px; font-weight: 800; margin-top: 6px; width: 100%;">
+                        <p style="font-size: 11px; color: #64748b; margin-top: 6px;">
+                            💡 El sistema separará automáticamente a las cabezas de serie en grupos o llaves opuestas.
+                        </p>
+                    </div>
+                `,
                 showCancelButton: true,
-                confirmButtonText: 'Asignar',
-                cancelButtonText: 'Cancelar'
+                confirmButtonText: 'Guardar CS',
+                confirmButtonColor: '#0f172a',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const input = document.getElementById('swal-seed-num-input') as HTMLInputElement;
+                    const val = input ? parseInt(input.value, 10) : 1;
+                    return val > 0 ? val : 1;
+                }
             }).then(result => {
                 if (result.isConfirmed) {
-                    const nro = result.value ? parseInt(result.value) : 1;
+                    const nro = result.value || 1;
+                    this.clubesService.updateInscripcionSiembra(ins.id, true, nro).subscribe({
+                        next: () => {
+                            ins.es_semilla = 1;
+                            ins.nro_siembra = nro;
+                            this.cdr.detectChanges();
+                            Swal.fire({
+                                title: '¡Cabeza de Serie Asignada!',
+                                text: `Pareja configurada como Cabeza de Serie #${nro}.`,
+                                icon: 'success',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }
+                    });
+                }
+            });
+        } else {
+            Swal.fire({
+                title: `👑 Cabeza de Serie #${ins.nro_siembra}`,
+                html: `
+                    <div style="text-align: left; padding: 10px 0;">
+                        <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+                            Pareja: <strong>${ins.nombre_jugador_1} / ${ins.nombre_jugador_2}</strong>
+                        </p>
+                        <label style="font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase;">
+                            Cambiar Número de Siembra:
+                        </label>
+                        <input id="swal-seed-edit-input" type="number" min="1" max="32" value="${ins.nro_siembra || 1}" 
+                               class="swal2-input" style="font-size: 15px; font-weight: 800; margin-top: 6px; width: 100%;">
+                    </div>
+                `,
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Actualizar Número',
+                confirmButtonColor: '#0f172a',
+                denyButtonText: 'Quitar Cabeza de Serie',
+                denyButtonColor: '#ef4444',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const input = document.getElementById('swal-seed-edit-input') as HTMLInputElement;
+                    const val = input ? parseInt(input.value, 10) : 1;
+                    return val > 0 ? val : 1;
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    const nro = result.value || 1;
                     this.clubesService.updateInscripcionSiembra(ins.id, true, nro).subscribe({
                         next: () => {
                             ins.es_semilla = 1;
@@ -1713,15 +1787,21 @@ export class TorneoGestionComponent implements OnInit {
                             this.cdr.detectChanges();
                         }
                     });
-                }
-            });
-        } else {
-            // Desactivar
-            this.clubesService.updateInscripcionSiembra(ins.id, false, null).subscribe({
-                next: () => {
-                    ins.es_semilla = 0;
-                    ins.nro_siembra = null;
-                    this.cdr.detectChanges();
+                } else if (result.isDenied) {
+                    this.clubesService.updateInscripcionSiembra(ins.id, false, null).subscribe({
+                        next: () => {
+                            ins.es_semilla = 0;
+                            ins.nro_siembra = null;
+                            this.cdr.detectChanges();
+                            Swal.fire({
+                                title: 'Eliminado',
+                                text: 'Se ha quitado la condición de cabeza de serie.',
+                                icon: 'info',
+                                timer: 1200,
+                                showConfirmButton: false
+                            });
+                        }
+                    });
                 }
             });
         }
@@ -1799,26 +1879,41 @@ export class TorneoGestionComponent implements OnInit {
         Swal.fire({
             title: 'Añadir Pareja Manual',
             html: `
-                <div style="text-align: left;">
-                    <label style="font-size: 12px; font-weight: bold; color: #64748b;">Jugador 1</label>
-                    <input id="swal-input1" class="swal2-input" placeholder="Nombre Jugador 1" style="font-size: 14px; margin-top: 5px;">
+                <div style="text-align: left; padding: 5px 0;">
+                    <label style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase;">Jugador 1 *</label>
+                    <input id="swal-input1" class="swal2-input" placeholder="Nombre completo Jugador 1" style="font-size: 13px; margin: 4px 0 14px; width: 100%;">
                     
-                    <label style="font-size: 12px; font-weight: bold; color: #64748b; margin-top: 15px; display: block;">Jugador 2</label>
-                    <input id="swal-input2" class="swal2-input" placeholder="Nombre Jugador 2" style="font-size: 14px; margin-top: 5px;">
+                    <label style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase;">Jugador 2 *</label>
+                    <input id="swal-input2" class="swal2-input" placeholder="Nombre completo Jugador 2" style="font-size: 13px; margin: 4px 0 14px; width: 100%;">
+
+                    <div style="margin-top: 10px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 800; color: #0f172a;">
+                            <input type="checkbox" id="swal-is-seed" style="width: 18px; height: 18px; accent-color: #0f172a;">
+                            👑 Asignar como Cabeza de Serie (Seed)
+                        </label>
+                        <div id="seed-num-wrapper" style="margin-top: 8px;">
+                            <label style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Nº de Cabeza de Serie</label>
+                            <input type="number" id="swal-seed-num" class="swal2-input" min="1" max="32" placeholder="Ej: 1" style="font-size: 13px; margin-top: 4px; width: 100%;">
+                        </div>
+                    </div>
                 </div>
             `,
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: 'Guardar Inscripción',
+            confirmButtonColor: '#0f172a',
             cancelButtonText: 'Cancelar',
             preConfirm: () => {
                 const j1 = (document.getElementById('swal-input1') as HTMLInputElement).value;
                 const j2 = (document.getElementById('swal-input2') as HTMLInputElement).value;
+                const isSeed = (document.getElementById('swal-is-seed') as HTMLInputElement).checked;
+                const seedNumVal = (document.getElementById('swal-seed-num') as HTMLInputElement).value;
                 if (!j1 || !j2) {
                     Swal.showValidationMessage('Ambos nombres son requeridos');
                     return false;
                 }
-                return { j1, j2 };
+                const seedNum = isSeed && seedNumVal ? parseInt(seedNumVal, 10) : (isSeed ? 1 : null);
+                return { j1, j2, isSeed, seedNum };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -1827,9 +1922,48 @@ export class TorneoGestionComponent implements OnInit {
                     jugador1_nombre: result.value.j1,
                     jugador2_id: 0,
                     jugador2_nombre: result.value.j2,
-                    nombre_pareja: `${result.value.j1} / ${result.value.j2}`
+                    nombre_pareja: `${result.value.j1} / ${result.value.j2}`,
+                    es_semilla: result.value.isSeed ? 1 : 0,
+                    nro_siembra: result.value.seedNum
                 };
                 this.inscribirParejaManual();
+            }
+        });
+    }
+
+    generarCuadroDirecto() {
+        if (!this.selectedCategoria) return;
+
+        Swal.fire({
+            title: '¿Generar Cuadro Eliminatorio?',
+            text: 'Se generará la llave con las parejas validadas y sus cabezas de serie (1/16, Octavos, Cuartos, etc.).',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar cuadro',
+            confirmButtonColor: '#0f172a',
+            cancelButtonText: 'Cancelar'
+        }).then(result => {
+            if (result.isConfirmed) {
+                this.clubesService.generarCuadroDirecto(this.selectedCategoria.id).subscribe({
+                    next: (res) => {
+                        Swal.fire({
+                            title: '¡Cuadro Generado!',
+                            text: res.mensaje,
+                            icon: 'success',
+                            confirmButtonColor: '#0f172a'
+                        });
+                        this.activeDetailTab = 'playoffs';
+                        this.loadPlayoffs(this.selectedCategoria.id);
+                    },
+                    error: (err) => {
+                        Swal.fire({
+                            title: 'Error',
+                            text: err.error?.error || 'No se pudo generar el cuadro de eliminación directa.',
+                            icon: 'error',
+                            confirmButtonColor: '#0f172a'
+                        });
+                    }
+                });
             }
         });
     }

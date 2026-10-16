@@ -338,6 +338,12 @@
         color: #059669;
         border: 1px solid rgba(16, 185, 129, 0.2);
       }
+
+      &.cancha {
+        background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
+        color: #ea580c;
+        border: 1px solid rgba(249, 115, 22, 0.2);
+      }
     }
 
     // --- Actions Column ---
@@ -605,6 +611,11 @@
         &.multi {
           color: #059669;
           background: rgba(16, 185, 129, 0.1);
+        }
+
+        &.cancha {
+          color: #ea580c;
+          background: rgba(249, 115, 22, 0.1);
         }
       }
     }

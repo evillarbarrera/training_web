@@ -27,17 +27,35 @@ html {
   html { scroll-behavior: auto; }
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   padding: 0;
+  min-width: 320px;
 }
 
-/* 3. Safari: appearance fix for ALL form elements */
-input, select, textarea, button {
+/* 3. Safari: appearance fix for ALL form elements (except checkboxes and radios) */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea, button {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
   font-family: inherit;
+}
+
+input[type="checkbox"] {
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+  appearance: auto;
+}
+
+input[type="radio"] {
+  -webkit-appearance: radio;
+  -moz-appearance: radio;
+  appearance: auto;
 }
 
 /* 4. Safari: date input normalization */
@@ -209,8 +227,8 @@ input[type="datetime-local"] {
 
 /* Dashboard Grid Wrapper */
 .dashboard-grid {
-  padding: 32px 40px;
-  max-width: 1300px;
+  padding: 16px 24px;
+  max-width: 1500px;
   margin: 0 auto;
   width: 100%;
 }
@@ -353,4 +371,143 @@ body.swal2-shown .swal2-container {
 
 .swal2-container {
   z-index: 1000000 !important;
+}
+
+/* ==========================================
+   GLOBAL PADEL BALL ANIMATED LOADER
+   ========================================== */
+
+@keyframes padelBallBounce {
+  0% {
+    transform: translateY(0) scale(1.05, 0.85);
+  }
+  50% {
+    transform: translateY(-36px) scale(0.95, 1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1.05, 0.85);
+  }
+}
+
+@keyframes padelBallSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes padelShadowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(0.4);
+    opacity: 0.15;
+  }
+}
+
+.padel-ball-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 12px;
+}
+
+.padel-ball-wrapper {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.padel-ball {
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle at 35% 35%, #e2f835 0%, #b8cf00 65%, #8a9c00 100%);
+  border-radius: 50%;
+  position: relative;
+  box-shadow: inset -2px -2px 6px rgba(0, 0, 0, 0.35), 0 6px 14px rgba(184, 207, 0, 0.4);
+  animation: padelBallBounce 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.padel-ball-inner-lines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  animation: padelBallSpin 2.5s linear infinite;
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 2px dashed rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    top: -10px;
+    left: 5px;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 2px dashed rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    bottom: -10px;
+    right: 5px;
+  }
+}
+
+.padel-ball-shadow {
+  width: 34px;
+  height: 7px;
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 50%;
+  margin-top: 6px;
+  animation: padelShadowPulse 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  filter: blur(1px);
+}
+
+.padel-loader-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.padel-loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+}
+
+.padel-loader-card {
+  background: #ffffff;
+  padding: 28px 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }

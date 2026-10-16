@@ -297,6 +297,14 @@ export class AlumnoClasesComponent implements OnInit {
         }
     }
 
+    getTotalHistorialSesiones(): number {
+        if (!this.historialPacks || this.historialPacks.length === 0) return 0;
+        return this.historialPacks.reduce((acc: number, p: any) => {
+            const total = Number(p.sesiones_totales) || Number(p.sesiones_pasadas) || 0;
+            return acc + total;
+        }, 0);
+    }
+
     loadEvaluaciones() {
         if (!this.alumnoId) return;
         
@@ -591,6 +599,21 @@ export class AlumnoClasesComponent implements OnInit {
 
     setTab(t: string) {
         this.activeTab = t;
+        if (t === 'historial') {
+            if (this.historialPacks && this.historialPacks.length > 0) {
+                const isCurrentInHistorial = this.historialPacks.some((p: any) => p.id === this.selectedPack?.id);
+                if (!isCurrentInHistorial) {
+                    this.seleccionarPackRoadmap(this.historialPacks[0]);
+                }
+            }
+        } else if (t === 'roadmap') {
+            if (this.roadmapPacks && this.roadmapPacks.length > 0) {
+                const isCurrentInRoadmap = this.roadmapPacks.some((p: any) => p.id === this.selectedPack?.id);
+                if (!isCurrentInRoadmap) {
+                    this.seleccionarPackRoadmap(this.roadmapPacks[0]);
+                }
+            }
+        }
         this.cdr.detectChanges();
         if (t === 'progreso') {
             setTimeout(() => {
@@ -598,6 +621,10 @@ export class AlumnoClasesComponent implements OnInit {
                 this.cdr.detectChanges();
             }, 300);
         }
+    }
+
+    volverAlumnos() {
+        this.router.navigate(['/alumnos']);
     }
 
     actualizarNivel(event: any) {

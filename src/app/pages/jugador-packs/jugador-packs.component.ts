@@ -51,6 +51,8 @@ export class JugadorPacksComponent implements OnInit {
     packsIndividual: any[] = [];
     packsSmallGroups: any[] = [];
     packsGrupales: any[] = [];
+    pendingTrainerId: any = null;
+    pendingPackId: any = null;
 
     constructor(
         private mysqlService: MysqlService,
@@ -106,6 +108,12 @@ export class JugadorPacksComponent implements OnInit {
     checkPaymentStatus(): void {
         this.route.queryParams.subscribe(params => {
             const status = params['status'];
+            if (params['entrenador_id']) {
+                this.pendingTrainerId = params['entrenador_id'];
+            }
+            if (params['pack_id']) {
+                this.pendingPackId = params['pack_id'];
+            }
             if (status === 'success') {
                 this.popupService.success('¡Pago Exitoso!', 'El pack ha sido activado en tu cuenta.');
                 this.router.navigate([], { queryParams: { 'status': null }, queryParamsHandling: 'merge' });
@@ -179,6 +187,23 @@ export class JugadorPacksComponent implements OnInit {
                 this.packs = data || [];
                 this.cargarEntrenadores();
                 this.filtrarPacks();
+
+                if (this.pendingTrainerId) {
+                    this.selectedEntrenador = Number(this.pendingTrainerId);
+                    this.viewMode = 'packs';
+                    this.filtrarPacks();
+                }
+
+                if (this.pendingPackId) {
+                    const packTarget = this.packs.find(p => p.id == this.pendingPackId);
+                    if (packTarget) {
+                        this.selectedEntrenador = packTarget.entrenador_id;
+                        this.viewMode = 'packs';
+                        this.filtrarPacks();
+                        setTimeout(() => this.comprarPack(packTarget), 400);
+                    }
+                    this.pendingPackId = null;
+                }
             },
             error: (err: any) => console.error('Error al cargar packs', err)
         });

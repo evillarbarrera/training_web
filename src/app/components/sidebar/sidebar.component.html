@@ -22,24 +22,22 @@
     </div>
 
     <nav class="sidebar-nav">
-        <!-- Photo Widget -->
-        <div class="sidebar-player-widget" *ngIf="userId">
-            <img [src]="jugadorFoto ? jugadorFoto : 'assets/images/placeholder_avatar.png'" 
-                 class="avatar-img-large" 
-                 alt="Perfil"
-                 (error)="jugadorFoto = 'assets/images/placeholder_avatar.png'">
-        </div>
-
-        <!-- PROFILE SWITCHER -->
+        <!-- PROFILE SWITCHER COMPACT -->
         <div class="profile-switcher">
-            <button class="current-profile-btn" (click)="toggleSwitchMenu()">
-                <div class="info">
-                    <span class="role-label">{{ displayRoleName }}</span>
-                    <span class="club-label" style="font-size: 0.75rem; opacity: 0.7;">
-                        {{ availableProfiles.length > 1 ? 'Cambiar Perfil' : 'Gestionar Perfil' }}
-                    </span>
+            <button class="current-profile-btn" (click)="toggleSwitchMenu()" [title]="displayRoleName">
+                <div class="profile-btn-left">
+                    <img [src]="jugadorFoto ? jugadorFoto : 'assets/images/placeholder_avatar.png'" 
+                         class="avatar-img-compact" 
+                         alt="Perfil"
+                         (error)="jugadorFoto = 'assets/images/placeholder_avatar.png'">
+                    <div class="info" *ngIf="!isCollapsed">
+                        <span class="role-label">{{ displayRoleName }}</span>
+                        <span class="club-label">
+                            {{ availableProfiles.length > 1 ? 'Cambiar Perfil' : 'Gestionar Perfil' }}
+                        </span>
+                    </div>
                 </div>
-                <span class="arrow" [class.rotated]="showSwitchMenu">▼</span>
+                <span class="arrow" *ngIf="!isCollapsed" [class.rotated]="showSwitchMenu">▼</span>
             </button>
 
             <div class="switch-menu" [class.expanded]="showSwitchMenu">
@@ -71,7 +69,10 @@
                     <span class="icon">📅</span> <span>Mis Clases</span>
                 </a>
                 <a class="nav-item" [class.active]="activePage === 'mis-partidos'" (click)="navigate('/mis-partidos')">
-                    <span class="icon">🏆</span> <span>Mis Partidos</span>
+                    <span class="icon">🎾</span> <span>Mis Partidos</span>
+                </a>
+                <a class="nav-item" [class.active]="activePage === 'torneo-jugador' || activePage === 'mis-torneos'" (click)="navigate('/mis-torneos')">
+                    <span class="icon">🏆</span> <span>Torneos y Ligas</span>
                 </a>
 
                 <div class="menu-divider">Configuración</div>
@@ -108,6 +109,9 @@
 
                 <div class="menu-divider">Gestión y Ajustes</div>
 
+                <a class="nav-item" [class.active]="activePage === 'perfil-publico'" (click)="navigate('/perfil-publico')">
+                    <span class="icon">🌐</span> <span>Perfil Público (Web)</span>
+                </a>
                 <a class="nav-item" [class.active]="activePage === 'packs'" (click)="navigate('/entrenador-packs')">
                     <span class="icon">📦</span> <span>Mis Packs</span>
                 </a>
@@ -141,20 +145,27 @@
                 <a class="nav-item" [class.active]="activePage === 'club-reservas'" (click)="navigate('/club-reservas')">
                     <span class="icon">📅</span> <span>Reservas Club</span>
                 </a>
+                <a class="nav-item" [class.active]="activePage === 'club-turnos'" (click)="navigate('/club-turnos')">
+                    <span class="icon">👥</span> <span>Turnos Club</span>
+                </a>
+                <a class="nav-item" [class.active]="activePage === 'matchmaking'" (click)="navigate('/matchmaking')">
+                    <span class="icon">⚡</span> <span>Matchmaking & Partidos</span>
+                </a>
                 <a class="nav-item" [class.active]="activePage === 'club-ventas'" (click)="navigate('/club-ventas')">
                     <span class="icon">📊</span> <span>Ventas</span>
                 </a>
                 <a class="nav-item" [class.active]="activePage === 'club-reportes'" (click)="navigate('/club-reportes')">
                     <span class="icon">📈</span> <span>Reportes</span>
                 </a>
+                <a class="nav-item" (click)="openTvMode()" title="Abrir Modo Pantalla TV para Cafetería">
+                    <span class="icon">📺</span> <span>Padelblox TV</span>
+                </a>
                 <div class="menu-divider">Competición</div>
-                <!--
                 <a class="nav-item" [class.active]="activePage === 'torneos'" (click)="navigate('/torneos')">
                     <span class="icon">🏆</span> <span>Mis Torneos</span>
                 </a>
-                -->
                 <a class="nav-item" [class.active]="activePage === 'crear-americano'" (click)="navigate('/crear-americano')">
-                    <span class="icon">🎾</span> <span>Crear Americano</span>
+                    <span class="icon">🎾</span> <span>Americanos</span>
                 </a>
                 <a class="nav-item" [class.active]="activePage === 'ligas'" (click)="navigate('/ligas')">
                     <span class="icon">🏆</span> <span>Ligas de Pádel</span>
@@ -192,20 +203,27 @@
                 <a class="nav-item" [class.active]="activePage === 'club-reservas'" (click)="navigate('/club-reservas')">
                     <span class="icon">📅</span> <span>Reservas Club</span>
                 </a>
+                <a class="nav-item" [class.active]="activePage === 'club-turnos'" (click)="navigate('/club-turnos')">
+                    <span class="icon">👥</span> <span>Turnos Club</span>
+                </a>
+                <a class="nav-item" [class.active]="activePage === 'matchmaking'" (click)="navigate('/matchmaking')">
+                    <span class="icon">⚡</span> <span>Matchmaking & Partidos</span>
+                </a>
                 <a class="nav-item" [class.active]="activePage === 'club-ventas'" (click)="navigate('/club-ventas')">
                     <span class="icon">📊</span> <span>Ventas</span>
                 </a>
                 <a class="nav-item" [class.active]="activePage === 'club-reportes'" (click)="navigate('/club-reportes')">
                     <span class="icon">📈</span> <span>Reportes</span>
                 </a>
+                <a class="nav-item" (click)="openTvMode()" title="Abrir Modo Pantalla TV para Cafetería">
+                    <span class="icon">📺</span> <span>Padelblox TV</span>
+                </a>
                 <div class="menu-divider">Competición</div>
-                <!--
                 <a class="nav-item" [class.active]="activePage === 'torneos'" (click)="navigate('/torneos')">
                     <span class="icon">🏆</span> <span>Mis Torneos</span>
                 </a>
-                -->
                 <a class="nav-item" [class.active]="activePage === 'crear-americano'" (click)="navigate('/crear-americano')">
-                    <span class="icon">🎾</span> <span>Crear Americano</span>
+                    <span class="icon">🎾</span> <span>Americanos</span>
                 </a>
                 <a class="nav-item" [class.active]="activePage === 'ligas'" (click)="navigate('/ligas')">
                     <span class="icon">🏆</span> <span>Ligas de Pádel</span>
@@ -214,9 +232,6 @@
                     <span class="icon">📈</span> <span>Ranking por Categoría</span>
                 </a>
                 <div class="menu-divider">Configuración</div>
-                <a class="nav-item" [class.active]="activePage === 'club-whatsapp-difusion'" (click)="navigate('/club-whatsapp-difusion')">
-                    <span class="icon">📲</span> <span>Difusión WhatsApp</span>
-                </a>
                 <a class="nav-item" [class.active]="activePage === 'club-inventario'" (click)="navigate('/club-inventario')">
                     <span class="icon">📦</span> <span>Inventario</span>
                 </a>
@@ -246,14 +261,30 @@
     </nav>
 
     <div class="sidebar-footer">
-        <a href="https://wa.me/56969083124?text=Hola%20Soporte%20PadelBlox,%20necesito%20ayuda" 
-           target="_blank" rel="noopener noreferrer" class="support-wa-btn" title="Contactar a Soporte por WhatsApp">
-            <span class="icon">💬</span>
-            <span *ngIf="!isCollapsed">Soporte WhatsApp</span>
-        </a>
-        <button class="logout-btn" (click)="logout()">
-            <span class="icon">🚪</span>
-            <span *ngIf="!isCollapsed">Cerrar Sesión</span>
+        <button *ngIf="computedRole === 'administrador_club' || computedRole === 'staff_club'"
+                class="club-guide-sidebar-btn" 
+                (click)="openClubGuide()" 
+                title="Centro de Ayuda y Guía del Club">
+            <span class="guide-sparkle">💡</span>
+            <span *ngIf="!isCollapsed" class="guide-txt">Guía del Club</span>
+            <span *ngIf="!isCollapsed" class="guide-badge-new">AYUDA</span>
         </button>
+        <div class="footer-actions-row">
+            <a href="https://wa.me/56969083124?text=Hola%20Soporte%20PadelBlox,%20necesito%20ayuda" 
+               target="_blank" rel="noopener noreferrer" class="support-wa-btn" title="Contactar a Soporte por WhatsApp">
+                <span class="icon">💬</span>
+                <span *ngIf="!isCollapsed">Soporte</span>
+            </a>
+            <button class="logout-btn" (click)="logout()" title="Cerrar Sesión">
+                <span class="icon">🚪</span>
+                <span *ngIf="!isCollapsed">Salir</span>
+            </button>
+        </div>
     </div>
 </aside>
+
+<!-- Club Guide Interactive Modal -->
+<app-club-guide-modal [isOpen]="showClubGuideModal" (close)="showClubGuideModal = false"></app-club-guide-modal>
+
+<!-- Subscription Hard Gate Overlay -->
+<app-hard-gate [activePage]="activePage"></app-hard-gate>

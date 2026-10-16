@@ -17,6 +17,7 @@ export class ProgramarPartidoModalComponent implements OnInit {
 
   canchaId: number | null = null;
   fechaHora: string = '';
+  duracionMinutos: number = 90;
   loading: boolean = false;
   errorMsj: string = '';
 
@@ -24,23 +25,59 @@ export class ProgramarPartidoModalComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.partido) {
-      this.canchaId = this.partido.cancha_id || null;
-      if (this.partido.fecha_hora) {
+      this.canchaId = this.partido.cancha_id ? Number(this.partido.cancha_id) : null;
+      if (this.partido.fecha_hora && !this.partido.fecha_hora.startsWith('0000')) {
         // Format for datetime-local input YYYY-MM-DDTHH:mm
         this.fechaHora = this.partido.fecha_hora.replace(' ', 'T').substring(0, 16);
       }
     }
   }
 
+  get tieneProgramacionPrevia(): boolean {
+    return !!(this.partido && (this.partido.cancha_id || (this.partido.fecha_hora && !this.partido.fecha_hora.startsWith('0000'))));
+  }
+
+  limpiarFecha(): void {
+    this.fechaHora = '';
+  }
+
+  limpiarCancha(): void {
+    this.canchaId = null;
+  }
+
+  desprogramar(): void {
+    if (!this.partido?.id) return;
+
+    this.loading = true;
+    this.errorMsj = '';
+
+    this.ligaService.programarPartido(this.partido.id, null, null).subscribe({
+      next: (res) => {
+        this.loading = false;
+        if (res.success) {
+          this.cerrar.emit(true);
+        } else {
+          this.errorMsj = res.error || 'Error al desprogramar partido';
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMsj = 'Error de conexión al desprogramar partido';
+        console.error(err);
+      }
+    });
+  }
+
   guardar(): void {
-    if (!this.partido) return;
+    if (!this.partido?.id) return;
 
     this.loading = true;
     this.errorMsj = '';
 
     const formattedFechaHora = this.fechaHora ? this.fechaHora.replace('T', ' ') + ':00' : null;
+    const finalCanchaId = this.canchaId ? Number(this.canchaId) : null;
 
-    this.ligaService.programarPartido(this.partido.id, this.canchaId, formattedFechaHora).subscribe({
+    this.ligaService.programarPartido(this.partido.id, finalCanchaId, formattedFechaHora, this.duracionMinutos).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {

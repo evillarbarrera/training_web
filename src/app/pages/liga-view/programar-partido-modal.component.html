@@ -1,7 +1,11 @@
 <div class="modal-backdrop">
   <div class="modal-card animate-in">
     <div class="modal-header">
-      <h3>📅 Programar Partido (Semanal)</h3>
+      <div>
+        <h3>📅 Programar Partido (Semanal)</h3>
+        <span class="status-subtitle assigned" *ngIf="tieneProgramacionPrevia">✓ Partido con cancha u horario fijado</span>
+        <span class="status-subtitle pending" *ngIf="!tieneProgramacionPrevia">⚠️ Partido actualmente sin fecha ni cancha</span>
+      </div>
       <button class="btn-close" (click)="cancelar()">✕</button>
     </div>
 
@@ -14,22 +18,40 @@
     <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
 
     <div class="form-group">
-      <label>Asignar Cancha del Club</label>
+      <div class="label-row">
+        <label>Asignar Cancha del Club</label>
+        <button type="button" class="btn-clear-link" *ngIf="canchaId" (click)="limpiarCancha()">✕ Quitar cancha</button>
+      </div>
       <select [(ngModel)]="canchaId" class="custom-select">
-        <option [value]="null">-- Por Determinar / Sin Cancha --</option>
-        <option *ngFor="let c of canchas" [value]="c.id">{{ c.nombre }}</option>
+        <option [ngValue]="null">-- Por Determinar / Sin Cancha --</option>
+        <option *ngFor="let c of canchas" [ngValue]="c.id">{{ c.nombre }}</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label>Fecha y Hora del Partido</label>
+      <div class="label-row">
+        <label>Fecha y Hora de Inicio del Partido</label>
+        <button type="button" class="btn-clear-link" *ngIf="fechaHora" (click)="limpiarFecha()">✕ Quitar fecha</button>
+      </div>
       <input type="datetime-local" [(ngModel)]="fechaHora" class="custom-input" />
+    </div>
+
+    <div class="form-group">
+      <label>Duración de la Reserva en Cancha</label>
+      <select [(ngModel)]="duracionMinutos" class="custom-select">
+        <option [ngValue]="90">90 minutos (1 hora y media - Estándar Liga)</option>
+        <option [ngValue]="60">60 minutos (1 hora)</option>
+        <option [ngValue]="120">120 minutos (2 horas)</option>
+      </select>
     </div>
 
     <div class="modal-footer">
       <button class="btn-cancel" (click)="cancelar()" [disabled]="loading">Cancelar</button>
+      <button type="button" class="btn-unassign" *ngIf="tieneProgramacionPrevia" (click)="desprogramar()" [disabled]="loading" title="Libera la cancha y deja el partido pendiente de programar">
+        🚫 Quitar Cancha y Fecha
+      </button>
       <button class="btn-save" (click)="guardar()" [disabled]="loading">
-        {{ loading ? 'Guardando...' : '📅 Asignar Horario y Cancha' }}
+        {{ loading ? 'Guardando...' : (canchaId && fechaHora ? '📅 Guardar Horario y Cancha' : '💾 Guardar Cambios') }}
       </button>
     </div>
   </div>

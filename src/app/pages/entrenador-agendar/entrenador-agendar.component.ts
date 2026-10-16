@@ -10,7 +10,6 @@ import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { PopupService } from '../../services/popup.service';
 import { MysqlService } from '../../services/mysql.service';
 import { AlumnoService } from '../../services/alumno.service';
-import { HardGateComponent } from '../../components/hard-gate/hard-gate.component';
 import { AnalyticsService } from '../../services/analytics.service';
 
 registerLocaleData(localeEs);
@@ -18,7 +17,7 @@ registerLocaleData(localeEs);
 @Component({
     selector: 'app-entrenador-agendar',
     standalone: true,
-    imports: [CommonModule, FormsModule, SidebarComponent, HardGateComponent],
+    imports: [CommonModule, FormsModule, SidebarComponent],
     templateUrl: './entrenador-agendar.component.html',
     styleUrls: ['./entrenador-agendar.component.scss']
 })
@@ -382,8 +381,8 @@ export class EntrenadorAgendarComponent implements OnInit {
     getReservasCount(day: Date): number {
         const slots = this.slotsByDay[this.formatDate(day)];
         if (!slots) return 0;
-        // Count only booked slots to show the number of classes that day
-        return slots.filter((s: any) => s.reserva_id != null).length;
+        // Count only unique booked classes (only start slots)
+        return slots.filter((s: any) => s.ocupado && (s.is_reserva_start || !s.is_reserva_continuation)).length;
     }
 
     loadAlumnos(): void {
@@ -497,11 +496,36 @@ export class EntrenadorAgendarComponent implements OnInit {
         });
     }
 
+    addMinutesToTime(timeStr: string, minutes: number): string {
+        if (!timeStr) return '08:00';
+        const parts = timeStr.split(':').map(Number);
+        const total = parts[0] * 60 + (parts[1] || 0) + minutes;
+        const h = Math.floor(total / 60) % 24;
+        const m = total % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    }
+
     processSlots(rawSlots: any[]) {
         rawSlots.forEach(s => {
             const fecha = this.extractDate(s.fecha_inicio);
             if (!this.slotsByDay[fecha]) this.slotsByDay[fecha] = [];
-            this.slotsByDay[fecha].push({ ...s, time: this.extractTime(s.fecha_inicio) });
+            
+            const startH = this.extractTime(s.fecha_inicio);
+            const endH = s.fecha_fin ? this.extractTime(s.fecha_fin) : null;
+            
+            if (endH && endH > startH) {
+                let current = startH;
+                while (current < endH) {
+                    if (!this.slotsByDay[fecha].some(existing => existing.time === current)) {
+                        this.slotsByDay[fecha].push({ ...s, time: current });
+                    }
+                    current = this.addMinutesToTime(current, 30);
+                }
+            } else {
+                if (!this.slotsByDay[fecha].some(existing => existing.time === startH)) {
+                    this.slotsByDay[fecha].push({ ...s, time: startH });
+                }
+            }
         });
     }
 
@@ -510,37 +534,74 @@ export class EntrenadorAgendarComponent implements OnInit {
         const reservas = agendaData.reservas_tradicionales || [];
         reservas.forEach((a: any) => {
             const h = a.hora_inicio ? a.hora_inicio.slice(0, 5) : '08:00';
-            this.applyToSlot(this.extractDate(a.fecha), h, a);
+            const duracion = Number(a.duracion_calculada || a.duracion || a.duracion_sesion_min || 60);
+            const numSlots = Math.max(1, Math.round(duracion / 30));
+            const fecha = this.extractDate(a.fecha);
+            const horaFin = a.hora_fin ? a.hora_fin.slice(0, 5) : this.addMinutesToTime(h, duracion);
+
+            for (let i = 0; i < numSlots; i++) {
+                const slotHora = this.addMinutesToTime(h, i * 30);
+                this.applyToSlot(fecha, slotHora, {
+                    ...a,
+                    is_reserva_start: i === 0,
+                    is_reserva_continuation: i > 0,
+                    is_reserva_end: i === numSlots - 1,
+                    hora_inicio_reserva: h,
+                    hora_fin_reserva: horaFin,
+                    duracion_total_min: duracion,
+                    slot_index_in_reserva: i
+                });
+            }
         });
 
         const templates = agendaData.packs_grupales || [];
         templates.forEach((t: any) => {
             const hora = t.hora_inicio ? t.hora_inicio.slice(0, 5) : '08:00';
+            const duracion = Number(t.duracion_original || t.duracion_calculada || t.duracion || 60);
+            const numSlots = Math.max(1, Math.round(duracion / 30));
+            const horaFin = this.addMinutesToTime(hora, duracion);
             
             if (t.fecha) {
-                // Specific date session
-                this.applyToSlot(t.fecha, hora, {
-                    ...t,
-                    reserva_id: t.pack_id,
-                    reserva_tipo: 'Entrenamiento Grupal',
-                    jugador_nombre: t.jugador_nombre || 'Abierto para inscripción'
-                });
+                for (let i = 0; i < numSlots; i++) {
+                    const slotHora = this.addMinutesToTime(hora, i * 30);
+                    this.applyToSlot(t.fecha, slotHora, {
+                        ...t,
+                        reserva_id: t.pack_id,
+                        reserva_tipo: 'Entrenamiento Grupal',
+                        jugador_nombre: t.jugador_nombre || 'Abierto para inscripción',
+                        is_reserva_start: i === 0,
+                        is_reserva_continuation: i > 0,
+                        is_reserva_end: i === numSlots - 1,
+                        hora_inicio_reserva: hora,
+                        hora_fin_reserva: horaFin,
+                        duracion_total_min: duracion,
+                        slot_index_in_reserva: i
+                    });
+                }
             } else {
-                // Recurring template
                 this.weekDates.forEach(date => {
-                    const dayIndex = date.getDay(); // 0 (Sun) - 6 (Sat)
+                    const dayIndex = date.getDay();
                     const dayName = date.toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase();
                     const dayRef = (t.dia_semana != null) ? t.dia_semana.toString().toLowerCase() : '';
-                    
-                    // Match by index or name
                     const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
                     if (dayRef === dayIndex.toString() || dayRef === dayName || dayRef === daysMap[dayIndex]) {
-                        this.applyToSlot(this.formatDate(date), hora, {
-                            ...t,
-                            reserva_id: t.pack_id,
-                            reserva_tipo: 'Entrenamiento Grupal (Recurrente)',
-                            jugador_nombre: 'Clase Grupal'
-                        });
+                        const fechaStr = this.formatDate(date);
+                        for (let i = 0; i < numSlots; i++) {
+                            const slotHora = this.addMinutesToTime(hora, i * 30);
+                            this.applyToSlot(fechaStr, slotHora, {
+                                ...t,
+                                reserva_id: t.pack_id,
+                                reserva_tipo: 'Entrenamiento Grupal (Recurrente)',
+                                jugador_nombre: 'Clase Grupal',
+                                is_reserva_start: i === 0,
+                                is_reserva_continuation: i > 0,
+                                is_reserva_end: i === numSlots - 1,
+                                hora_inicio_reserva: hora,
+                                hora_fin_reserva: horaFin,
+                                duracion_total_min: duracion,
+                                slot_index_in_reserva: i
+                            });
+                        }
                     }
                 });
             }
@@ -553,10 +614,16 @@ export class EntrenadorAgendarComponent implements OnInit {
         
         const slotUpdate = {
             ocupado: true,
+            is_reserva_start: data.is_reserva_start !== undefined ? data.is_reserva_start : true,
+            is_reserva_continuation: data.is_reserva_continuation || false,
+            is_reserva_end: data.is_reserva_end !== undefined ? data.is_reserva_end : true,
+            hora_inicio_reserva: data.hora_inicio_reserva || hora,
+            hora_fin_reserva: data.hora_fin_reserva || this.addMinutesToTime(data.hora_inicio_reserva || hora, 60),
+            duracion_total_min: data.duracion_total_min || 60,
             reserva_id: data.reserva_id || data.id,
-            pack_id: data.pack_id || data.id, // Para clases grupales
+            pack_id: data.pack_id || data.id,
             jugador_nombre: data.jugador_nombre || data.nombre_jugador,
-            reserva_tipo: data.pack_nombre || data.tipo,
+            reserva_tipo: data.pack_nombre || data.tipo || data.reserva_tipo,
             club_nombre: data.club_nombre,
             club_id: data.club_id,
             malla_nombre: data.malla_nombre,
@@ -603,7 +670,8 @@ export class EntrenadorAgendarComponent implements OnInit {
         }
         
         if (slotData.ocupado) {
-            this.selectedSlot = { date, dateStr: this.formatDate(date), hour, slotData };
+            const effectiveHour = slotData.hora_inicio_reserva || hour;
+            this.selectedSlot = { date, dateStr: this.formatDate(date), hour: effectiveHour, slotData };
             this.showDetailModal = true;
             return;
         }

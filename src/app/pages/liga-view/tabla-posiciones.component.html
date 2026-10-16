@@ -1,41 +1,121 @@
-<div class="table-responsive-wrapper">
-  <table class="custom-table-standings">
-    <thead>
-      <tr>
-        <th class="pos-th">#</th>
-        <th class="team-th">Pareja / Equipo</th>
-        <th>PJ</th>
-        <th>PG</th>
-        <th>PP</th>
-        <th>SF / SC</th>
-        <th>DIF S</th>
-        <th>GF / GC</th>
-        <th>DIF G</th>
-        <th class="pts-th">PTS</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let pos of posicionesOrdenadas; let i = index" [class.clasificado]="i < cuposPlayoff">
-        <td class="pos-td">
-          <span class="rank-badge" [class.playoff]="i < cuposPlayoff">{{ i + 1 }}</span>
-        </td>
-        <td class="team-td">
-          <span class="team-name">{{ pos.nombre_pareja }}</span>
-          <span *ngIf="i < cuposPlayoff" class="playoff-tag">Clasifica Playoff</span>
-        </td>
-        <td>{{ pos.pj }}</td>
-        <td>{{ pos.pg }}</td>
-        <td>{{ pos.pp }}</td>
-        <td class="sub-info">{{ pos.sets_favor }}/{{ pos.sets_contra }}</td>
-        <td [class.positive]="pos.dif_sets > 0" [class.negative]="pos.dif_sets < 0">{{ pos.dif_sets > 0 ? '+' : '' }}{{ pos.dif_sets }}</td>
-        <td class="sub-info">{{ pos.games_favor }}/{{ pos.games_contra }}</td>
-        <td [class.positive]="pos.dif_games > 0" [class.negative]="pos.dif_games < 0">{{ pos.dif_games > 0 ? '+' : '' }}{{ pos.dif_games }}</td>
-        <td class="pts-td">{{ pos.puntos }}</td>
-      </tr>
+<div class="standings-card-container">
+  <div class="table-responsive-wrapper">
+    <table class="custom-table-standings">
+      <thead>
+        <tr>
+          <th class="pos-th">#</th>
+          <th class="team-th">Pareja / Equipo</th>
+          <th title="Partidos Jugados">PJ</th>
+          <th title="Partidos Ganados">PG</th>
+          <th title="Partidos Perdidos">PP</th>
+          <th title="Sets a Favor / Sets en Contra" class="col-sets">SF / SC</th>
+          <th title="Diferencia de Sets">DIF S</th>
+          <th title="Games a Favor / Games en Contra" class="col-games">GF / GC</th>
+          <th title="Diferencia de Games">DIF G</th>
+          <th class="pts-th" title="Puntos Totales">PTS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let pos of posicionesOrdenadas; let i = index" 
+            [class.clasificado]="i < cuposPlayoff"
+            [class.podium-1]="i === 0"
+            [class.podium-2]="i === 1"
+            [class.podium-3]="i === 2">
+          
+          <!-- Posición / Rank -->
+          <td class="pos-td">
+            <div class="rank-badge" 
+                 [class.rank-gold]="i === 0" 
+                 [class.rank-silver]="i === 1" 
+                 [class.rank-bronze]="i === 2"
+                 [class.rank-playoff]="i >= 3 && i < cuposPlayoff">
+              <span>{{ i + 1 }}</span>
+            </div>
+          </td>
 
-      <tr *ngIf="posicionesOrdenadas.length === 0">
-        <td colspan="10" class="empty-state">No hay resultados ni partidos jugados aún en este grupo.</td>
-      </tr>
-    </tbody>
-  </table>
+          <!-- Pareja / Equipo -->
+          <td class="team-td">
+            <div class="team-wrapper">
+              <!-- Dual Player Avatars -->
+              <div class="duo-avatars-wrapper" [class.podium-gold-avatar]="i === 0">
+                <div class="duo-avatar avatar-p1" [title]="getPlayer1Name(pos)">
+                  <img [src]="getPlayer1Photo(pos)" 
+                       [alt]="getPlayer1Name(pos)" 
+                       (error)="onImgError($event, getPlayer1Name(pos), false)" />
+                </div>
+                <div class="duo-avatar avatar-p2" [title]="getPlayer2Name(pos)">
+                  <img [src]="getPlayer2Photo(pos)" 
+                       [alt]="getPlayer2Name(pos)" 
+                       (error)="onImgError($event, getPlayer2Name(pos), true)" />
+                </div>
+              </div>
+
+              <div class="team-meta">
+                <span class="team-name" [title]="pos.nombre_pareja">{{ pos.nombre_pareja }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Partidos Jugados / Ganados / Perdidos -->
+          <td class="stat-cell pj-cell">{{ pos.pj }}</td>
+          <td class="stat-cell pg-cell"><span class="stat-val win">{{ pos.pg }}</span></td>
+          <td class="stat-cell pp-cell"><span class="stat-val loss">{{ pos.pp }}</span></td>
+
+          <!-- Sets a Favor / Contra -->
+          <td class="stat-cell sub-info col-sets">
+            <span class="ratio-text">{{ pos.sets_favor }}/{{ pos.sets_contra }}</span>
+          </td>
+
+          <!-- Diferencia de Sets -->
+          <td class="stat-cell dif-cell">
+            <span class="diff-badge" 
+                  [class.positive]="pos.dif_sets > 0" 
+                  [class.negative]="pos.dif_sets < 0"
+                  [class.neutral]="pos.dif_sets === 0">
+              {{ pos.dif_sets > 0 ? '+' : '' }}{{ pos.dif_sets }}
+            </span>
+          </td>
+
+          <!-- Games a Favor / Contra -->
+          <td class="stat-cell sub-info col-games">
+            <span class="ratio-text">{{ pos.games_favor }}/{{ pos.games_contra }}</span>
+          </td>
+
+          <!-- Diferencia de Games -->
+          <td class="stat-cell dif-cell">
+            <span class="diff-badge" 
+                  [class.positive]="pos.dif_games > 0" 
+                  [class.negative]="pos.dif_games < 0"
+                  [class.neutral]="pos.dif_games === 0">
+              {{ pos.dif_games > 0 ? '+' : '' }}{{ pos.dif_games }}
+            </span>
+          </td>
+
+          <!-- Puntos Totales -->
+          <td class="pts-td">
+            <div class="pts-pill">
+              {{ pos.puntos }}
+            </div>
+          </td>
+        </tr>
+
+        <tr *ngIf="posicionesOrdenadas.length === 0">
+          <td colspan="10" class="empty-state">
+            <div class="empty-content">
+              <i class="fas fa-trophy empty-icon"></i>
+              <p>No hay resultados ni partidos registrados aún en esta categoría.</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend Footer -->
+  <div class="standings-footer-legend" *ngIf="posicionesOrdenadas.length > 0">
+    <div class="legend-hint">
+      <i class="fas fa-info-circle"></i>
+      <span>Criterio: Puntos → Dif. Sets → Dif. Games → Games Favor</span>
+    </div>
+  </div>
 </div>

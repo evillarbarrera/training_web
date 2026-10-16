@@ -31,17 +31,8 @@
                     </div>
                 </div>
 
-                <!-- Zona Derecha: Acciones y Estados -->
+                <!-- Zona Derecha: Acciones en Fila Única -->
                 <div class="header-actions-right">
-                    <div class="legend-simplified">
-                        <div class="leg-item"><span class="dot admin"></span> <span>Admin</span></div>
-                        <div class="leg-item"><span class="dot player"></span> <span>App</span></div>
-                        <div class="leg-item"><span class="dot trainer"></span> <span>Entrenamiento</span></div>
-                        <div class="leg-item"><div class="status-box status-total"></div> <span>Total</span></div>
-                        <div class="leg-item"><div class="status-box status-parcial"></div> <span>Parte</span></div>
-                        <div class="leg-item"><div class="status-box status-pendiente"></div> <span>Debe</span></div>
-                    </div>
-                    
                     <div class="action-buttons">
                         <div class="date-input-wrapper">
                             <input type="date" [(ngModel)]="selectedFecha" (change)="onFechaChange()">
@@ -71,42 +62,57 @@
             </div>
         </nav>
 
-        <!-- CATEGORY FILTER TABS FOR AGENDA -->
+        <!-- CATEGORY FILTER TABS FOR AGENDA + LEYENDA CONTEXTUAL -->
         <div class="resource-category-tabs agenda-tabs animate-in" *ngIf="canchas.length > 0 && !isTVMode">
-            <button class="cat-tab-btn" 
-                    [class.active]="activeCategoryFilter === 'all'" 
-                    (click)="activeCategoryFilter = 'all'">
-                <span>🏢 Todos</span>
-                <span class="tab-count">{{ canchas.length }}</span>
-            </button>
-            <button class="cat-tab-btn" 
-                    *ngIf="getCategoryCount('padel') > 0"
-                    [class.active]="activeCategoryFilter === 'padel'" 
-                    (click)="activeCategoryFilter = 'padel'">
-                <span>🎾 Pádel & Pickleball</span>
-                <span class="tab-count">{{ getCategoryCount('padel') }}</span>
-            </button>
-            <button class="cat-tab-btn" 
-                    *ngIf="getCategoryCount('juegos') > 0"
-                    [class.active]="activeCategoryFilter === 'juegos'" 
-                    (click)="activeCategoryFilter = 'juegos'">
-                <span>🎱 Mesas & Juegos</span>
-                <span class="tab-count">{{ getCategoryCount('juegos') }}</span>
-            </button>
-            <button class="cat-tab-btn" 
-                    *ngIf="getCategoryCount('amenities') > 0"
-                    [class.active]="activeCategoryFilter === 'amenities'" 
-                    (click)="activeCategoryFilter = 'amenities'">
-                <span>🍖 Quinchos & Salones</span>
-                <span class="tab-count">{{ getCategoryCount('amenities') }}</span>
-            </button>
-            <button class="cat-tab-btn" 
-                    *ngIf="getCategoryCount('equipamiento') > 0"
-                    [class.active]="activeCategoryFilter === 'equipamiento'" 
-                    (click)="activeCategoryFilter = 'equipamiento'">
-                <span>🤖 Equipamiento</span>
-                <span class="tab-count">{{ getCategoryCount('equipamiento') }}</span>
-            </button>
+            <div class="cat-tabs-scroll">
+                <button class="cat-tab-btn" 
+                        [class.active]="activeCategoryFilter === 'all'" 
+                        (click)="activeCategoryFilter = 'all'">
+                    <span>🏢 Todos</span>
+                    <span class="tab-count">{{ canchas.length }}</span>
+                </button>
+                <button class="cat-tab-btn" 
+                        *ngIf="getCategoryCount('padel') > 0"
+                        [class.active]="activeCategoryFilter === 'padel'" 
+                        (click)="activeCategoryFilter = 'padel'">
+                    <span>🎾 Pádel & Pickleball</span>
+                    <span class="tab-count">{{ getCategoryCount('padel') }}</span>
+                </button>
+                <button class="cat-tab-btn" 
+                        *ngIf="getCategoryCount('juegos') > 0"
+                        [class.active]="activeCategoryFilter === 'juegos'" 
+                        (click)="activeCategoryFilter = 'juegos'">
+                    <span>🎱 Mesas & Juegos</span>
+                    <span class="tab-count">{{ getCategoryCount('juegos') }}</span>
+                </button>
+                <button class="cat-tab-btn" 
+                        *ngIf="getCategoryCount('amenities') > 0"
+                        [class.active]="activeCategoryFilter === 'amenities'" 
+                        (click)="activeCategoryFilter = 'amenities'">
+                    <span>🍖 Quinchos & Salones</span>
+                    <span class="tab-count">{{ getCategoryCount('amenities') }}</span>
+                </button>
+                <button class="cat-tab-btn" 
+                        *ngIf="getCategoryCount('equipamiento') > 0"
+                        [class.active]="activeCategoryFilter === 'equipamiento'" 
+                        (click)="activeCategoryFilter = 'equipamiento'">
+                    <span>🤖 Equipamiento</span>
+                    <span class="tab-count">{{ getCategoryCount('equipamiento') }}</span>
+                </button>
+            </div>
+
+            <!-- Leyenda Contextual de la Grilla de Reservas -->
+            <div class="legend-simplified">
+                <span class="leg-group-title">Origen:</span>
+                <div class="leg-item"><span class="dot admin"></span> <span>Admin</span></div>
+                <div class="leg-item"><span class="dot player"></span> <span>App</span></div>
+                <div class="leg-item"><span class="dot trainer"></span> <span>Entrenamiento</span></div>
+                <span class="leg-divider"></span>
+                <span class="leg-group-title">Pago:</span>
+                <div class="leg-item"><div class="status-box status-total"></div> <span>Total</span></div>
+                <div class="leg-item"><div class="status-box status-parcial"></div> <span>Parte</span></div>
+                <div class="leg-item"><div class="status-box status-pendiente"></div> <span>Debe</span></div>
+            </div>
         </div>
 
         <!-- TV HEADER -->
@@ -450,7 +456,7 @@
                         <!-- Estado Global Solo si es Pago Total (Total Sede / Efectivo / Tarjeta / Transferencia) -->
                         <div class="global-pay-row" *ngIf="newReserva.metodo_pago !== 'proporcional'">
                             <label>Estado del Pago</label>
-                            <div class="global-pay-toggle-bar">
+                            <div class="global-pay-toggle-bar" *ngIf="!newReserva.liga_partido_id">
                                 <button type="button" 
                                         class="pay-toggle-btn paid" 
                                         [class.active]="newReserva.pagado == 1"
@@ -463,6 +469,10 @@
                                         (click)="setPagoGlobal(0)">
                                     <i class="fas fa-exclamation-circle"></i> DEBE (Pendiente)
                                 </button>
+                            </div>
+                            <!-- Aviso para Partidos de Liga -->
+                            <div class="liga-paid-banner" *ngIf="newReserva.liga_partido_id" style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1.5px solid rgba(16, 185, 129, 0.3); padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-trophy"></i> Pagado (Inscripción de Liga)
                             </div>
                         </div>
                     </div>

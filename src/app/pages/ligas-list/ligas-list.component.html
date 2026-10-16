@@ -12,9 +12,26 @@
       </button>
     </header>
 
+    <!-- NAVEGACIÓN ENTRE CLUBES / SEDES -->
+    <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 1">
+      <div class="tabs-scroll-container">
+        <button *ngFor="let club of clubes" 
+                class="club-tab-btn" 
+                [class.active]="selectedClubId === club.id"
+                (click)="onClubChange(club.id)">
+          <span class="tab-icon">🏢</span>
+          <span class="tab-name">{{ club.nombre }}</span>
+          <span class="tab-badge" *ngIf="selectedClubId === club.id">Activo</span>
+        </button>
+      </div>
+    </nav>
+
     <div class="dashboard-grid">
       <div class="header-banner animate-in">
         <div>
+          <span class="club-badge-indicator" *ngIf="selectedClubNombre">
+            🏢 {{ selectedClubNombre }}
+          </span>
           <h1>🏆 Ligas de Pádel</h1>
           <p>Gestiona campeonatos con formato Round Robin, afiches promocionales, visibilidad móvil y edición completa.</p>
         </div>
@@ -61,8 +78,8 @@
 
           <div class="card-stats">
             <div class="stat-item">
-              <span class="stat-num">${{ (l.precio || 0) | number:'1.0-0' }}</span>
-              <span class="stat-lbl">Inscripción</span>
+              <span class="stat-num">{{ formatPrecio(l.precio) }}</span>
+              <span class="stat-lbl">Precio</span>
             </div>
             <div class="stat-item">
               <span class="stat-num">{{ l.num_categorias || 1 }}</span>
@@ -70,7 +87,7 @@
             </div>
             <div class="stat-item">
               <span class="stat-num">{{ l.total_parejas || 0 }}</span>
-              <span class="stat-lbl">Parejas</span>
+              <span class="stat-lbl">Parejas Inscritas</span>
             </div>
           </div>
 

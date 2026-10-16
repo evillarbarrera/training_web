@@ -4,12 +4,11 @@ import { Router } from '@angular/router';
 import { MysqlService } from '../../services/mysql.service';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { PopupService } from '../../services/popup.service';
-import { HardGateComponent } from '../../components/hard-gate/hard-gate.component';
 
 @Component({
   selector: 'app-entrenador-home',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, HardGateComponent],
+  imports: [CommonModule, SidebarComponent],
   templateUrl: './entrenador-home.component.html',
   styleUrls: ['./entrenador-home.component.scss']
 })
@@ -38,6 +37,24 @@ export class EntrenadorHomeComponent implements OnInit {
   showMPReminder = false;
   hoyNombre = '';
   fechaHoyFormatted = '';
+  selectedAgendaFilter: 'todos' | 'hoy' | 'manana' = 'todos';
+
+  get greeting(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días';
+    if (hour < 19) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  get filteredClasesHoyList(): any[] {
+    if (this.selectedAgendaFilter === 'hoy') {
+      return this.clasesHoyList.filter(c => c.diaLabel === 'Hoy');
+    }
+    if (this.selectedAgendaFilter === 'manana') {
+      return this.clasesHoyList.filter(c => c.diaLabel === 'Mañana');
+    }
+    return this.clasesHoyList;
+  }
 
   // Finanzas Chart Data
   totalRecaudado: number = 0;
@@ -328,6 +345,10 @@ export class EntrenadorHomeComponent implements OnInit {
 
   irACupones(): void {
     this.router.navigate(['/entrenador-cupones']);
+  }
+
+  irAPerfilPublico(): void {
+    this.router.navigate(['/perfil-publico']);
   }
 
   irAPerfil(): void {

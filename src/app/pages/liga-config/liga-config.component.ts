@@ -17,6 +17,7 @@ export class LigaConfigComponent implements OnInit {
   userRole: 'jugador' | 'entrenador' | 'administrador_club' | 'administrador' | 'staff_club' = 'administrador_club';
   userName: string = '';
 
+  clubId: number = 0;
   ligaId: number | null = null;
   ligaNombre: string = '';
   descripcion: string = '';
@@ -24,6 +25,7 @@ export class LigaConfigComponent implements OnInit {
   fechaInicio: string = '';
   fechaFin: string = '';
   precio: number = 0;
+  precioDisplay: string = '';
   estado: 'Inscripción' | 'En Curso' | 'Playoffs' | 'Finalizada' = 'Inscripción';
   visibleApp: boolean = true;
   
@@ -56,12 +58,20 @@ export class LigaConfigComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const storedClubId = localStorage.getItem('selectedClubId');
+    if (storedClubId && storedClubId !== 'undefined' && storedClubId !== 'null') {
+      this.clubId = Number(storedClubId);
+    }
+
     const userStr = localStorage.getItem('currentUser');
     if (userStr) {
       const u = JSON.parse(userStr);
       this.userId = u.id;
       this.userRole = u.rol || 'administrador_club';
       this.userName = `${u.nombre || ''} ${u.apellido || ''}`;
+      if (!this.clubId && u.club_id) {
+        this.clubId = Number(u.club_id);
+      }
     }
 
     // Comprobar si hay ID en la URL de snapshot o suscripción
@@ -79,6 +89,18 @@ export class LigaConfigComponent implements OnInit {
     }
   }
 
+  onPrecioInput(event: any): void {
+    const raw = (event.target.value || '').toString();
+    const cleanNum = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(cleanNum) && cleanNum > 0) {
+      this.precio = cleanNum;
+      this.precioDisplay = '$' + cleanNum.toLocaleString('es-CL');
+    } else {
+      this.precio = 0;
+      this.precioDisplay = '';
+    }
+  }
+
   cargarLiga(id: number): void {
     this.loading = true;
     this.errorMsj = '';
@@ -92,6 +114,9 @@ export class LigaConfigComponent implements OnInit {
           this.ligaNombre = l.nombre || '';
           this.descripcion = l.descripcion || '';
           this.imagenUrl = l.imagen_url || '';
+          if (l.club_id) {
+            this.clubId = Number(l.club_id);
+          }
           
           // Formatear fechas para <input type="date"> (YYYY-MM-DD)
           if (l.fecha_inicio) {
@@ -101,7 +126,10 @@ export class LigaConfigComponent implements OnInit {
             this.fechaFin = String(l.fecha_fin).split('T')[0].split(' ')[0];
           }
 
-          this.precio = l.precio ? Number(l.precio) : 0;
+          let p = l.precio ? Number(l.precio) : 0;
+          if (p > 0 && p < 1000) p = p * 1000;
+          this.precio = p;
+          this.precioDisplay = p > 0 ? '$' + Math.round(p).toLocaleString('es-CL') : '';
           this.estado = l.estado || 'Inscripción';
           this.visibleApp = l.visible_app == 1 || l.visible_app === true || l.visible_app === '1';
           
@@ -112,7 +140,8 @@ export class LigaConfigComponent implements OnInit {
               genero: c.genero || 'Caballeros',
               nivel: c.nivel || 'B',
               max_parejas: Number(c.max_parejas || 16),
-              parejas_clasifican_playoff: Number(c.parejas_clasifican_playoff || 2)
+              parejas_clasifican_playoff: Number(c.parejas_clasifican_playoff || 2),
+              dias_juego: Array.isArray(c.dias_juego) ? c.dias_juego : (typeof c.dias_juego_json === 'string' ? JSON.parse(c.dias_juego_json) : [])
             }));
           }
 
@@ -164,13 +193,33 @@ export class LigaConfigComponent implements OnInit {
     }
   }
 
+  diasSemanaList: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  isDiaSeleccionado(cat: CategoriaConfig, dia: string): boolean {
+    if (!cat.dias_juego) return false;
+    return cat.dias_juego.includes(dia);
+  }
+
+  toggleDiaCategoria(cat: CategoriaConfig, dia: string): void {
+    if (!cat.dias_juego) {
+      cat.dias_juego = [];
+    }
+    const idx = cat.dias_juego.indexOf(dia);
+    if (idx > -1) {
+      cat.dias_juego.splice(idx, 1);
+    } else {
+      cat.dias_juego.push(dia);
+    }
+  }
+
   agregarCategoria(): void {
     this.categorias.push({
       nombre: `Categoría ${this.categorias.length + 1}`,
       genero: 'Caballeros',
       nivel: 'B',
       max_parejas: 16,
-      parejas_clasifican_playoff: 2
+      parejas_clasifican_playoff: 2,
+      dias_juego: []
     });
   }
 
@@ -206,6 +255,8 @@ export class LigaConfigComponent implements OnInit {
 
     const payload = {
       id: this.ligaId || undefined,
+      club_id: this.clubId || undefined,
+      admin_id: this.userId || undefined,
       nombre: this.ligaNombre,
       descripcion: this.descripcion,
       imagen_url: this.imagenUrl,

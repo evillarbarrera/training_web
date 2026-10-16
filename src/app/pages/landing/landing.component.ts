@@ -2,7 +2,7 @@ import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MysqlService } from '../../services/mysql.service';
 import { AuthService } from '../../services/auth.service';
 import { EntrenamientoService } from '../../services/entrenamientos.service';
@@ -10,13 +10,14 @@ import { CurrencyService } from '../../services/currency.service';
 import { Chart, registerables } from 'chart.js';
 import { Title, Meta } from '@angular/platform-browser';
 import { environment } from '../../../environments/environment';
+import { SeoService } from '../../services/seo.service';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './landing.component.html',
   styleUrls: ['./landing.component.scss']
 })
@@ -127,34 +128,70 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   currentSlide = 0;
   slides = [
     {
-      badge: 'GESTIÓN TOTAL',
-      title: 'SOFTWARE DE ADMIN',
-      highlight: 'PARA TU ACADEMIA',
-      description: 'Lleva el control absoluto de tu negocio de pádel. Gestión de alumnos, pagos automatizados y agenda inteligente en un solo panel profesional.',
-      image: 'assets/images/app-screenshot-v2.png'
+      badge: 'APP JUGADORES & ALUMNOS 🎾',
+      title: 'TODO TU PÁDEL',
+      highlight: 'EN LA PALMA DE TU MANO',
+      description: 'Panel del jugador con métricas en tiempo real, reservas de pistas, historial de clases, créditos y estadísticas.',
+      image: 'assets/img/Celular/home-jugador.png'
     },
     {
-      badge: 'GESTIÓN DE CLUB 🏢',
-      title: 'ADMINISTRA TUS CLUBES',
-      highlight: 'RESERVAS Y VENTAS',
-      description: 'Controla las reservas de canchas para uno o más clubes. Gestiona ventas, inventario, crea torneos americanos y rankings por categoría en tiempo real.',
-      image: 'assets/images/app-screenshot.png'
+      badge: 'GESTIÓN DE CANCHAS 🏢',
+      title: 'RESERVAS Y TURNOS',
+      highlight: 'EN TIEMPO REAL',
+      description: 'Visualiza la disponibilidad de pistas en segundos, agenda arriendos, partidos con amigos y controla cada franja horaria.',
+      image: 'assets/img/Celular/reservas-de-canchas.png'
     },
     {
-      badge: 'AUTOMATIZACIÓN ⚡',
-      title: 'CONTROLA TUS CLASES',
-      highlight: 'REDUCE LA CARGA ADMIN',
-      description: 'Optimiza tu tiempo como entrenador. Seguimiento de packs, asistencias y pagos automáticos para que te enfoques solo en enseñar en pista.',
-      image: 'assets/images/slide-coaches.jpg'
+      badge: 'ACADEMIA & ENTRENAMIENTOS ⚡',
+      title: 'AGENDA TUS CLASES',
+      highlight: 'CON TU COACH FAVORITO',
+      description: 'Elige a tu entrenador, revisa sus cupos disponibles y reserva entrenamientos particulares o grupales al instante.',
+      image: 'assets/img/Celular/agendar-entrenamiento.png'
     },
     {
-      badge: 'MÉTRICAS DE NEGOCIO',
-      title: 'POTENCIA TU CLUB',
-      highlight: 'CON DATOS REALES',
-      description: 'Visualiza la rentabilidad de tus pistas y el progreso de tus alumnos. La herramienta de administración de pádel más completa del mercado.',
-      image: 'assets/images/slide-players.jpg'
+      badge: 'PROGRESO & EVALUACIÓN 📈',
+      title: 'SEGUIMIENTO TÉCNICO',
+      highlight: 'RADAR DE HABILIDADES',
+      description: 'Evaluaciones personalizadas por tu coach, seguimiento de objetivos y evolución técnica detallada por cada golpe.',
+      image: 'assets/img/Celular/progreso-entrenamiento.png'
+    },
+    {
+      badge: 'COMPETICIÓN & TORNEOS 🏆',
+      title: 'CAMPEONATOS ACTIVOS',
+      highlight: 'LIGAS Y AMERICANOS',
+      description: 'Sigue fixtures, consulta tablas de posiciones en directo y registra los resultados de tus partidos oficiales.',
+      image: 'assets/img/Celular/campeonatos-en-curso.png'
     }
   ];
+
+  // Web Platform Interactive Screenshots Tabs
+  clubScreenshotTabs = [
+    { id: 'reservas', label: '📅 Calendario Canchas', image: 'assets/img/web/calendario-de-reservas.png', title: 'Calendario de Reservas en Tiempo Real', desc: 'Cuadrícula interactiva de pistas con estados por color, arriendos rápidos y bloqueos de mantenimiento.' },
+    { id: 'dashboard', label: '📊 Panel Central', image: 'assets/img/web/home-club.png', title: 'Panel de Control del Club', desc: 'Métricas de ocupación, facturación del día, resumen de reservas y alertas operativas en un solo vistazo.' },
+    { id: 'americanos', label: '🏆 Torneos Americanos', image: 'assets/img/web/americanos.png', title: 'Organizador de Torneos y Ligas', desc: 'Generación automática de fixtures, rotaciones de parejas y marcadores en vivo para dinamizar tu club.' },
+    { id: 'ventas', label: '💳 Punto de Venta (TPV)', image: 'assets/img/web/ventas-del-dia.png', title: 'Control de Ventas y Caja Diaria', desc: 'Cobros por arriendos, bebidas, pelotas y productos de tienda con flujo de caja transparente.' },
+    { id: 'inventario', label: '📦 Control de Inventario', image: 'assets/img/web/inventario.png', title: 'Stock y Alertas de Reposición', desc: 'Inventario en tiempo real de accesorios, palas de test y consumibles con alertas de stock crítico.' },
+    { id: 'reportes', label: '📈 Reportes Financieros', image: 'assets/img/web/reportes.png', title: 'Reportes y Estadísticas de Negocio', desc: 'Análisis detallado de rentabilidad por pista, horarios pico y recurrencia de socios.' }
+  ];
+  activeClubTab = 0;
+
+  showZoomModal = false;
+  zoomImage = '';
+  zoomTitle = '';
+
+  setActiveClubTab(index: number): void {
+    this.activeClubTab = index;
+  }
+
+  openZoom(img: string, title: string): void {
+    this.zoomImage = img;
+    this.zoomTitle = title;
+    this.showZoomModal = true;
+  }
+
+  closeZoom(): void {
+    this.showZoomModal = false;
+  }
 
   entrenadorStats = {
     alumnos_totales: 0,
@@ -194,8 +231,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     private authService: AuthService,
     private entrenamientoService: EntrenamientoService,
     private currencyService: CurrencyService,
-    private titleService: Title,
-    private metaService: Meta,
+    private seoService: SeoService,
     private http: HttpClient
   ) { }
 
@@ -217,14 +253,49 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setSeoTags(): void {
-    this.titleService.setTitle('PadelBlox | Software de Gestión para Academias de Pádel');
-    this.metaService.addTags([
-      { name: 'description', content: 'La plataforma líder para entrenadores y clubes de pádel. Gestión de alumnos, pagos, agenda inteligente y análisis por IA. Prueba 90 días gratis.' },
-      { name: 'keywords', content: 'software padel, gestion academias padel, app entrenadores padel, reservas pistas padel, clases padel' },
-      { property: 'og:title', content: 'PadelBlox | Eleva tu Academia al Siguiente Nivel' },
-      { property: 'og:description', content: 'Digitaliza tu academia de pádel con el software más potente del mercado.' },
-      { property: 'og:image', content: 'assets/images/app-screenshot-v2.png' }
-    ]);
+    this.seoService.setPageSeo({
+      title: 'PadelBlox | Software Nº1 de Gestión de Clubes, Entrenamientos y Smartwatch de Pádel',
+      description: 'La plataforma integral líder de pádel: gestión de clubes, reservas online de canchas, software para entrenadores con IA y marcador en tiempo real para Apple Watch y Wear OS. Prueba 90 días gratis.',
+      keywords: 'software padel, gestion club de padel, reservas canchas padel, app smartwatch padel, entrenadores de padel, marcador apple watch padel, torneos americanos padel software, pizarra tactica padel',
+      canonicalUrl: 'https://padelblox.cl/',
+      ogTitle: 'PadelBlox | El Software Definitivo para el Mundo del Pádel',
+      ogDescription: 'Digitaliza tu club o academia de pádel con reservas en vivo, análisis con IA y app de smartwatch para Apple Watch y Wear OS.',
+      ogImage: 'https://padelblox.cl/assets/images/app-screenshot-v2.png',
+      schemaJson: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          'name': 'PadelBlox',
+          'applicationCategory': 'SportsApplication, BusinessApplication',
+          'operatingSystem': 'Web, iOS, Android, watchOS, Wear OS',
+          'description': 'Plataforma líder para la gestión integral de clubes de pádel, academias, entrenamientos y tanteador en vivo para smartwatches.',
+          'url': 'https://padelblox.cl/',
+          'offers': {
+            '@type': 'Offer',
+            'price': '19990',
+            'priceCurrency': 'CLP',
+            'description': 'Planes desde $19.990 CLP / mes con 90 días de prueba gratuita'
+          },
+          'aggregateRating': {
+            '@type': 'AggregateRating',
+            'ratingValue': '4.9',
+            'reviewCount': '154'
+          }
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          'mainEntity': this.faqs.map(f => ({
+            '@type': 'Question',
+            'name': f.q,
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': f.a
+            }
+          }))
+        }
+      ]
+    });
   }
 
   toggleFaq(index: number) {
@@ -240,12 +311,25 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   openContactModal(): void {
-    this.showContactModal = true;
-    this.contactSuccess = false;
+    this.router.navigate(['/register']);
+  }
+
+  irARegister(): void {
+    this.router.navigate(['/register']);
   }
 
   closeContactModal(): void {
     this.showContactModal = false;
+  }
+
+  mobileMenuOpen = false;
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen = false;
   }
 
   submitContactForm(): void {

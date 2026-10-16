@@ -7,6 +7,7 @@ import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { PopupService } from '../../services/popup.service';
 import { PacksService } from '../../services/packs.service';
 import { AlumnoService } from '../../services/alumno.service';
+import { AppDeepLinkService } from '../../services/app-deep-link.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
@@ -135,24 +136,47 @@ export class JugadorReservasComponent implements OnInit {
     return false;
   }
 
+  // Mobile App Banner
+  isMobile: boolean = false;
+  showMobileBanner: boolean = true;
+  storeDownloadUrl: string = '';
+
   constructor(
     private mysqlService: MysqlService,
-    // ... (omitting for brevity)
     private entrenamientoService: EntrenamientoService,
     private packsService: PacksService,
     private alumnoService: AlumnoService,
     public router: Router,
     private route: ActivatedRoute,
-    private popupService: PopupService
+    private popupService: PopupService,
+    public appDeepLink: AppDeepLinkService
   ) { }
 
   ngOnInit(): void {
     const storedUserId = localStorage.getItem('userId');
     this.userId = storedUserId ? Number(storedUserId) : null;
 
+    this.isMobile = this.appDeepLink.isMobile();
+    this.storeDownloadUrl = this.appDeepLink.getStoreUrl();
+
     this.loadUserProfile();
     // Prefer loading profile first to set default location
     this.checkQueryParams();
+  }
+
+  openInMobileApp(): void {
+    let query = 'jugador-reservas';
+    if (this.selectedEntrenador) {
+      query += `?entrenador_id=${this.selectedEntrenador}`;
+      if (this.selectedPack?.id) {
+        query += `&pack_id=${this.selectedPack.id}`;
+      }
+    }
+    this.appDeepLink.openAppOrStore(query);
+  }
+
+  dismissMobileBanner(): void {
+    this.showMobileBanner = false;
   }
 
   checkBookingRestriction(entrenadorId?: number) {
@@ -258,7 +282,13 @@ export class JugadorReservasComponent implements OnInit {
 
   checkQueryParams(): void {
     this.route.queryParams.subscribe(params => {
-      // ... (omitting for brevity)
+      if (params['entrenador_id'] || params['coach_id']) {
+        const coachId = Number(params['entrenador_id'] || params['coach_id']);
+        if (coachId) {
+          this.selectedEntrenador = coachId;
+          this.onEntrenadorChange();
+        }
+      }
       if (params['status'] === 'success' && params['reserva'] === 'confirmed') {
         this.popupService.success(
           '¡Reserva confirmada!',
@@ -355,6 +385,10 @@ export class JugadorReservasComponent implements OnInit {
         } else {
           this.entrenadores = coaches;
           this.isLoadingDiscovery = false;
+        }
+
+        if (this.selectedEntrenador) {
+          this.onEntrenadorChange();
         }
 
         if (this.userId) {

@@ -4,55 +4,138 @@
     </app-sidebar>
 
     <main class="main-content">
+        <!-- NAVEGACIÓN ENTRE CLUBES / SEDES -->
+        <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 1">
+            <div class="tabs-scroll-container">
+                <button *ngFor="let club of clubes" 
+                        class="club-tab-btn" 
+                        [class.active]="selectedClubId === club.id"
+                        (click)="onClubChange(club.id)">
+                    <span class="tab-icon">🏢</span>
+                    <span class="tab-name">{{ club.nombre }}</span>
+                    <span class="tab-badge" *ngIf="selectedClubId === club.id">Activo</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- TOP HEADER ATHLETIC -->
+        <div class="top-header-athletic">
+            <div class="header-left">
+                <div class="header-trophy">🏆</div>
+                <div class="header-info">
+                    <span class="club-badge-indicator" *ngIf="selectedClubNombre">
+                        🏢 {{ selectedClubNombre }}
+                    </span>
+                    <h1>Ranking Oficial de Pádel</h1>
+                    <p class="subtitle">Clasificación deportiva acumulada según rendimiento en competencias y torneos oficiales.</p>
+                </div>
+            </div>
+            <div class="header-badge-season">
+                <span class="season-dot"></span>
+                <span>Temporada Activa ⚡</span>
+            </div>
+        </div>
+
+        <!-- FILTERS & CATEGORIES CARD -->
+        <div class="ranking-filter-card">
+            <div class="filter-top-bar">
+                <div class="branch-selector">
+                    <button type="button" 
+                            class="branch-btn" 
+                            [class.active]="selectedRama === 'todas'" 
+                            (click)="setRama('todas')">
+                        🌐 Todas
+                    </button>
+                    <button type="button" 
+                            class="branch-btn" 
+                            [class.active]="selectedRama === 'open'" 
+                            (click)="setRama('open')">
+                        🎾 Open / Varones
+                    </button>
+                    <button type="button" 
+                            class="branch-btn" 
+                            [class.active]="selectedRama === 'damas'" 
+                            (click)="setRama('damas')">
+                        🌸 Damas
+                    </button>
+                </div>
+
+                <div class="search-input-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" 
+                           [(ngModel)]="filtroBusqueda" 
+                           (ngModelChange)="currentPage = 1" 
+                           placeholder="Buscar jugador por nombre...">
+                    <button *ngIf="filtroBusqueda" 
+                            class="btn-clear-search" 
+                            (click)="filtroBusqueda = ''; currentPage = 1">✕</button>
+                </div>
+            </div>
+
+            <!-- TABS DE CATEGORÍAS -->
+            <div class="category-pills-row">
+                <button 
+                    type="button" 
+                    *ngFor="let cat of categoriasVisibles" 
+                    class="cat-pill-btn" 
+                    [class.active]="selectedCategoria === cat" 
+                    (click)="setCategoria(cat)">
+                    <span *ngIf="cat === 'General'">🌐 General</span>
+                    <span *ngIf="cat !== 'General'">🏷️ {{ formatCategoriaNombre(cat) }}</span>
+                </button>
+            </div>
+        </div>
 
         <div class="content-body">
-            <!-- PODIUM (Top 3) -->
-            @if (ranking.length > 0) {
-            <div class="podium-container">
-                <!-- 2nd Place -->
-                <div class="podium-spot second" [style.visibility]="ranking[1] ? 'visible' : 'hidden'">
-                    <div class="avatar-container">
-                        <img [src]="ranking[1]?.foto || 'assets/images/placeholder_avatar.png'" alt="2nd">
-                        <div class="rank-badge">2</div>
-                    </div>
-                    <div class="player-info">
-                        <span class="name">{{ ranking[1]?.nombre }}</span>
-                        <span class="points">{{ ranking[1]?.puntos_ranking }} pts</span>
-                    </div>
-                </div>
 
-                <!-- 1st Place -->
-                <div class="podium-spot first">
-                    <div class="avatar-container">
-                        <div class="crown">👑</div>
-                        <img [src]="ranking[0]?.foto || 'assets/images/placeholder_avatar.png'" alt="1st">
-                        <div class="rank-badge">1</div>
-                    </div>
-                    <div class="player-info">
-                        <span class="name">{{ ranking[0]?.nombre }}</span>
-                        <span class="points">{{ ranking[0]?.puntos_ranking }} pts</span>
-                    </div>
+            <!-- 🏆 PODIO DE HONOR (TOP 3) -->
+            <div class="podium-section" *ngIf="!loading && ranking.length >= 3 && !filtroBusqueda">
+                <div class="podium-header-badge">
+                    <span>👑 PODIO DE HONOR — {{ selectedCategoria | uppercase }}</span>
                 </div>
-
-                <!-- 3rd Place -->
-                <div class="podium-spot third" [style.visibility]="ranking[2] ? 'visible' : 'hidden'">
-                    <div class="avatar-container">
-                        <img [src]="ranking[2]?.foto || 'assets/images/placeholder_avatar.png'" alt="3rd">
-                        <div class="rank-badge">3</div>
+                
+                <div class="podium-grid">
+                    <!-- 2ND PLACE (SILVER) -->
+                    <div class="podium-card second" *ngIf="top2" (click)="verDetalleJugador(top2)" title="Ver historial de {{ top2.nombre }}">
+                        <div class="avatar-wrapper">
+                            <img [src]="getPlayerPhoto(top2)" (error)="onImgError($event, top2)" class="avatar-img" [alt]="top2.nombre">
+                            <span class="rank-medal-badge">2</span>
+                        </div>
+                        <span class="podium-name">{{ top2.nombre }}</span>
+                        <span class="podium-points">🥈 {{ top2.puntos_ranking }} PTS</span>
+                        <div class="podium-pedestal">2</div>
                     </div>
-                    <div class="player-info">
-                        <span class="name">{{ ranking[2]?.nombre }}</span>
-                        <span class="points">{{ ranking[2]?.puntos_ranking }} pts</span>
+
+                    <!-- 1ST PLACE (GOLD) -->
+                    <div class="podium-card first" *ngIf="top1" (click)="verDetalleJugador(top1)" title="Ver historial del líder {{ top1.nombre }}">
+                        <div class="avatar-wrapper">
+                            <span class="crown-icon">👑</span>
+                            <img [src]="getPlayerPhoto(top1)" (error)="onImgError($event, top1)" class="avatar-img" [alt]="top1.nombre">
+                            <span class="rank-medal-badge">1</span>
+                        </div>
+                        <span class="podium-name">{{ top1.nombre }}</span>
+                        <span class="podium-points">🥇 {{ top1.puntos_ranking }} PTS</span>
+                        <div class="podium-pedestal">1</div>
+                    </div>
+
+                    <!-- 3RD PLACE (BRONZE) -->
+                    <div class="podium-card third" *ngIf="top3" (click)="verDetalleJugador(top3)" title="Ver historial de {{ top3.nombre }}">
+                        <div class="avatar-wrapper">
+                            <img [src]="getPlayerPhoto(top3)" (error)="onImgError($event, top3)" class="avatar-img" [alt]="top3.nombre">
+                            <span class="rank-medal-badge">3</span>
+                        </div>
+                        <span class="podium-name">{{ top3.nombre }}</span>
+                        <span class="podium-points">🥉 {{ top3.puntos_ranking }} PTS</span>
+                        <div class="podium-pedestal">3</div>
                     </div>
                 </div>
             </div>
-            }
 
             <!-- RANKING TABLE -->
             <div class="ranking-card">
                 <div class="card-header">
-                    <h2>Tabla de Clasificación</h2>
-                    <div class="badge-total">{{ ranking.length }} Jugadores</div>
+                    <h2>Tabla de Clasificación — {{ selectedCategoria }}</h2>
+                    <div class="badge-total">{{ rankingFiltrado.length }} Jugadores con Puntos</div>
                 </div>
 
                 <div class="table-container">
@@ -61,54 +144,82 @@
                             <tr>
                                 <th class="pos-th">Puesto</th>
                                 <th>Jugador</th>
-                                <th class="text-right">Puntos</th>
+                                <th class="cat-th">Categoría</th>
+                                <th class="text-right">Puntuación</th>
+                                <th class="text-center" style="width: 140px;">Historial</th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (player of paginatedRanking; track player.id; let i = $index) {
-                            <tr [class.top-3]="((currentPage - 1) * pageSize + i) < 3">
+                            <tr [class.top-row]="((currentPage - 1) * pageSize + i) < 3">
                                 <td class="pos-td">
-                                    <span class="rank-circle" [ngClass]="'rank-' + ((currentPage - 1) * pageSize + i + 1)">
-                                        {{ (currentPage - 1) * pageSize + i + 1 }}
+                                    <span class="rank-pill" 
+                                          [class.gold]="((currentPage - 1) * pageSize + i + 1) === 1"
+                                          [class.silver]="((currentPage - 1) * pageSize + i + 1) === 2"
+                                          [class.bronze]="((currentPage - 1) * pageSize + i + 1) === 3">
+                                        <span *ngIf="((currentPage - 1) * pageSize + i + 1) === 1">🥇 1</span>
+                                        <span *ngIf="((currentPage - 1) * pageSize + i + 1) === 2">🥈 2</span>
+                                        <span *ngIf="((currentPage - 1) * pageSize + i + 1) === 3">🥉 3</span>
+                                        <span *ngIf="((currentPage - 1) * pageSize + i + 1) > 3">{{ (currentPage - 1) * pageSize + i + 1 }}</span>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="player-cell">
-                                        <img [src]="player.foto || 'assets/images/placeholder_avatar.png'"
-                                            class="avatar-mini">
+                                        <img [src]="getPlayerPhoto(player)"
+                                             (error)="onImgError($event, player)"
+                                             [alt]="player.nombre"
+                                             class="avatar-mini">
                                         <div class="name-box">
                                             <span class="player-name">{{ player.nombre }}</span>
-                                            <span class="player-email">{{ player.usuario }}</span>
+                                            <span class="player-subtag" *ngIf="((currentPage - 1) * pageSize + i + 1) === 1">👑 Líder de Categoría</span>
+                                            <span class="player-subtag" *ngIf="((currentPage - 1) * pageSize + i + 1) === 2 || ((currentPage - 1) * pageSize + i + 1) === 3">⭐ Podio Oficial</span>
+                                            <span class="player-subtag" *ngIf="((currentPage - 1) * pageSize + i + 1) > 3">Jugador Oficial</span>
                                         </div>
                                     </div>
                                 </td>
+                                <td class="cat-td">
+                                    <span class="cat-badge-cell">{{ selectedCategoria }}</span>
+                                </td>
                                 <td class="text-right points-cell">
-                                    <strong>{{ player.puntos_ranking }}</strong>
-                                    <span class="pts-label">PTS</span>
+                                    <div class="points-wrapper">
+                                        <div class="pts-number-row">
+                                            <strong>{{ player.puntos_ranking }}</strong>
+                                            <span class="pts-label">PTS</span>
+                                        </div>
+                                        <div class="pts-progress-track" [title]="getPointsPercentage(player.puntos_ranking) + '% respecto al líder'">
+                                            <div class="pts-progress-fill" [style.width.%]="getPointsPercentage(player.puntos_ranking)"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-detalle" (click)="verDetalleJugador(player)" title="Ver campeonatos y puntos detallados">
+                                        <span>📊</span> Ver Detalle
+                                    </button>
                                 </td>
                             </tr>
                             }
                         </tbody>
                     </table>
 
-                    @if (ranking.length === 0 && !loading) {
+                    @if (rankingFiltrado.length === 0 && !loading) {
                     <div class="empty-state">
                         <div class="empty-icon">🏆</div>
-                        <h3>No hay ranking disponible</h3>
-                        <p>Los jugadores aparecerán aquí cuando sumen puntos en torneos.</p>
+                        <h3>Sin jugadores encontrados</h3>
+                        <p *ngIf="filtroBusqueda">No hay jugadores con el término "{{ filtroBusqueda }}". Intenta borrar la búsqueda.</p>
+                        <p *ngIf="!filtroBusqueda">Los jugadores aparecerán aquí a medida que ganen partidos y sumen puntos en los torneos y ligas de la categoría <strong>{{ selectedCategoria }}</strong>.</p>
                     </div>
                     }
 
                     @if (loading) {
                     <div class="loading-state">
                         <div class="spinner"></div>
-                        <p>Cargando ranking...</p>
+                        <p>Cargando ranking deportivo...</p>
                     </div>
                     }
                 </div>
 
                 <!-- Controles de Paginación -->
-                <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px; border-radius: 0 0 16px 16px;" *ngIf="ranking.length > 0">
+                <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #fff; border-top: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px; border-radius: 0 0 16px 16px;" *ngIf="rankingFiltrado.length > 0">
                     <div class="pagination-info" style="display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 600; color: #64748b;">
                         <span>{{ pageRangeText }}</span>
                         <div class="page-size-selector" style="display: flex; align-items: center; gap: 8px;">
@@ -120,7 +231,7 @@
                     </div>
                     <div class="pagination-controls" style="display: flex; align-items: center; gap: 6px;">
                         <button [disabled]="currentPage === 1" (click)="currentPage = currentPage - 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
-                            <i class="fas fa-chevron-left"></i>
+                            ‹
                         </button>
                         <button *ngFor="let page of pagesArray" 
                                 (click)="currentPage = page"
@@ -131,11 +242,182 @@
                             {{ page }}
                         </button>
                         <button [disabled]="currentPage === totalPages" (click)="currentPage = currentPage + 1" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
-                            <i class="fas fa-chevron-right"></i>
+                            ›
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- MODAL DETALLE DE TORNEOS Y PUNTOS DEL JUGADOR -->
+    @if (showDetailModal) {
+    <div class="modal-overlay" (click)="cerrarModalDetalle()">
+        <div class="modal-container animate-scale" (click)="$event.stopPropagation()">
+            
+            <!-- MODAL HEADER -->
+            <div class="modal-header">
+                <div class="player-header-info">
+                    <img [src]="getPlayerPhoto(selectedPlayer)" 
+                         (error)="onImgError($event, selectedPlayer)" 
+                         [alt]="selectedPlayer?.nombre" 
+                         class="modal-avatar">
+                    <div>
+                        <div class="header-badge">Historial Oficial de Competencias</div>
+                        <h2>{{ selectedPlayer?.nombre }}</h2>
+                        <span class="player-sub">{{ selectedPlayer?.usuario }}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" (click)="cerrarModalDetalle()">×</button>
+            </div>
+
+            <!-- MODAL BODY -->
+            <div class="modal-body">
+                @if (loadingDetail) {
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Cargando historial de campeonatos y puntos...</p>
+                </div>
+                }
+
+                @if (!loadingDetail && playerHistory) {
+                <!-- RESUMEN EN CARDS -->
+                <div class="stats-summary-grid">
+                    <div class="stat-box">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-content">
+                            <span class="stat-value">{{ playerHistory.resumen?.torneos_jugados || 0 }}</span>
+                            <span class="stat-label">Torneos Jugados</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-icon">🥇</div>
+                        <div class="stat-content">
+                            <span class="stat-value">{{ playerHistory.resumen?.total_podios || 0 }}</span>
+                            <span class="stat-label">Podios / Finales</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-icon">🎾</div>
+                        <div class="stat-content">
+                            <span class="stat-value">{{ playerHistory.resumen?.win_rate || 0 }}%</span>
+                            <span class="stat-label">{{ playerHistory.resumen?.partidos_ganados || 0 }}/{{ playerHistory.resumen?.partidos_jugados || 0 }} Ganados</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-box highlight">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-content">
+                            <span class="stat-value">{{ selectedPlayer?.puntos_ranking || playerHistory.resumen?.total_puntos_calculados || 0 }}</span>
+                            <span class="stat-label">Puntos Totales</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CATEGORÍAS ACUMULADAS -->
+                @if (playerCategoryPills.length > 0) {
+                <div class="cat-breakdown-section">
+                    <span class="section-label">Puntos por Categoría:</span>
+                    <div class="cat-pill-list">
+                        <span class="cat-pill" *ngFor="let item of playerCategoryPills">
+                            <strong>{{ item.key }}:</strong> {{ item.value }} pts
+                        </span>
+                    </div>
+                </div>
+                }
+
+                <!-- LISTA DE CAMPEONATOS -->
+                <div class="tournaments-section">
+                    <h3 class="section-title">Campeonatos y Partidos Disputados</h3>
+
+                    @if (playerHistory.historial && playerHistory.historial.length > 0) {
+                    <div class="tournaments-list">
+                        @for (t of playerHistory.historial; track t.torneo_id) {
+                        <div class="tournament-card">
+                            <div class="t-header">
+                                <div class="t-main-info">
+                                    <div class="t-title-row">
+                                        <h4>{{ t.torneo_nombre }}</h4>
+                                        <span class="t-cat-tag">🏷️ {{ t.categoria }}</span>
+                                    </div>
+                                    <div class="t-meta">
+                                        <span>📅 {{ t.fecha | date:'dd/MM/yyyy' }}</span>
+                                        <span>📍 {{ t.club_nombre }}</span>
+                                        <span>👥 Dupla: <strong>{{ t.companero }}</strong></span>
+                                    </div>
+                                </div>
+
+                                <div class="t-points-badge" [class.anulado-box]="t.anulado">
+                                    <span class="pts-total" [class.anulado-pts]="t.anulado">
+                                        {{ t.anulado ? '0 PTS (Anulado)' : '+' + t.puntos_totales + ' PTS' }}
+                                    </span>
+                                    <span class="pts-detail" *ngIf="!t.anulado && t.puntos_posicion > 0">
+                                        ({{ t.puntos_posicion }} podio + {{ t.puntos_participacion }} part.)
+                                    </span>
+                                    <span class="pts-detail" *ngIf="!t.anulado && t.puntos_posicion === 0">
+                                        ({{ t.puntos_participacion }} participación)
+                                    </span>
+                                    <span class="pts-detail text-danger" *ngIf="t.anulado">
+                                        (Descontado de ranking)
+                                    </span>
+
+                                    <!-- BOTÓN ADMIN BORRAR/RESTAURAR PUNTOS -->
+                                    <div class="admin-actions-pts" *ngIf="isAdmin">
+                                        <button type="button" 
+                                                class="btn-action-pts btn-del" 
+                                                *ngIf="!t.anulado"
+                                                (click)="anularPuntosTorneo(t)" 
+                                                title="Anular y descontar estos puntos">
+                                            <i class="fas fa-trash-alt"></i> Borrar Puntos
+                                        </button>
+                                        <button type="button" 
+                                                class="btn-action-pts btn-restore" 
+                                                *ngIf="t.anulado"
+                                                (click)="restaurarPuntosTorneo(t)" 
+                                                title="Restablecer puntos de este torneo">
+                                            <i class="fas fa-undo"></i> Reactivar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="t-footer">
+                                <div class="t-position" [ngClass]="t.badge_class">
+                                    <span class="pos-icon">{{ t.icono_posicion }}</span>
+                                    <span class="pos-text">{{ t.posicion }}</span>
+                                </div>
+
+                                <div class="t-match-stats">
+                                    <span>Partidos: <strong>{{ t.partidos_ganados }}G - {{ t.partidos_perdidos }}P</strong></span>
+                                    <span class="diff-games" [class.positive]="t.dif_games >= 0" [class.negative]="t.dif_games < 0">
+                                        Dif: {{ t.dif_games >= 0 ? '+' + t.dif_games : t.dif_games }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    } @else {
+                    <div class="empty-history">
+                        <span class="empty-history-icon">📋</span>
+                        <h4>Sin historial de torneos cerrados</h4>
+                        <p>Este jugador aún no tiene participaciones registradas en torneos oficiales finalizados.</p>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+
+            <!-- MODAL FOOTER -->
+            <div class="modal-footer">
+                <button type="button" class="btn-cerrar-modal" (click)="cerrarModalDetalle()">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+    }
 </div>

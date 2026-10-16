@@ -100,7 +100,7 @@ export class ClubHomeComponent implements OnInit {
 
     generateTimeSlots() {
         const slots: string[] = [];
-        for (let i = 8; i <= 22; i++) {
+        for (let i = 7; i <= 23; i++) {
             slots.push(`${i.toString().padStart(2, '0')}:00`);
             slots.push(`${i.toString().padStart(2, '0')}:30`);
         }
@@ -122,11 +122,17 @@ export class ClubHomeComponent implements OnInit {
             next: (res) => {
                 this.clubes = res || [];
                 if (this.clubes.length > 0) {
-                    if (this.clubId) {
-                        const matched = this.clubes.find(c => Number(c.id) === Number(this.clubId));
+                    const savedClubId = localStorage.getItem('selectedClubId');
+                    const targetId = this.clubId || savedClubId;
+                    if (targetId) {
+                        const matched = this.clubes.find(c => Number(c.id) === Number(targetId));
                         this.selectedClub = matched || this.clubes[0];
                     } else {
                         this.selectedClub = this.clubes[0];
+                    }
+                    if (this.selectedClub) {
+                        this.clubId = this.selectedClub.id;
+                        localStorage.setItem('selectedClubId', String(this.selectedClub.id));
                     }
                 }
                 this.loadStats();
@@ -142,6 +148,7 @@ export class ClubHomeComponent implements OnInit {
     onClubSelectChange() {
         if (this.selectedClub) {
             this.clubId = this.selectedClub.id;
+            localStorage.setItem('selectedClubId', String(this.selectedClub.id));
         }
         this.loadStats();
         this.loadCalendarData();
@@ -226,7 +233,7 @@ export class ClubHomeComponent implements OnInit {
             const startMinutes = hStart * 60 + mStart;
 
             const [hEnd, mEnd] = r.hora_fin.split(':').map(Number);
-            const endMinutes = hEnd * 60 + mEnd;
+            let endMinutes = (hEnd === 24 || (hEnd === 0 && mEnd === 0) || hEnd < hStart) ? 1440 : (hEnd * 60 + mEnd);
 
             return startMinutes < slotEnd && endMinutes > slotMinutes;
         });
@@ -278,7 +285,7 @@ export class ClubHomeComponent implements OnInit {
             }
 
             if (inFreeBlock) {
-                franjasLibres.push(`${startSlot} - 22:30`);
+                franjasLibres.push(`${startSlot} - 00:00`);
             }
 
             const totalCourtSlots = this.timeSlots.length;

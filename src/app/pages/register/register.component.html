@@ -1,91 +1,140 @@
 <div class="login-container">
   <div class="login-card">
+    
+    <!-- BRAND & HEADER -->
     <div class="header-box">
       <div class="logo">
         <img src="assets/images/logo-circular.png" class="logo-img" alt="PadelBlox" />
         <span class="logo-text">Padel<span class="accent">Blox</span></span>
       </div>
       <h2>Crear Cuenta</h2>
-      <p class="subtitle">Únete a la mejor comunidad de pádel.</p>
+      <p class="subtitle">Únete a la plataforma líder de pádel y empieza hoy mismo.</p>
     </div>
 
     <div class="form-box">
-      <div class="input-group">
-        <label>Nombre Completo</label>
-        <div class="input-wrapper">
-          <input type="text" placeholder="Tu nombre" [(ngModel)]="nombre" (keypress)="handleKeyPress($event)">
-          <span class="icon">👤</span>
+      
+      <!-- 🌟 ROLE SELECTOR TILES (UX Best Practice) -->
+      <div class="role-selector-section">
+        <label class="section-label">Selecciona tu Perfil</label>
+        <div class="role-grid">
+          
+          <div class="role-card" [class.active]="rol === 'jugador'" (click)="selectRole('jugador')">
+            <div class="role-icon">🎾</div>
+            <div class="role-info">
+              <span class="role-title">Jugador</span>
+              <span class="role-desc">Partidos y reservas</span>
+            </div>
+            <div class="role-check" *ngIf="rol === 'jugador'">✓</div>
+          </div>
+
+          <div class="role-card" [class.active]="rol === 'entrenador'" (click)="selectRole('entrenador')">
+            <div class="role-icon">⚡</div>
+            <div class="role-info">
+              <span class="role-title">Entrenador</span>
+              <span class="role-desc">Clases y alumnos</span>
+            </div>
+            <div class="role-check" *ngIf="rol === 'entrenador'">✓</div>
+          </div>
+
+          <div class="role-card" [class.active]="rol === 'administrador_club'" (click)="selectRole('administrador_club')">
+            <div class="role-icon">🏢</div>
+            <div class="role-info">
+              <span class="role-title">Club de Pádel</span>
+              <span class="role-desc">Canchas y gestión</span>
+            </div>
+            <div class="role-check" *ngIf="rol === 'administrador_club'">✓</div>
+          </div>
+
         </div>
       </div>
 
-      <div class="input-group">
-        <label>Correo Electrónico</label>
-        <div class="input-wrapper">
-          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="email" (keypress)="handleKeyPress($event)">
-          <span class="icon">✉️</span>
+      <!-- 📝 INPUT FIELDS (Balanced 2x2 Grid) -->
+      <div class="inputs-grid">
+        
+        <div class="input-group">
+          <label>Nombre Completo</label>
+          <div class="input-wrapper">
+            <span class="icon-prefix">👤</span>
+            <input type="text" placeholder="Tu nombre y apellido" [(ngModel)]="nombre" (keypress)="handleKeyPress($event)">
+          </div>
         </div>
+
+        <div class="input-group">
+          <label>Correo Electrónico</label>
+          <div class="input-wrapper">
+            <span class="icon-prefix">✉️</span>
+            <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="email" (keypress)="handleKeyPress($event)">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Contraseña</label>
+          <div class="input-wrapper">
+            <span class="icon-prefix">🔒</span>
+            <input [type]="showPassword ? 'text' : 'password'" placeholder="Mínimo 6 caracteres" [(ngModel)]="password"
+              (keypress)="handleKeyPress($event)">
+            <span class="toggle-password" (click)="togglePasswordVisibility()" [title]="showPassword ? 'Ocultar' : 'Mostrar'">
+              {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Confirmar Contraseña</label>
+          <div class="input-wrapper">
+            <span class="icon-prefix">🔒</span>
+            <input [type]="showConfirmPassword ? 'text' : 'password'" placeholder="Repite tu contraseña" [(ngModel)]="confirmPassword"
+              (keypress)="handleKeyPress($event)">
+            <span class="toggle-password" (click)="toggleConfirmPasswordVisibility()" [title]="showConfirmPassword ? 'Ocultar' : 'Mostrar'">
+              {{ showConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+            </span>
+          </div>
+        </div>
+
       </div>
 
-      <div class="input-group">
-        <label>Contraseña</label>
-        <div class="input-wrapper">
-          <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="password"
-            (keypress)="handleKeyPress($event)">
-          <span class="toggle-password" (click)="togglePasswordVisibility()">
-            {{ showPassword ? '👁️' : '🔒' }}
+      <!-- 🛡️ TERMS & CONSENT (Glass Card) -->
+      <div class="consent-box">
+        <label class="consent-item">
+          <input type="checkbox" [(ngModel)]="acceptTerms" class="custom-checkbox">
+          <span class="consent-text">
+            He leído y acepto los <a href="javascript:void(0)" (click)="openTerms($event)">Términos y Condiciones</a> y la <a href="javascript:void(0)" (click)="openPrivacy($event)">Política de Privacidad</a> (Ley N° 19.628). <strong class="required-star">*</strong>
           </span>
-        </div>
-      </div>
-
-      <div class="input-group">
-        <label>Confirmar Contraseña</label>
-        <div class="input-wrapper">
-          <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="confirmPassword"
-            (keypress)="handleKeyPress($event)">
-          <span class="icon">🔒</span>
-        </div>
-      </div>
-
-      <div class="input-group">
-        <label>Perfil</label>
-        <div class="input-wrapper">
-          <select [(ngModel)]="rol" class="form-control">
-            <option value="jugador">Jugador</option>
-            <option value="entrenador">Entrenador</option>
-            <option value="administrador_club">Club</option>
-          </select>
-          <span class="icon">🎓</span>
-        </div>
-      </div>
-
-      <div class="consent-box" style="margin: 15px 0; text-align: left; font-size: 13px; color: #cbd5e1;">
-        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; cursor: pointer;">
-          <input type="checkbox" [(ngModel)]="acceptTerms" style="margin-top: 3px; accent-color: #ccff00;">
-          <span>He leído y acepto los <a href="#" style="color: #ccff00; text-decoration: underline;">Términos y Condiciones</a> y la <a href="#" style="color: #ccff00; text-decoration: underline;">Política de Privacidad</a> (Ley N° 19.628). <strong style="color: #ef4444;">*</strong></span>
         </label>
-        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-          <input type="checkbox" [(ngModel)]="acceptMarketing" style="margin-top: 3px; accent-color: #ccff00;">
-          <span>Acepto recibir notificaciones, novedades de torneos y promociones de PadelBlox (Opcional).</span>
+        <label class="consent-item">
+          <input type="checkbox" [(ngModel)]="acceptMarketing" class="custom-checkbox">
+          <span class="consent-text">
+            Acepto recibir novedades, invitaciones a torneos y promociones de PadelBlox (Opcional).
+          </span>
         </label>
       </div>
 
-      <button class="btn-login" (click)="register()" [disabled]="isLoading">
-        <span *ngIf="!isLoading">Registrarse</span>
+      <!-- ⚡ CTA BUTTON (Volt High Contrast) -->
+      <button class="btn-register-action" (click)="register()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">REGISTRARME GRATIS</span>
         <span *ngIf="isLoading" class="spinner"></span>
       </button>
 
+      <!-- ⚠️ ERROR BANNER -->
       <div *ngIf="error" class="error-message">
-        {{ error }}
+        <span class="err-icon">⚠️</span> {{ error }}
       </div>
 
+      <!-- 🔁 SWITCH TO LOGIN -->
       <div class="register-prompt">
-        ¿Ya tienes cuenta? <a (click)="goToLogin()">Inicia sesión aquí</a>
+        ¿Ya tienes una cuenta? <a (click)="goToLogin()">Inicia sesión aquí</a>
       </div>
+
     </div>
 
+    <!-- 🔗 FOOTER LINKS -->
     <div class="footer-links">
       <a href="#">Privacidad</a>
-      <a href="#">Términos</a>
+      <span class="dot">•</span>
+      <a href="#">Términos de Servicio</a>
+      <span class="dot">•</span>
+      <a href="https://wa.me/56969083124" target="_blank" rel="noopener noreferrer">Soporte WhatsApp</a>
     </div>
+
   </div>
 </div>

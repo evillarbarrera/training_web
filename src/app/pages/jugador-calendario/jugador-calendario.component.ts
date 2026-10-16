@@ -123,7 +123,14 @@ export class JugadorCalendarioComponent implements OnInit {
         } else {
           const individuales = res.reservas_individuales || [];
           const grupales = res.entrenamientos_grupales || [];
-          allReservas = [...individuales, ...grupales];
+          const canchas = res.reservas_cancha || [];
+          const combined = [...individuales, ...grupales];
+          canchas.forEach((c: any) => {
+            if (!combined.some(x => Number(x.reserva_id) === Number(c.reserva_id) && x.tipo === 'cancha')) {
+              combined.push(c);
+            }
+          });
+          allReservas = combined;
         }
 
         const today = new Date();

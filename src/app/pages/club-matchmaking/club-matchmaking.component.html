@@ -1,0 +1,830 @@
+<div class="admin-layout">
+  <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole"
+    activePage="matchmaking">
+  </app-sidebar>
+
+  <main class="main-content">
+    
+    <!-- 🏢 CLUB TABS NAV -->
+    <nav class="club-tabs-nav animate-in" *ngIf="clubes.length > 0">
+      <div class="tabs-scroll-container">
+        <button *ngFor="let club of clubes" 
+                class="club-tab-btn" 
+                [class.active]="selectedClubId === (club.id || club.club_id)"
+                (click)="selectClub(club.id || club.club_id)">
+          <span class="tab-icon">🏢</span>
+          <span class="tab-name">{{ club.nombre || club.club_nombre }}</span>
+          <span class="tab-badge" *ngIf="selectedClubId === (club.id || club.club_id)">Activo</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 🌟 TOP HEADER COMPACT -->
+    <header class="page-header-standard animate-in">
+      <div class="title-wrap">
+        <div class="badge-tag">INTELIGENCIA & MATCHMAKING ⚡</div>
+        <h1>Matchmaking & Convocatorias del Día</h1>
+        <p>Partidos automatizados según horarios habituales de los jugadores y 100% equilibrados por categoría y posición.</p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-refresh-header" (click)="cargarDatos()" title="Recargar datos">
+          <span>🔄 Actualizar</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="matchmaking-container">
+
+      <!-- 📑 MAIN NAVIGATION TABS -->
+      <div class="tabs-nav-bar">
+        <button class="nav-tab-btn" 
+                [class.active]="activeTab === 'partidos'" 
+                (click)="setTab('partidos')">
+          <span class="tab-icon">⚡</span>
+          <span>Posibles Partidos del Día</span>
+          <span class="tab-badge" *ngIf="totalPartidosSugeridos > 0">{{ totalPartidosSugeridos }}</span>
+        </button>
+
+        <button class="nav-tab-btn" 
+                [class.active]="activeTab === 'horarios_matriz'" 
+                (click)="setTab('horarios_matriz')">
+          <span class="tab-icon">📅</span>
+          <span>Días & Horarios de Juego</span>
+          <span class="tab-badge secondary" *ngIf="jugadores.length > 0">{{ jugadores.length }}</span>
+        </button>
+
+        <button class="nav-tab-btn" 
+                [class.active]="activeTab === 'jugadores'" 
+                (click)="setTab('jugadores')">
+          <span class="tab-icon">👥</span>
+          <span>Fichas de Jugadores</span>
+          <span class="tab-badge secondary" *ngIf="jugadores.length > 0">{{ jugadores.length }}</span>
+        </button>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- TAB 1: POSIBLES PARTIDOS DEL DÍA (REDISEÑO ATHLETIC UX)         -->
+      <!-- ============================================================== -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'partidos'">
+        
+        <!-- DATE CONTROLS & FILTER TOOLBAR (UNIFIED) -->
+        <div class="matchmaking-controls-card">
+          <div class="unified-filter-toolbar">
+            <div class="filter-group-left">
+              <span class="control-label">📅 Fecha:</span>
+              <div class="btn-group-dates">
+                <button (click)="setFechaQuick(0)" class="btn-date-quick">Hoy</button>
+                <button (click)="setFechaQuick(1)" class="btn-date-quick">Mañana</button>
+                <button (click)="setFechaFinDeSemana()" class="btn-date-quick">Finde</button>
+              </div>
+              <input type="date" [(ngModel)]="fechaSeleccionada" (change)="cargarPosiblesPartidos()" class="date-picker-input">
+              
+              <select [(ngModel)]="filtroCategoriaPartido" (change)="cargarPosiblesPartidos()" class="filter-select">
+                <option value="todas">🏷️ Todas las Categorías</option>
+                <option *ngFor="let cat of categoriasList" [value]="cat">{{ cat }} Categoría</option>
+              </select>
+            </div>
+
+            <div class="filter-group-right">
+              <div class="time-pills-group">
+                <button class="btn-franja-pill" 
+                        [class.active]="filtroFranjaPartido === 'todas'" 
+                        (click)="setFiltroFranjaPartido('todas')">
+                  <span class="pill-title">Todos</span>
+                  <span class="pill-count">{{ posiblesPartidos.length }}</span>
+                </button>
+
+                <button class="btn-franja-pill" 
+                        [class.active]="filtroFranjaPartido === 'manana'" 
+                        (click)="setFiltroFranjaPartido('manana')">
+                  <span class="pill-title">🌅 Mañanas</span>
+                  <span class="pill-count" *ngIf="countPartidosManana > 0">{{ countPartidosManana }}</span>
+                </button>
+
+                <button class="btn-franja-pill" 
+                        [class.active]="filtroFranjaPartido === 'tarde'" 
+                        (click)="setFiltroFranjaPartido('tarde')">
+                  <span class="pill-title">☀️ Tardes</span>
+                  <span class="pill-count" *ngIf="countPartidosTarde > 0">{{ countPartidosTarde }}</span>
+                </button>
+
+                <button class="btn-franja-pill" 
+                        [class.active]="filtroFranjaPartido === 'noche'" 
+                        (click)="setFiltroFranjaPartido('noche')">
+                  <span class="pill-title">🌙 Noches</span>
+                  <span class="pill-count" *ngIf="countPartidosNoche > 0">{{ countPartidosNoche }}</span>
+                </button>
+              </div>
+
+              <button (click)="cargarPosiblesPartidos()" class="btn-recalcular" title="Recalcular compatibilidades">
+                <span>⚡</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATHLETIC DAY SUMMARY BAR -->
+        <div class="day-summary-bar" *ngIf="!isLoadingPartidos">
+          <div class="summary-left">
+            <span class="day-indicator">📅 {{ (diaSemanaLabel || 'DÍA') | uppercase }} {{ fechaSeleccionada | date:'d MMMM, y' }}:</span>
+            <strong class="matches-count-text">{{ partidosFiltrados.length }} Partidos Sugeridos</strong>
+            <span class="tag-balance">✓ 100% Nivel & Posición Equilibrados (2D + 2R)</span>
+          </div>
+          <div class="summary-right">
+            <div class="view-mode-toggle">
+              <button class="btn-view-toggle" [class.active]="vistaModo === 'tarjetas'" (click)="setVistaModo('tarjetas')" title="Vista Tarjetas">
+                <span>🎴 Tarjetas</span>
+              </button>
+              <button class="btn-view-toggle" [class.active]="vistaModo === 'lista'" (click)="setVistaModo('lista')" title="Vista Lista Rápida">
+                <span>📋 Lista</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOADING STATE -->
+        <div class="loading-state-box" *ngIf="isLoadingPartidos">
+          <div class="spinner-brand"></div>
+          <h4>Analizando disponibilidades y horarios habituales de los jugadores...</h4>
+          <p>Calculando compatibilidad de categoría, balance de posiciones y disponibilidad de canchas.</p>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div class="empty-state-card" *ngIf="!isLoadingPartidos && partidosFiltrados.length === 0">
+          <div class="empty-icon">🎾</div>
+          <h3>No se encontraron partidos sugeridos con estos filtros</h3>
+          <p>Prueba cambiando la franja horaria (ej: Tardes o Noches) o seleccionando otra fecha con mayor demanda.</p>
+          <div class="empty-actions">
+            <button (click)="setFiltroFranjaPartido('todas')" class="btn-primary-action">Ver Todas las Franjas</button>
+            <button (click)="setFechaFinDeSemana()" class="btn-secondary-action">Ver Fin de Semana</button>
+          </div>
+        </div>
+
+        <!-- MATCHES GRID (CARD VIEW) -->
+        <div class="matches-grid" *ngIf="!isLoadingPartidos && partidosFiltrados.length > 0 && vistaModo === 'tarjetas'">
+          <div class="match-card" *ngFor="let m of partidosFiltrados">
+            
+            <!-- MATCH HEADER -->
+            <div class="match-card-header">
+              <div class="time-court-info">
+                <span class="time-badge">⏰ {{ m.hora_inicio }} - {{ m.hora_fin }}</span>
+                <span class="court-badge" [class.available]="m.cancha_disponible">
+                  <span class="court-dot" [class.available]="m.cancha_disponible"></span>
+                  🏟️ {{ m.cancha?.nombre || 'Cancha Asignada' }}
+                </span>
+              </div>
+
+              <div class="compatibility-badge">
+                <span class="category-pill">{{ m.categoria }} Cat</span>
+                <span class="score-pill">⭐ {{ m.compatibilidad_score }}%</span>
+              </div>
+            </div>
+
+            <!-- PADEL COURT ATHLETIC VIEW -->
+            <div class="court-layout-sleek">
+              
+              <!-- PAREJA 1 -->
+              <div class="team-col team-blue">
+                <div class="team-header-sleek">
+                  <span>PAREJA 1</span>
+                </div>
+                
+                <div class="player-row-sleek">
+                  <div class="player-left">
+                    <img [src]="getAvatarUrl(m.pareja1.jugador1.foto, m.pareja1.jugador1.nombre)" (error)="onAvatarError($event, m.pareja1.jugador1.nombre)" class="avatar-mini" alt="Avatar">
+                    <strong class="player-name-sleek" [title]="m.pareja1.jugador1.nombre">{{ m.pareja1.jugador1.nombre }}</strong>
+                  </div>
+                  <span class="pos-pill-mini drv">DRV</span>
+                </div>
+
+                <div class="player-row-sleek">
+                  <div class="player-left">
+                    <img [src]="getAvatarUrl(m.pareja1.jugador2.foto, m.pareja1.jugador2.nombre)" (error)="onAvatarError($event, m.pareja1.jugador2.nombre)" class="avatar-mini" alt="Avatar">
+                    <strong class="player-name-sleek" [title]="m.pareja1.jugador2.nombre">{{ m.pareja1.jugador2.nombre }}</strong>
+                  </div>
+                  <span class="pos-pill-mini rev">REV</span>
+                </div>
+              </div>
+
+              <!-- NET / VS -->
+              <div class="court-net-sleek">
+                <div class="net-dash"></div>
+                <span class="vs-tag-sleek">VS</span>
+                <div class="net-dash"></div>
+              </div>
+
+              <!-- PAREJA 2 -->
+              <div class="team-col team-gold">
+                <div class="team-header-sleek">
+                  <span>PAREJA 2</span>
+                </div>
+
+                <div class="player-row-sleek">
+                  <div class="player-left">
+                    <img [src]="getAvatarUrl(m.pareja2.jugador1.foto, m.pareja2.jugador1.nombre)" (error)="onAvatarError($event, m.pareja2.jugador1.nombre)" class="avatar-mini" alt="Avatar">
+                    <strong class="player-name-sleek" [title]="m.pareja2.jugador1.nombre">{{ m.pareja2.jugador1.nombre }}</strong>
+                  </div>
+                  <span class="pos-pill-mini drv">DRV</span>
+                </div>
+
+                <div class="player-row-sleek">
+                  <div class="player-left">
+                    <img [src]="getAvatarUrl(m.pareja2.jugador2.foto, m.pareja2.jugador2.nombre)" (error)="onAvatarError($event, m.pareja2.jugador2.nombre)" class="avatar-mini" alt="Avatar">
+                    <strong class="player-name-sleek" [title]="m.pareja2.jugador2.nombre">{{ m.pareja2.jugador2.nombre }}</strong>
+                  </div>
+                  <span class="pos-pill-mini rev">REV</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- MICRO INSIGHTS CHIPS -->
+            <div class="micro-insights-row">
+              <span class="insight-chip">🎯 {{ m.categoria }} Categoría</span>
+              <span class="insight-chip">⚖️ 2 Drive + 2 Revés</span>
+              <span class="insight-chip">⏰ Horario habitual</span>
+              <span class="court-status-chip" *ngIf="m.cancha_disponible">🟢 Libre</span>
+              <span class="court-status-chip warning" *ngIf="!m.cancha_disponible">🟡 Asignar</span>
+            </div>
+
+            <!-- ACTIONS FOOTER -->
+            <div class="match-actions-footer">
+              <button (click)="confirmarYReservarPartido(m)" class="btn-action-book" [disabled]="isBookingMatch" title="Confirmar y reservar cancha en el club">
+                <span>🎾 Reservar Cancha</span>
+              </button>
+
+              <button (click)="enviarWhatsAppDirecto(m)" class="btn-action-wa" title="Enviar convocatoria por WhatsApp">
+                <span>📲 WhatsApp</span>
+              </button>
+
+              <button (click)="copiarConvocatoriaWhatsApp(m)" class="btn-action-copy" title="Copiar texto de convocatoria">
+                <span>📋</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- MATCHES TABLE (LIST VIEW) -->
+        <div class="matches-list-table-card" *ngIf="!isLoadingPartidos && partidosFiltrados.length > 0 && vistaModo === 'lista'">
+          <table class="matches-compact-table">
+            <thead>
+              <tr>
+                <th>Horario & Cancha</th>
+                <th>Categoría</th>
+                <th>Pareja 1 (Drive / Revés)</th>
+                <th class="vs-col">VS</th>
+                <th>Pareja 2 (Drive / Revés)</th>
+                <th class="actions-col text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of partidosFiltrados">
+                <td class="cell-time-court">
+                  <div class="time-box">⏰ {{ m.hora_inicio }} - {{ m.hora_fin }}</div>
+                  <div class="court-sub" [class.available]="m.cancha_disponible">
+                    🏟️ {{ m.cancha?.nombre || 'Cancha 1' }} 
+                    <span *ngIf="m.cancha_disponible" class="dot-green">● Libre</span>
+                    <span *ngIf="!m.cancha_disponible" class="dot-amber">● Asignar</span>
+                  </div>
+                </td>
+                <td class="cell-cat">
+                  <span class="cat-pill-table">{{ m.categoria }} Cat</span>
+                  <span class="score-pill-table">⭐ {{ m.compatibilidad_score }}%</span>
+                </td>
+                <td class="cell-team">
+                  <div class="team-inline">
+                    <span class="player-tag"><span class="pos-mini-lbl drv">DRV</span> {{ m.pareja1.jugador1.nombre }}</span>
+                    <span class="player-tag"><span class="pos-mini-lbl rev">REV</span> {{ m.pareja1.jugador2.nombre }}</span>
+                  </div>
+                </td>
+                <td class="vs-col"><span class="vs-badge-table">VS</span></td>
+                <td class="cell-team">
+                  <div class="team-inline">
+                    <span class="player-tag"><span class="pos-mini-lbl drv">DRV</span> {{ m.pareja2.jugador1.nombre }}</span>
+                    <span class="player-tag"><span class="pos-mini-lbl rev">REV</span> {{ m.pareja2.jugador2.nombre }}</span>
+                  </div>
+                </td>
+                <td class="actions-col text-right">
+                  <div class="table-actions-inline">
+                    <button (click)="confirmarYReservarPartido(m)" class="btn-table-book" title="Reservar Cancha">
+                      🎾 Reservar
+                    </button>
+                    <button (click)="enviarWhatsAppDirecto(m)" class="btn-table-wa" title="Convocatoria WhatsApp">
+                      📲
+                    </button>
+                    <button (click)="copiarConvocatoriaWhatsApp(m)" class="btn-table-copy" title="Copiar texto">
+                      📋
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- TAB 2: MATRIZ DE DÍAS Y HORARIOS DE JUEGO                      -->
+      <!-- ============================================================== -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'horarios_matriz'">
+        
+        <!-- FILTERS PANEL FOR DAYS & HOURS MATRIX -->
+        <div class="matrix-filters-panel">
+          
+          <!-- ROW 1: SEARCH & DROPDOWNS -->
+          <div class="panel-top-row">
+            <div class="search-input-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" [(ngModel)]="searchMatriz" (input)="filtrarMatriz()" placeholder="Buscar por nombre, teléfono o email...">
+            </div>
+
+            <div class="selects-group">
+              <select [(ngModel)]="filtroCategoriaMatriz" (change)="filtrarMatriz()" class="filter-select">
+                <option value="todas">🏷️ Todas las Categorías</option>
+                <option *ngFor="let cat of categoriasList" [value]="cat">{{ cat }} Categoría</option>
+              </select>
+
+              <select [(ngModel)]="filtroPosicionMatriz" (change)="filtrarMatriz()" class="filter-select">
+                <option value="todas">📍 Cualquier Posición</option>
+                <option value="Drive">🔵 Drive</option>
+                <option value="Reves">🔴 Revés</option>
+                <option value="Ambos">🟣 Ambos</option>
+              </select>
+
+              <select [(ngModel)]="filtroHoraMatriz" (change)="filtrarMatriz()" class="filter-select">
+                <option value="todas">⏰ Hora: Todas</option>
+                <option *ngFor="let h of horariosDisponiblesList" [value]="h">{{ h }} hrs</option>
+              </select>
+
+              <button (click)="limpiarFiltrosMatriz()" class="btn-reset-filters" title="Limpiar todos los filtros">
+                <span>🔄 Limpiar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROW 2: FILTRO INTERACTIVO POR DÍA DE LA SEMANA -->
+          <div class="filter-pills-row">
+            <span class="filter-section-lbl">📅 Filtrar por Día:</span>
+            <div class="pills-container">
+              <button class="filter-pill-btn" 
+                      [class.active]="filtroDiaMatriz === 'todos'" 
+                      (click)="setFiltroDiaMatriz('todos')">
+                <span class="pill-name">Todos los Días</span>
+                <span class="pill-counter">{{ jugadores.length }}</span>
+              </button>
+
+              <button *ngFor="let d of diasSemanaList" 
+                      class="filter-pill-btn" 
+                      [class.active]="filtroDiaMatriz === d.val" 
+                      (click)="setFiltroDiaMatriz(d.val)">
+                <span class="pill-name">{{ d.label }}</span>
+                <span class="pill-counter" *ngIf="countJugadoresPorDia(d.val) > 0">{{ countJugadoresPorDia(d.val) }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROW 3: FILTRO INTERACTIVO POR FRANJA / HORARIO -->
+          <div class="filter-pills-row">
+            <span class="filter-section-lbl">⏰ Filtrar por Horario:</span>
+            <div class="pills-container">
+              <button class="filter-pill-btn time-pill" 
+                      [class.active]="filtroFranjaMatriz === 'todas'" 
+                      (click)="setFiltroFranjaMatriz('todas')">
+                <span class="pill-name">🎾 Cualquier Horario</span>
+              </button>
+
+              <button class="filter-pill-btn time-pill manana" 
+                      [class.active]="filtroFranjaMatriz === 'manana'" 
+                      (click)="setFiltroFranjaMatriz('manana')">
+                <span class="pill-name">🌅 Mañanas (08:00 - 12:00)</span>
+                <span class="pill-counter" *ngIf="countJugadoresPorFranja('manana') > 0">{{ countJugadoresPorFranja('manana') }}</span>
+              </button>
+
+              <button class="filter-pill-btn time-pill mediodia" 
+                      [class.active]="filtroFranjaMatriz === 'mediodia'" 
+                      (click)="setFiltroFranjaMatriz('mediodia')">
+                <span class="pill-name">☀️ Mediodía (12:00 - 16:00)</span>
+                <span class="pill-counter" *ngIf="countJugadoresPorFranja('mediodia') > 0">{{ countJugadoresPorFranja('mediodia') }}</span>
+              </button>
+
+              <button class="filter-pill-btn time-pill tarde" 
+                      [class.active]="filtroFranjaMatriz === 'tarde'" 
+                      (click)="setFiltroFranjaMatriz('tarde')">
+                <span class="pill-name">🌆 Tardes (16:00 - 20:00)</span>
+                <span class="pill-counter" *ngIf="countJugadoresPorFranja('tarde') > 0">{{ countJugadoresPorFranja('tarde') }}</span>
+              </button>
+
+              <button class="filter-pill-btn time-pill noche" 
+                      [class.active]="filtroFranjaMatriz === 'noche'" 
+                      (click)="setFiltroFranjaMatriz('noche')">
+                <span class="pill-name">🌙 Noches (20:00 - 23:00)</span>
+                <span class="pill-counter" *ngIf="countJugadoresPorFranja('noche') > 0">{{ countJugadoresPorFranja('noche') }}</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- LOADING STATE -->
+        <div class="loading-state-box" *ngIf="isLoadingJugadores">
+          <div class="spinner-brand"></div>
+          <h4>Cargando datos y matriz de disponibilidad...</h4>
+        </div>
+
+        <!-- MATRIX TABLE CARD -->
+        <div class="schedule-matrix-card" *ngIf="!isLoadingJugadores">
+          
+          <div class="matrix-card-top-header">
+            <div class="header-left">
+              <h3>Cuadro Semanal: Cruce de Jugadores, Días & Horarios de Juego</h3>
+              <p>Visualiza rápidamente qué días y a qué horas juega cada jugador para armar convocatorias y partidos al instante.</p>
+            </div>
+            <div class="header-right">
+              <div class="schedule-legend">
+                <span class="legend-item manana"><span class="dot"></span> 🌅 Mañana</span>
+                <span class="legend-item mediodia"><span class="dot"></span> ☀️ Mediodía</span>
+                <span class="legend-item tarde"><span class="dot"></span> 🌆 Tarde</span>
+                <span class="legend-item noche"><span class="dot"></span> 🌙 Noche</span>
+              </div>
+              <span class="total-badge">{{ filteredMatrizJugadores.length }} Jugadores</span>
+            </div>
+          </div>
+
+          <div class="matrix-table-wrapper" *ngIf="filteredMatrizJugadores.length > 0">
+            <table class="matrix-table cross-schedule-table">
+              <thead>
+                <tr>
+                  <th class="col-player-main">Jugador</th>
+                  <th class="col-day-header text-center" *ngFor="let d of diasSemanaList">
+                    <div class="header-day-wrap">
+                      <span class="day-full">{{ d.label }}</span>
+                      <span class="day-short">{{ d.short }}</span>
+                    </div>
+                  </th>
+                  <th class="col-actions text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let j of paginatedMatrizJugadores">
+                  <!-- COLUMNA 1: JUGADOR -->
+                  <td class="col-player-main">
+                    <div class="player-cell">
+                      <img [src]="getAvatarUrl(j.foto, j.nombre)" (error)="onAvatarError($event, j.nombre)" class="table-avatar" alt="Avatar">
+                      <div class="player-meta">
+                        <strong class="name">{{ j.nombre }}</strong>
+                        <div class="badges-subrow">
+                          <span class="cat-pill">{{ j.categoria }}</span>
+                          <span class="pos-pill" [ngClass]="j.posicion.toLowerCase()">
+                            {{ j.posicion === 'Drive' ? '🔵 Drive' : (j.posicion === 'Reves' ? '🔴 Revés' : '🟣 Ambos') }}
+                          </span>
+                        </div>
+                        <span class="subtext">{{ j.telefono || j.email || 'Sin contacto' }}</span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- COLUMNAS DE DÍAS (CRUCE CON HORARIOS DE JUEGO) -->
+                  <td class="col-day-cross text-center" *ngFor="let d of diasSemanaList">
+                    <div class="cross-schedule-slot active" 
+                         *ngIf="getHorarioDia(j, d.val)" 
+                         [ngClass]="getFranjaFromHora(getHorarioDia(j, d.val))"
+                         [title]="j.nombre + ' - ' + d.label + ': ' + getHorarioDia(j, d.val) + ' hrs (' + getFranjaLabel(getHorarioDia(j, d.val)) + ')'">
+                      <span class="slot-time">{{ getHorarioDia(j, d.val) }}</span>
+                    </div>
+
+                    <div class="cross-schedule-slot inactive" *ngIf="!getHorarioDia(j, d.val)">
+                      <span class="slot-empty-dash">·</span>
+                    </div>
+                  </td>
+
+                  <!-- ACCIONES -->
+                  <td class="col-actions text-right">
+                    <div class="table-actions-group">
+                      <button (click)="abrirEditarPreferencia(j)" class="btn-table-btn" title="Editar Preferencias y Horarios">
+                        <span>✏️</span>
+                      </button>
+                      <button (click)="abrirWhatsAppJugador(j)" class="btn-table-btn wa" title="Contactar por WhatsApp">
+                        <span>💬</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- EMPTY STATE TAB 2 -->
+          <div class="empty-state-inside" *ngIf="filteredMatrizJugadores.length === 0">
+            <div class="empty-icon">🔍</div>
+            <h4>No se encontraron jugadores con los filtros seleccionados</h4>
+            <p>Intenta cambiar el día, la franja o limpiar el buscador.</p>
+          </div>
+
+          <!-- PAGINATION CONTROLS TAB 2 -->
+          <div class="pagination-footer" *ngIf="totalPagesMatriz > 1">
+            <div class="pagination-info">
+              Mostrando <strong>{{ (currentPageMatriz - 1) * pageSizeMatriz + 1 }}</strong> - <strong>{{ (currentPageMatriz * pageSizeMatriz > filteredMatrizJugadores.length) ? filteredMatrizJugadores.length : (currentPageMatriz * pageSizeMatriz) }}</strong> de <strong>{{ filteredMatrizJugadores.length }}</strong> jugadores
+            </div>
+
+            <div class="pagination-controls">
+              <button class="btn-page-nav" [disabled]="currentPageMatriz === 1" (click)="setPageMatriz(currentPageMatriz - 1)">
+                ‹ Anterior
+              </button>
+              
+              <div class="page-numbers-list">
+                <button *ngFor="let p of getPagesArrayMatriz()" 
+                        class="btn-page-num" 
+                        [class.active]="currentPageMatriz === p" 
+                        (click)="setPageMatriz(p)">
+                  {{ p }}
+                </button>
+              </div>
+
+              <button class="btn-page-nav" [disabled]="currentPageMatriz === totalPagesMatriz" (click)="setPageMatriz(currentPageMatriz + 1)">
+                Siguiente ›
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- TAB 3: FICHAS DE JUGADORES & ESTADÍSTICAS                      -->
+      <!-- ============================================================== -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'jugadores'">
+        
+        <!-- STATS OVERVIEW CARDS -->
+        <div class="stats-overview-grid">
+          <div class="stat-card">
+            <div class="stat-icon-wrap blue">👥</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.total_jugadores || jugadores.length }}</span>
+              <span class="stat-label">Jugadores Registrados</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap green">⏰</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.horario_pico || '19:30 - 21:00' }}</span>
+              <span class="stat-label">Horario Más Solicitado</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap purple">📅</div>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.dia_mas_demandado || 'Miércoles y Jueves' }}</span>
+              <span class="stat-label">Días con Mayor Demanda</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrap orange">⚖️</div>
+            <div class="stat-info">
+              <span class="stat-value">Equilibrado</span>
+              <span class="stat-label">Balance Drive / Revés</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILTERS & SEARCH -->
+        <div class="players-filter-bar">
+          <div class="search-input-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" [(ngModel)]="searchJugador" (input)="filtrarJugadores()" placeholder="Buscar jugador por nombre, teléfono o email...">
+          </div>
+
+          <div class="filter-controls-group">
+            <select [(ngModel)]="filtroCategoria" (change)="filtrarJugadores()" class="filter-select">
+              <option value="todas">Todas las Categorías</option>
+              <option *ngFor="let cat of categoriasList" [value]="cat">{{ cat }} Categoría</option>
+            </select>
+
+            <select [(ngModel)]="filtroPosicion" (change)="filtrarJugadores()" class="filter-select">
+              <option value="todas">Cualquier Posición</option>
+              <option value="Drive">🔵 Drive (Derecha)</option>
+              <option value="Reves">🔴 Revés (Izquierda)</option>
+              <option value="Ambos">🟣 Ambos / Polivalente</option>
+            </select>
+
+            <select [(ngModel)]="filtroFranja" (change)="filtrarJugadores()" class="filter-select">
+              <option value="todas">Cualquier Franja</option>
+              <option value="manana">Mañanas</option>
+              <option value="mediodia">Mediodía</option>
+              <option value="tarde">Tardes</option>
+              <option value="noche">Noches</option>
+            </select>
+
+            <button (click)="cargarJugadores()" class="btn-refresh-icon" title="Recargar lista">
+              <span>🔄</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LOADING STATE -->
+        <div class="loading-state-box" *ngIf="isLoadingJugadores">
+          <div class="spinner-brand"></div>
+          <h4>Cargando jugadores y analizando historial de partidos...</h4>
+        </div>
+
+        <!-- PLAYERS CARDS GRID -->
+        <div class="players-cards-grid" *ngIf="!isLoadingJugadores">
+          <div class="player-profile-card" *ngFor="let j of paginatedJugadores">
+            
+            <div class="card-top">
+              <div class="avatar-wrap">
+                <img [src]="getAvatarUrl(j.foto, j.nombre)" (error)="onAvatarError($event, j.nombre)" class="avatar-img" alt="Foto">
+                <span class="online-indicator" [class.inactive]="!j.activo_matchmaking"></span>
+              </div>
+
+              <div class="user-main-info">
+                <h4 class="user-name">{{ j.nombre }}</h4>
+                <span class="user-contact">{{ j.telefono || j.email || 'Sin contacto registrado' }}</span>
+                <div class="badges-row">
+                  <span class="cat-badge">{{ j.categoria }} Categoría</span>
+                  <span class="pos-badge" [ngClass]="j.posicion.toLowerCase()">
+                    {{ j.posicion === 'Drive' ? '🔵 Drive' : (j.posicion === 'Reves' ? '🔴 Revés' : '🟣 Ambos') }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="player-habits-details">
+              <div class="habit-item">
+                <span class="habit-lbl">⏰ Horario Habitual:</span>
+                <strong class="habit-val highlight">{{ j.horario_habitual }} hrs ({{ j.franja_horaria | titlecase }})</strong>
+              </div>
+
+              <div class="habit-item">
+                <span class="habit-lbl">📅 Días Preferidos:</span>
+                <div class="days-pills-list">
+                  <span class="day-pill" *ngFor="let d of j.dias_labels">{{ d }}</span>
+                </div>
+              </div>
+
+              <div class="habit-item">
+                <span class="habit-lbl">🎾 Partidos Jugados:</span>
+                <span class="habit-val">{{ j.total_partidos }} partidos (Último: {{ j.ultimo_partido }})</span>
+              </div>
+            </div>
+
+            <div class="card-actions-row">
+              <button (click)="abrirEditarPreferencia(j)" class="btn-edit-pref">
+                <span>✏️ Editar Preferencias</span>
+              </button>
+              
+              <button (click)="abrirWhatsAppJugador(j)" class="btn-wa-direct" title="Abrir WhatsApp con jugador">
+                <span>💬 WhatsApp</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- EMPTY FILTER -->
+        <div class="empty-state-card" *ngIf="!isLoadingJugadores && filteredJugadores.length === 0">
+          <div class="empty-icon">👥</div>
+          <h3>No se encontraron jugadores que hayan jugado en este club</h3>
+          <p>Solo se listan los jugadores que registran 1 o más partidos en las canchas de este club. Intenta limpiar el buscador o cambiar de club.</p>
+        </div>
+
+        <!-- PAGINATION CONTROLS TAB 3 -->
+        <div class="pagination-footer-cards" *ngIf="!isLoadingJugadores && totalPages > 1">
+          <div class="pagination-info">
+            Mostrando <strong>{{ (currentPage - 1) * pageSize + 1 }}</strong> - <strong>{{ (currentPage * pageSize > filteredJugadores.length) ? filteredJugadores.length : (currentPage * pageSize) }}</strong> de <strong>{{ filteredJugadores.length }}</strong> jugadores
+          </div>
+
+          <div class="pagination-controls">
+            <button class="btn-page-nav" [disabled]="currentPage === 1" (click)="setPage(currentPage - 1)">
+              ‹ Anterior
+            </button>
+            
+            <div class="page-numbers-list">
+              <button *ngFor="let p of getPagesArray()" 
+                      class="btn-page-num" 
+                      [class.active]="currentPage === p" 
+                      (click)="setPage(p)">
+                {{ p }}
+              </button>
+            </div>
+
+            <button class="btn-page-nav" [disabled]="currentPage === totalPages" (click)="setPage(currentPage + 1)">
+              Siguiente ›
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: EDITAR PREFERENCIAS DEL JUGADOR                         -->
+    <!-- ============================================================== -->
+    <div class="modal-backdrop" *ngIf="showEditModal" (click)="cerrarEditarPreferencia()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Ajustar Preferencias de Juego</h3>
+          <button class="modal-close" (click)="cerrarEditarPreferencia()">✕</button>
+        </div>
+
+        <div class="modal-body" *ngIf="selectedJugador">
+          <div class="player-modal-preview">
+            <img [src]="getAvatarUrl(selectedJugador.foto, selectedJugador.nombre)" (error)="onAvatarError($event, selectedJugador.nombre)" class="modal-avatar" alt="Avatar">
+            <div>
+              <h4>{{ selectedJugador.nombre }}</h4>
+              <span class="subtext">{{ selectedJugador.email }} · {{ selectedJugador.telefono }}</span>
+            </div>
+          </div>
+
+          <form (ngSubmit)="guardarPreferencia()">
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>🏷️ Categoría de Juego</label>
+                <select [(ngModel)]="editForm.categoria" name="categoria" class="form-control">
+                  <option *ngFor="let c of categoriasList" [value]="c">{{ c }} Categoría</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>📍 Posición Preferida en Pista</label>
+                <select [(ngModel)]="editForm.posicion" name="posicion" class="form-control">
+                  <option value="Drive">🔵 Drive (Lado Derecho)</option>
+                  <option value="Reves">🔴 Revés (Lado Izquierdo)</option>
+                  <option value="Ambos">🟣 Ambos / Indiferente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>✋ Brazo Hábil</label>
+                <select [(ngModel)]="editForm.brazo_habil" name="brazo_habil" class="form-control">
+                  <option value="Diestro">Diestro</option>
+                  <option value="Zurdo">Zurdo</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>⏰ Horario Habitual Preferido</label>
+                <select [(ngModel)]="editForm.horario_habitual" name="horario_habitual" class="form-control">
+                  <option value="08:00">08:00 hrs (Mañana temprano)</option>
+                  <option value="09:30">09:30 hrs (Media mañana)</option>
+                  <option value="12:30">12:30 hrs (Almuerzo)</option>
+                  <option value="17:00">17:00 hrs (Tarde 1)</option>
+                  <option value="18:30">18:30 hrs (Tarde central)</option>
+                  <option value="19:30">19:30 hrs (Tarde pico)</option>
+                  <option value="20:00">20:00 hrs (Noche prime)</option>
+                  <option value="21:00">21:00 hrs (Noche 2)</option>
+                  <option value="21:30">21:30 hrs (Noche tardía)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>📅 Días de Juego Preferidos</label>
+              <div class="days-checkboxes-grid">
+                <button type="button" 
+                        *ngFor="let d of diasSemanaList" 
+                        (click)="toggleDiaPreferido(d.val)"
+                        class="day-toggle-btn" 
+                        [class.selected]="isDiaSelected(d.val)">
+                  {{ d.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>📝 Notas de Juego / Observaciones del Club</label>
+              <textarea [(ngModel)]="editForm.notas" name="notas" rows="2" class="form-control" placeholder="Ej: Prefiere jugar con pelotas nuevas, muy constante de revés..."></textarea>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="switch-container">
+                <input type="checkbox" [(ngModel)]="editForm.activo_matchmaking" name="activo_matchmaking" [checked]="editForm.activo_matchmaking == 1">
+                <span class="switch-label">Incluir automáticamente en sugerencias de partidos (Matchmaking)</span>
+              </label>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" (click)="cerrarEditarPreferencia()" class="btn-cancel">Cancelar</button>
+              <button type="submit" class="btn-save" [disabled]="isSavingPref">
+                <span *ngIf="!isSavingPref">💾 Guardar Preferencias</span>
+                <span *ngIf="isSavingPref">Guardando...</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>

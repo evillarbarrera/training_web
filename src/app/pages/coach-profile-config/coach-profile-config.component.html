@@ -1,0 +1,672 @@
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole" activePage="perfil-publico"></app-sidebar>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Top Bar -->
+    <header class="page-header">
+      <div class="ph-left">
+        <div class="eyebrow-badge">
+          <span class="live-dot"></span>
+          <span>PRESENCIA ONLINE & SEO GOOGLE</span>
+        </div>
+        <h1>Mi Perfil Público de Entrenador</h1>
+        <p>Tu vitrina web personalizada para atraer y cerrar nuevos alumnos desde Google, Instagram y WhatsApp.</p>
+      </div>
+
+      <div class="ph-actions">
+        <!-- Switch de publicación prominente -->
+        <div class="status-toggle-pill" [class.live]="config.publicado" (click)="togglePublicar()" title="Clic para alternar estado">
+          <span class="status-indicator"></span>
+          <span class="status-label">{{ config.publicado ? 'PUBLICADO EN LÍNEA' : 'BORRADOR / PAUSADO' }}</span>
+        </div>
+
+        <button type="button" class="btn-action preview-btn" (click)="previsualizar()" title="Ver cómo lo ven tus alumnos">
+          <i class="fas fa-eye"></i>
+          <span>Vista Previa</span>
+        </button>
+
+        <button type="button" class="btn-action primary-btn" [disabled]="isSaving" (click)="guardarConfiguracion()">
+          <i class="fas fa-save" *ngIf="!isSaving"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+          <span>{{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Public Link Banner (Clean White Card Design) -->
+    <section class="url-share-banner">
+      <div class="usb-left">
+        <div class="usb-icon">
+          <i class="fas fa-globe"></i>
+        </div>
+        <div class="usb-details">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+            <span class="usb-label">TU ENLACE PÚBLICO OFICIAL:</span>
+            <span class="status-badge" [class.badge-live]="config.publicado" (click)="togglePublicar()" style="cursor: pointer;" [title]="config.publicado ? 'Clic para pausar perfil' : 'Clic para activar y publicar perfil'">
+              <span class="badge-dot"></span>
+              {{ config.publicado ? 'EN LÍNEA (Activo)' : 'PAUSADO (Clic para activar)' }}
+            </span>
+          </div>
+          <a [href]="publicUrl" target="_blank" class="usb-url" title="Abrir perfil público">
+            {{ publicUrl }}
+            <i class="fas fa-arrow-up-right-from-square"></i>
+          </a>
+          <div *ngIf="!config.publicado" style="margin-top: 6px; font-size: 12px; color: #b45309; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+            <i class="fas fa-circle-exclamation"></i>
+            <span>Tu perfil está pausado. Haz clic en la etiqueta o en el botón superior para ponerlo <strong>En Línea</strong> y que tus alumnos puedan verlo.</span>
+          </div>
+        </div>
+      </div>
+      <div class="usb-buttons">
+        <button type="button" class="btn-copy" (click)="copiarEnlace()">
+          <i class="fas fa-copy"></i>
+          <span>Copiar Enlace</span>
+        </button>
+        <div class="stat-mini" title="Visitas totales recibidas">
+          <i class="fas fa-chart-line"></i>
+          <span><strong>{{ stats.visitas }}</strong> visitas</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs (4 Columns Grid Segmented Control) -->
+    <nav class="tabs-nav" aria-label="Secciones de configuración">
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'general'" (click)="activeTab = 'general'">
+        <i class="fas fa-id-card"></i>
+        <div class="tb-text">
+          <span class="tb-title">1. Identidad y SEO</span>
+          <span class="tb-sub">Bio, títulos y ubicación</span>
+        </div>
+      </button>
+
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'multimedia'" (click)="activeTab = 'multimedia'">
+        <i class="fas fa-image"></i>
+        <div class="tb-text">
+          <span class="tb-title">2. Portada e Imagen</span>
+          <span class="tb-sub">Banner y redes sociales</span>
+        </div>
+      </button>
+
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'visibilidad'" (click)="activeTab = 'visibilidad'">
+        <i class="fas fa-palette"></i>
+        <div class="tb-text">
+          <span class="tb-title">3. Colores y Módulos</span>
+          <span class="tb-sub">Precios, packs y diseño</span>
+        </div>
+      </button>
+
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'certificados'" (click)="activeTab = 'certificados'">
+        <i class="fas fa-certificate"></i>
+        <div class="tb-text">
+          <span class="tb-title">4. Certificados & Diplomas</span>
+          <span class="tb-sub">Acreditación profesional</span>
+        </div>
+        <span class="counter-badge cert-badge" *ngIf="certificados.length > 0">{{ certificados.length }}</span>
+      </button>
+
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'resenas'" (click)="activeTab = 'resenas'">
+        <i class="fas fa-star"></i>
+        <div class="tb-text">
+          <span class="tb-title">5. Reseñas</span>
+          <span class="tb-sub">Opiniones verificadas</span>
+        </div>
+        <span class="counter-badge" *ngIf="resenasList.length > 0">{{ resenasList.length }}</span>
+      </button>
+    </nav>
+
+    <!-- TAB 1: IDENTIDAD Y SEO -->
+    <div class="tab-content" *ngIf="activeTab === 'general'">
+      <div class="config-grid">
+        
+        <!-- Left: Datos Principales -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-fingerprint"></i> Datos Principales de la Landing</h3>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Enlace / Slug personalizado (URL)</label>
+              <div class="input-with-prefix">
+                <span class="prefix">padelblox.cl/#/e/</span>
+                <input type="text" [(ngModel)]="config.slug" placeholder="juan-perez-padel">
+              </div>
+              <small class="hint">Usa solo letras, números y guiones. Es clave para el posicionamiento en Google.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Título Profesional (Aparece en Google)</label>
+              <input type="text" [(ngModel)]="config.titulo" placeholder="Ej: Profesor de Pádel FEP | Clases en Las Condes">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <div class="label-with-action">
+                <label>Biografía Profesional y Filosofía de Entrenamiento</label>
+                <button type="button" class="btn-ai-magic" (click)="generarBioConIA()">
+                  <i class="fas fa-wand-magic-sparkles"></i> Redactar con IA
+                </button>
+              </div>
+              <textarea [(ngModel)]="config.bio" rows="5" placeholder="Describe tu experiencia, a quién van dirigidas tus clases y qué resultados consiguen tus alumnos..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-row two-cols">
+            <div class="form-group">
+              <label>Años de Experiencia</label>
+              <input type="number" [(ngModel)]="config.anios_experiencia" min="1" max="50">
+            </div>
+            <div class="form-group">
+              <label>Certificaciones / Títulos (Texto resumen)</label>
+              <input type="text" [(ngModel)]="config.certificaciones" placeholder="Ej: Instructor Nacional Nivel 2, Certificación FEP">
+              <small class="hint-clickable" (click)="activeTab = 'certificados'">
+                <i class="fas fa-file-shield"></i> ¿Quieres subir diplomas oficiales en JPG, PNG o PDF? <strong>Ir a Certificados ({{ certificados.length }}) &rarr;</strong>
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Especialidades y Comunas -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-bullseye"></i> Especialidades y Ubicación</h3>
+
+          <!-- Especialidades -->
+          <div class="form-group">
+            <label>Especialidades (Haz clic para seleccionar)</label>
+            <div class="chips-selector">
+              <button type="button" *ngFor="let esp of especialidadesPresets" 
+                      class="chip-toggle" 
+                      [class.active]="config.especialidades.includes(esp)"
+                      (click)="toggleEspecialidad(esp)">
+                <i class="fas" [ngClass]="config.especialidades.includes(esp) ? 'fa-check' : 'fa-plus'"></i>
+                {{ esp }}
+              </button>
+            </div>
+            <div class="input-inline-add">
+              <input type="text" [(ngModel)]="nuevaEspecialidad" placeholder="Otra especialidad personalizada..." (keyup.enter)="addCustomEspecialidad()">
+              <button type="button" (click)="addCustomEspecialidad()">Agregar</button>
+            </div>
+          </div>
+
+          <!-- Niveles -->
+          <div class="form-group" style="margin-top: 18px;">
+            <label>Niveles que entrenas</label>
+            <div class="chips-selector">
+              <button type="button" *ngFor="let niv of nivelesPresets" 
+                      class="chip-toggle" 
+                      [class.active]="config.niveles.includes(niv)"
+                      (click)="toggleNivel(niv)">
+                <i class="fas" [ngClass]="config.niveles.includes(niv) ? 'fa-check' : 'fa-plus'"></i>
+                {{ niv }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Comunas -->
+          <div class="form-group" style="margin-top: 18px;">
+            <label>Comunas / Ciudades donde operas (SEO Local)</label>
+            <div class="tags-list">
+              <span class="tag-item" *ngFor="let com of config.comunas; let i = index">
+                {{ com }}
+                <i class="fas fa-times" (click)="removeComuna(i)"></i>
+              </span>
+            </div>
+            <div class="input-inline-add">
+              <input type="text" [(ngModel)]="nuevaComuna" placeholder="Ej: Las Condes, Vitacura, Providencia..." (keyup.enter)="addComuna()">
+              <button type="button" (click)="addComuna()">Agregar</button>
+            </div>
+          </div>
+
+          <!-- Clubes -->
+          <div class="form-group" style="margin-top: 18px;" *ngIf="clubesDisponibles.length > 0">
+            <label>Clubes asociados donde impartes clases</label>
+            <div class="clubes-checks-list">
+              <div class="club-check-item" *ngFor="let c of clubesDisponibles" 
+                   [class.selected]="config.clubes_ids.includes(c.id)"
+                   (click)="toggleClub(c.id)">
+                <i class="fas" [ngClass]="config.clubes_ids.includes(c.id) ? 'fa-square-check' : 'fa-square'"></i>
+                <span>{{ c.nombre }} <small>({{ c.comuna }})</small></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Bottom Step Navigation -->
+      <div class="step-nav-bar">
+        <span></span>
+        <button type="button" class="btn-step-next" (click)="activeTab = 'multimedia'">
+          <span>Siguiente: Subir Portada e Imagen</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 2: PORTADA Y CONTACTO -->
+    <div class="tab-content" *ngIf="activeTab === 'multimedia'">
+      <div class="config-grid">
+        
+        <!-- Portada / Banner -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-panorama"></i> Imagen de Portada (Banner)</h3>
+          
+          <div class="banner-preview" [style.background-image]="'url(' + bannerPreviewUrl + ')'">
+            <div class="bp-overlay">
+              <span>Vista previa del encabezado</span>
+            </div>
+          </div>
+
+          <div class="upload-actions">
+            <label class="btn-upload">
+              <i class="fas fa-cloud-arrow-up" *ngIf="!isUploadingBanner"></i>
+              <i class="fas fa-spinner fa-spin" *ngIf="isUploadingBanner"></i>
+              <span>{{ isUploadingBanner ? 'Subiendo...' : 'Subir Imagen desde mi dispositivo' }}</span>
+              <input type="file" (change)="onFileSelected($event)" accept="image/*" style="display: none;">
+            </label>
+            <span class="upload-note">Recomendado: 1200 x 400 píxeles, formato JPG, PNG o WEBP.</span>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label>O ingresa una URL directa de imagen:</label>
+            <input type="text" [(ngModel)]="config.banner_url" placeholder="https://ejemplo.com/mi-portada.jpg">
+          </div>
+        </div>
+
+        <!-- Canales de Contacto Directo -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-comments"></i> Canales de Contacto y Redes</h3>
+
+          <div class="form-group">
+            <label><i class="fab fa-whatsapp" style="color: #25d366;"></i> WhatsApp para Reservas</label>
+            <input type="text" [(ngModel)]="config.whatsapp" placeholder="+56 9 1234 5678">
+            <small class="hint">Los alumnos podrán hacer clic y escribirte directamente.</small>
+          </div>
+
+          <div class="form-group">
+            <label><i class="fab fa-instagram" style="color: #e1306c;"></i> Usuario de Instagram</label>
+            <input type="text" [(ngModel)]="config.instagram" placeholder="@tu_usuario_padel">
+          </div>
+
+          <div class="form-group">
+            <label><i class="fab fa-google" style="color: #4285f4;"></i> Enlace a tu Perfil de Google Maps / Business</label>
+            <input type="text" [(ngModel)]="config.google_business_url" placeholder="https://maps.google.com/...">
+            <small class="hint">Si tienes perfil en Google Maps, vincúlalo para potenciar tu SEO local.</small>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Step Navigation -->
+      <div class="step-nav-bar">
+        <button type="button" class="btn-step-prev" (click)="activeTab = 'general'">
+          <i class="fas fa-arrow-left"></i>
+          <span>Volver a Identidad</span>
+        </button>
+        <button type="button" class="btn-step-next" (click)="activeTab = 'visibilidad'">
+          <span>Siguiente: Personalizar Colores y Módulos</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 3: VISIBILIDAD Y DISEÑO -->
+    <div class="tab-content" *ngIf="activeTab === 'visibilidad'">
+      <div class="config-grid">
+        
+        <!-- Módulos Visibles -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-toggle-on"></i> Secciones Activas en tu Perfil</h3>
+
+          <div class="module-switch-item">
+            <div class="msi-info">
+              <h4>Mostrar Packs y Precios de Clases</h4>
+              <p>Muestra tus planes individuales y grupales activos con sus precios y botón de compra.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="config.mostrar_packs">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="module-switch-item">
+            <div class="msi-info">
+              <h4>Mostrar Próximos Horarios Disponibles</h4>
+              <p>Muestra los bloques de tu agenda libres para los próximos 14 días.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="config.mostrar_horarios">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="module-switch-item">
+            <div class="msi-info">
+              <h4>Mostrar Reseñas Verificadas de Alumnos</h4>
+              <p>Muestra las calificaciones y comentarios dejados por tus alumnos.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="config.mostrar_resenas">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Fondo y Paleta de Colores -->
+        <div class="card-box">
+          <h3 class="box-title"><i class="fas fa-palette"></i> Fondo y Apariencia Visual</h3>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 18px;">Personaliza el fondo y colores de tu página pública para que coincida con tu estilo o club.</p>
+
+          <!-- Paletas UX Sugeridas -->
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label style="font-weight: 700; font-size: 13px; color: #1e293b; display: block; margin-bottom: 8px;">
+              Paletas Profesionales Sugeridas:
+            </label>
+            <div class="presets-palettes-grid">
+              <button type="button" class="preset-palette-btn" (click)="aplicarPaletaPreset('#070a12', '#ccff00')" [class.active]="config.color_primary === '#070a12' && config.color_accent === '#ccff00'">
+                <span class="swatch" style="background: #070a12; border: 1px solid rgba(255,255,255,0.2);"></span>
+                <span class="swatch" style="background: #ccff00;"></span>
+                <span>Dark Neón</span>
+              </button>
+              <button type="button" class="preset-palette-btn" (click)="aplicarPaletaPreset('#0a1128', '#00f5d4')" [class.active]="config.color_primary === '#0a1128' && config.color_accent === '#00f5d4'">
+                <span class="swatch" style="background: #0a1128;"></span>
+                <span class="swatch" style="background: #00f5d4;"></span>
+                <span>Midnight Cyan</span>
+              </button>
+              <button type="button" class="preset-palette-btn" (click)="aplicarPaletaPreset('#121212', '#f59e0b')" [class.active]="config.color_primary === '#121212' && config.color_accent === '#f59e0b'">
+                <span class="swatch" style="background: #121212; border: 1px solid rgba(255,255,255,0.2);"></span>
+                <span class="swatch" style="background: #f59e0b;"></span>
+                <span>Obsidian Gold</span>
+              </button>
+              <button type="button" class="preset-palette-btn" (click)="aplicarPaletaPreset('#061a14', '#a3e635')" [class.active]="config.color_primary === '#061a14' && config.color_accent === '#a3e635'">
+                <span class="swatch" style="background: #061a14;"></span>
+                <span class="swatch" style="background: #a3e635;"></span>
+                <span>Emerald Court</span>
+              </button>
+              <button type="button" class="preset-palette-btn" (click)="aplicarPaletaPreset('#0b132b', '#38bdf8')" [class.active]="config.color_primary === '#0b132b' && config.color_accent === '#38bdf8'">
+                <span class="swatch" style="background: #0b132b;"></span>
+                <span class="swatch" style="background: #38bdf8;"></span>
+                <span>Royal Sky</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selectores de color -->
+          <div class="form-row two-cols" style="margin-bottom: 22px;">
+            <div class="form-group">
+              <label>Color de Fondo Principal:</label>
+              <div class="color-picker-input">
+                <input type="color" [(ngModel)]="config.color_primary">
+                <input type="text" [(ngModel)]="config.color_primary" placeholder="#070a12">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Color de Acento / Botones:</label>
+              <div class="color-picker-input">
+                <input type="color" [(ngModel)]="config.color_accent">
+                <input type="text" [(ngModel)]="config.color_accent" placeholder="#ccff00">
+              </div>
+            </div>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+          <!-- Imagen de Fondo / Wallpaper de la Landing -->
+          <div class="form-group">
+            <label style="font-weight: 700; font-size: 14px; color: #0f172a; display: block; margin-bottom: 6px;">
+              <i class="fas fa-image" style="color: #3b82f6;"></i> Imagen o Textura de Fondo (Opcional):
+            </label>
+            <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+              Puedes subir una fotografía de tus canchas o textura de pádel. Se mostrará en el fondo de toda tu página con un sutil filtro oscuro para que los textos resalten a la perfección.
+            </p>
+
+            <div class="fondo-preview" [style.background-color]="config.color_primary" [style.background-image]="fondoPreviewUrl ? 'linear-gradient(rgba(7, 10, 18, 0.75), rgba(7, 10, 18, 0.85)), url(' + fondoPreviewUrl + ')' : ''">
+              <div class="fp-overlay">
+                <span *ngIf="config.fondo_url"><i class="fas fa-check-circle" style="color: #22c55e;"></i> Imagen de fondo activa</span>
+                <span *ngIf="!config.fondo_url"><i class="fas fa-paint-roller"></i> Fondo liso color {{ config.color_primary }}</span>
+              </div>
+            </div>
+
+            <div class="upload-actions" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+              <label class="btn-upload">
+                <i class="fas fa-cloud-arrow-up" *ngIf="!isUploadingFondo"></i>
+                <i class="fas fa-spinner fa-spin" *ngIf="isUploadingFondo"></i>
+                <span>{{ isUploadingFondo ? 'Subiendo Fondo...' : 'Subir Imagen de Fondo' }}</span>
+                <input type="file" (change)="onFondoSelected($event)" accept="image/*" style="display: none;">
+              </label>
+
+              <button type="button" class="btn-remove-fondo" *ngIf="config.fondo_url" (click)="quitarFondo()">
+                <i class="fas fa-trash-can"></i> Quitar Imagen (Usar fondo liso)
+              </button>
+            </div>
+
+            <div class="form-group" style="margin-top: 14px;">
+              <label style="font-size: 12px; color: #64748b;">O ingresa una URL directa de imagen de fondo:</label>
+              <input type="text" [(ngModel)]="config.fondo_url" placeholder="https://ejemplo.com/mi-fondo-padel.jpg">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Step Navigation -->
+      <div class="step-nav-bar">
+        <button type="button" class="btn-step-prev" (click)="activeTab = 'multimedia'">
+          <i class="fas fa-arrow-left"></i>
+          <span>Volver a Portada</span>
+        </button>
+        <button type="button" class="btn-step-next" (click)="activeTab = 'certificados'">
+          <span>Siguiente: Diplomas y Certificados</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 4: CERTIFICADOS Y DIPLOMAS -->
+    <div class="tab-content" *ngIf="activeTab === 'certificados'">
+      <div class="card-box">
+        <div class="cert-intro-banner">
+          <div class="cib-icon">
+            <i class="fas fa-certificate"></i>
+          </div>
+          <div class="cib-text">
+            <h3>Acreditaciones, Diplomas y Certificaciones Oficiales</h3>
+            <p>Sube imágenes (diplomas enmarcados, credenciales JPG/PNG) o documentos PDF de tus certificaciones. Se mostrarán con insignia verificada en tu perfil público para generar máxima confianza en los alumnos que visiten tu vitrina.</p>
+          </div>
+        </div>
+
+        <!-- Formulario para subir nuevo certificado -->
+        <div class="cert-upload-card">
+          <h4 class="cuc-title"><i class="fas fa-cloud-arrow-up"></i> Subir Nueva Certificación o Diploma</h4>
+          
+          <div class="cuc-grid">
+            <div class="cuc-file-picker">
+              <input type="file" #certFileInput accept=".jpg,.jpeg,.png,.webp,.pdf" (change)="onCertFileSelected($event)" style="display: none;">
+              <button type="button" class="btn-pick-file" (click)="certFileInput.click()">
+                <i class="fas fa-file-arrow-up"></i>
+                <span>{{ selectedCertFile ? 'Cambiar Archivo' : 'Seleccionar Archivo (JPG, PNG o PDF)' }}</span>
+              </button>
+              <div class="picked-file-info" *ngIf="selectedCertFile">
+                <i class="fas" [ngClass]="selectedCertFile.name.endsWith('.pdf') ? 'fa-file-pdf text-red' : 'fa-file-image text-blue'"></i>
+                <span class="pfi-name">{{ selectedCertFileName }}</span>
+                <span class="pfi-size">({{ (selectedCertFile.size / 1024 / 1024) | number:'1.1-2' }} MB)</span>
+              </div>
+              <small class="hint">Formatos: JPG, PNG, WEBP o PDF. Tamaño máx: 10 MB.</small>
+            </div>
+
+            <div class="cuc-fields">
+              <div class="form-group">
+                <label>Título del Certificado o Diplomado *</label>
+                <input type="text" [(ngModel)]="nuevoCertTitulo" placeholder="Ej: Instructor de Pádel Nivel 1, Curso Táctico Padel MBA...">
+              </div>
+              <div class="form-group" style="margin-top: 12px;">
+                <label>Institución o Federación Emisora (Opcional)</label>
+                <input type="text" [(ngModel)]="nuevaCertInstitucion" placeholder="Ej: Federación Española de Pádel (FEP), RFET...">
+              </div>
+              <div class="cuc-action-bar">
+                <button type="button" class="btn-upload-cert" [disabled]="!selectedCertFile || !nuevoCertTitulo.trim() || isUploadingCert" (click)="subirCertificado()">
+                  <i class="fas fa-spinner fa-spin" *ngIf="isUploadingCert"></i>
+                  <i class="fas fa-check" *ngIf="!isUploadingCert"></i>
+                  <span>{{ isUploadingCert ? 'Subiendo Documento...' : 'Acreditar y Publicar Certificado' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de certificados subidos -->
+        <div class="certs-list-section">
+          <div class="cls-header">
+            <h4><i class="fas fa-folder-open"></i> Certificaciones Activas en tu Perfil ({{ certificados.length }})</h4>
+            <span class="cls-sub">Visibles para todos los jugadores que consulten tu perfil online.</span>
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-certs" *ngIf="certificados.length === 0">
+            <div class="ec-icon"><i class="fas fa-award"></i></div>
+            <h4>Aún no has subido certificados o diplomas</h4>
+            <p>Los entrenadores con acreditaciones oficiales visibles reciben hasta un <strong>65% más de reservas</strong> de alumnos que buscan garantías técnicas.</p>
+          </div>
+
+          <!-- Grid de certificados -->
+          <div class="certs-grid" *ngIf="certificados.length > 0">
+            <div class="cert-card-item" *ngFor="let cert of certificados">
+              <div class="cci-preview">
+                <img *ngIf="cert.tipo_archivo === 'image'" [src]="formatearCertUrl(cert.archivo_url)" alt="Certificado" loading="lazy">
+                <div *ngIf="cert.tipo_archivo === 'pdf'" class="cci-pdf-thumb">
+                  <i class="fas fa-file-pdf"></i>
+                  <span>DOCUMENTO PDF</span>
+                </div>
+                <div class="cci-type-badge">
+                  <i class="fas" [ngClass]="cert.tipo_archivo === 'pdf' ? 'fa-file-pdf' : 'fa-image'"></i>
+                  {{ cert.tipo_archivo === 'pdf' ? 'PDF' : 'IMAGEN' }}
+                </div>
+              </div>
+
+              <div class="cci-info">
+                <h5 class="cci-title" [title]="cert.titulo">{{ cert.titulo }}</h5>
+                <p class="cci-inst" *ngIf="cert.institucion">
+                  <i class="fas fa-building-columns"></i> {{ cert.institucion }}
+                </p>
+                <div class="cci-meta">
+                  <span class="cci-verified"><i class="fas fa-shield-check"></i> Acreditado</span>
+                  <span class="cci-date" *ngIf="cert.created_at">{{ cert.created_at | date:'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+
+              <div class="cci-actions">
+                <a [href]="formatearCertUrl(cert.archivo_url)" target="_blank" class="btn-cert-view" title="Abrir y ver documento en alta resolución">
+                  <i class="fas fa-arrow-up-right-from-square"></i>
+                  <span>Ver</span>
+                </a>
+                <button type="button" class="btn-cert-delete" (click)="eliminarCertificado(cert)" title="Eliminar certificado">
+                  <i class="fas fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Step Navigation -->
+      <div class="step-nav-bar">
+        <button type="button" class="btn-step-prev" (click)="activeTab = 'visibilidad'">
+          <i class="fas fa-arrow-left"></i>
+          <span>Volver a Colores y Módulos</span>
+        </button>
+        <button type="button" class="btn-step-next" (click)="activeTab = 'resenas'">
+          <span>Siguiente: Ver Reseñas</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 5: RESEÑAS -->
+    <div class="tab-content" *ngIf="activeTab === 'resenas'">
+      <div class="card-box">
+        
+        <div class="resenas-top-banner">
+          <div class="rtb-left">
+            <div class="big-score">{{ stats.promedio_rating }}</div>
+            <div class="score-details">
+              <div class="stars-gold">
+                <i class="fas fa-star" *ngFor="let s of [1,2,3,4,5]"></i>
+              </div>
+              <span class="rtb-count">{{ resenasList.length }} {{ resenasList.length === 1 ? 'reseña de alumno' : 'reseñas de alumnos' }}</span>
+            </div>
+          </div>
+          <div class="rtb-right">
+            <p><i class="fas fa-shield-halved" style="color: #10b981;"></i> Solo los alumnos que tienen al menos 1 clase registrada contigo en PadelBlox pueden calificar.</p>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-resenas" *ngIf="resenasList.length === 0">
+          <i class="fas fa-comments"></i>
+          <h4>Aún no tienes reseñas de alumnos</h4>
+          <p>Cuando tus alumnos finalicen clases, la app les invitará a dejar una calificación. También puedes compartirles tu enlace público para que opinen.</p>
+        </div>
+
+        <!-- List -->
+        <div class="resenas-manage-list" *ngIf="resenasList.length > 0">
+          <div class="resena-item-row" *ngFor="let r of resenasList">
+            <div class="rir-header">
+              <div class="rir-user">
+                <div class="user-avatar">
+                  <img [src]="r.alumno_foto || 'assets/icons/icon-192x192.png'" alt="Alumno">
+                </div>
+                <div>
+                  <h4 class="user-name">{{ r.alumno_nombre }}</h4>
+                  <span class="rir-date">{{ r.created_at | date:'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+              <div class="rir-rating">
+                <span class="rating-num">{{ r.rating }} / 5</span>
+                <i class="fas fa-star" style="color: #f59e0b;"></i>
+              </div>
+            </div>
+
+            <p class="rir-comment">{{ r.comentario }}</p>
+
+            <!-- Coach Reply Display -->
+            <div class="rir-reply-box" *ngIf="r.respuesta_entrenador">
+              <div class="reply-header">
+                <i class="fas fa-reply"></i>
+                <span>Tu respuesta:</span>
+              </div>
+              <p>{{ r.respuesta_entrenador }}</p>
+            </div>
+
+            <!-- Reply Action -->
+            <div class="rir-actions">
+              <button class="btn-reply" (click)="responderResena(r)">
+                <i class="fas fa-comment-dots"></i>
+                <span>{{ r.respuesta_entrenador ? 'Editar Respuesta' : 'Responder a Alumno' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Step Navigation -->
+      <div class="step-nav-bar">
+        <button type="button" class="btn-step-prev" (click)="activeTab = 'certificados'">
+          <i class="fas fa-arrow-left"></i>
+          <span>Volver a Certificados</span>
+        </button>
+        <button type="button" class="btn-step-save" (click)="guardarConfiguracion()">
+          <i class="fas fa-save"></i>
+          <span>Guardar Cambios</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>

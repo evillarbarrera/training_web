@@ -1,69 +1,78 @@
 <div class="login-container">
   <div class="login-card">
+    
+    <!-- BRAND & HEADER -->
     <div class="header-box">
       <div class="logo">
         <img src="assets/images/logo-circular.png" class="logo-img" alt="PadelBlox" />
         <span class="logo-text">Padel<span class="accent">Blox</span></span>
       </div>
-      <h2>{{ showRecoverForm ? 'Recuperar Contraseña' : 'Bienvenido de nuevo' }}</h2>
-      <p class="subtitle">{{ showRecoverForm ? 'Ingresa tu correo para recibir instrucciones' : 'Ingresa tus
-        credenciales para acceder' }}</p>
+      <h2>{{ showRecoverForm ? 'Recuperar Contraseña' : (showProfileSelector ? 'Selecciona tu Perfil' : 'Bienvenido de nuevo') }}</h2>
+      <p class="subtitle">
+        {{ showRecoverForm ? 'Ingresa tu correo para recibir las instrucciones de recuperación.' : 
+           (showProfileSelector ? 'Tienes múltiples roles asociados. Elige cómo deseas ingresar hoy.' : 
+           'Ingresa tus credenciales para acceder a tu plataforma.') }}
+      </p>
     </div>
 
-    <!-- Login Form -->
+    <!-- 🔑 LOGIN FORM -->
     <div class="form-box" *ngIf="!showRecoverForm && !showProfileSelector">
+      
       <div class="input-group">
         <label>Correo Electrónico</label>
         <div class="input-wrapper">
+          <span class="icon-prefix">✉️</span>
           <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="email" (keypress)="handleKeyPress($event)">
-          <span class="icon">✉️</span>
         </div>
       </div>
 
       <div class="input-group">
         <label>Contraseña</label>
         <div class="input-wrapper">
+          <span class="icon-prefix">🔒</span>
           <input [type]="showPassword ? 'text' : 'password'" placeholder="••••••••" [(ngModel)]="password"
             (keypress)="handleKeyPress($event)">
-          <span class="toggle-password" (click)="togglePasswordVisibility()">
-            {{ showPassword ? '👁️' : '🔒' }}
+          <span class="toggle-password" (click)="togglePasswordVisibility()" [title]="showPassword ? 'Ocultar' : 'Mostrar'">
+            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
           </span>
         </div>
       </div>
 
       <div class="actions">
-        <label class="checkbox-container">
-          <input type="checkbox">
-          Recordarme
+        <label class="remember-item">
+          <input type="checkbox" class="custom-checkbox">
+          <span>Recordarme</span>
         </label>
         <a (click)="toggleRecoverMode()" class="forgot-link">¿Olvidaste tu contraseña?</a>
       </div>
 
-      <button class="btn-login" (click)="login()" [disabled]="isLoading">
-        <span *ngIf="!isLoading">Iniciar Sesión</span>
+      <!-- ⚡ CTA BUTTON (Volt High Contrast) -->
+      <button class="btn-auth-action" (click)="login()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">INICIAR SESIÓN</span>
         <span *ngIf="isLoading" class="spinner"></span>
       </button>
 
+      <!-- ⚠️ ERROR BANNER -->
       <div *ngIf="error" class="error-message">
-        {{ error }}
+        <span class="err-icon">⚠️</span> {{ error }}
       </div>
 
+      <!-- 🌐 DIVIDER & GOOGLE SIGN-IN -->
       <div class="divider">
         <span>o continuar con</span>
       </div>
 
       <div id="googleBtn" class="google-btn-container"></div>
 
+      <!-- 🔁 SWITCH TO REGISTER -->
       <div class="register-prompt">
-        ¿No tienes cuenta? <a (click)="goToRegister()">Regístrate aquí</a>
+        ¿No tienes una cuenta? <a (click)="goToRegister()">Regístrate gratis aquí</a>
       </div>
+
     </div>
 
-    <!-- PROFILE SELECTOR -->
+    <!-- 👥 PROFILE SELECTOR -->
     <div class="form-box profile-selector" *ngIf="showProfileSelector">
-      <h3>Selecciona un Perfil</h3>
-      <p class="subtitle-small">Tienes múltiples roles asociados a esta cuenta.</p>
-
       <div class="profiles-list">
         <button *ngFor="let p of availableProfiles" 
                 class="profile-btn" 
@@ -73,14 +82,14 @@
                 [class.is-jugador]="p.rol === 'jugador'"
                 (click)="selectProfile(p)">
           <div class="p-icon">
-            {{ p.rol === 'administrador_club' || p.rol === 'administrador' ? '🏢' : (p.rol === 'entrenador' ? '🎾' : (p.rol === 'staff_club' ? '👤' : '👤')) }}
+            {{ p.rol === 'administrador_club' || p.rol === 'administrador' ? '🏢' : (p.rol === 'entrenador' ? '⚡' : (p.rol === 'staff_club' ? '💼' : '🎾')) }}
           </div>
           <div class="p-info">
-            <span class="p-club">{{ p.club_nombre || 'Perfil Global' }}</span>
+            <span class="p-club">{{ p.club_nombre || 'PadelBlox Global' }}</span>
             <span class="p-rol">
-               {{ p.rol === 'administrador_club' ? 'Administrador' : 
+               {{ p.rol === 'administrador_club' ? 'Administrador de Club' : 
                   (p.rol === 'staff_club' ? 'Personal del Club' : 
-                  (p.rol === 'entrenador' ? 'Entrenador' : 
+                  (p.rol === 'entrenador' ? 'Entrenador Pro' : 
                   (p.rol === 'administrador' ? 'Super Admin' : 'Jugador'))) }}
             </span>
           </div>
@@ -89,41 +98,46 @@
       </div>
 
       <div class="register-prompt">
-        <a (click)="showProfileSelector = false">Volver al inicio</a>
+        <a (click)="showProfileSelector = false">← Volver al inicio</a>
       </div>
     </div>
 
-    <!-- Recovery Form -->
+    <!-- 📩 PASSWORD RECOVERY FORM -->
     <div class="form-box" *ngIf="showRecoverForm && !showProfileSelector">
       <div class="input-group">
-        <label>Correo Electrónico</label>
+        <label>Correo Electrónico Registrado</label>
         <div class="input-wrapper">
-          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="recoverEmail">
-          <span class="icon">✉️</span>
+          <span class="icon-prefix">✉️</span>
+          <input type="email" placeholder="nombre@ejemplo.com" [(ngModel)]="recoverEmail" (keypress)="$event.key === 'Enter' && sendRecovery()">
         </div>
       </div>
 
-      <button class="btn-login" (click)="sendRecovery()" [disabled]="isLoading">
-        <span *ngIf="!isLoading">Enviar Instrucciones</span>
+      <button class="btn-auth-action" (click)="sendRecovery()" [disabled]="isLoading">
+        <span *ngIf="!isLoading">ENVIAR INSTRUCCIONES</span>
         <span *ngIf="isLoading" class="spinner"></span>
       </button>
 
       <div *ngIf="recoverMessage" class="success-message">
-        {{ recoverMessage }}
+        <span class="succ-icon">✅</span> {{ recoverMessage }}
       </div>
 
       <div *ngIf="recoverError" class="error-message">
-        {{ recoverError }}
+        <span class="err-icon">⚠️</span> {{ recoverError }}
       </div>
 
       <div class="register-prompt">
-        <a (click)="toggleRecoverMode()">Volver a Iniciar Sesión</a>
+        <a (click)="toggleRecoverMode()">← Volver a Iniciar Sesión</a>
       </div>
     </div>
 
+    <!-- 🔗 FOOTER LINKS -->
     <div class="footer-links">
       <a href="#">Privacidad</a>
-      <a href="#">Términos</a>
+      <span class="dot">•</span>
+      <a href="#">Términos de Servicio</a>
+      <span class="dot">•</span>
+      <a href="https://wa.me/56969083124" target="_blank" rel="noopener noreferrer">Soporte WhatsApp</a>
     </div>
+
   </div>
 </div>

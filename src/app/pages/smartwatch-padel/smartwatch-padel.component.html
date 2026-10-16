@@ -1,0 +1,470 @@
+<div class="landing-layout">
+
+  <!-- 📣 TOP ANNOUNCEMENT BAR -->
+  <div class="top-announcement-bar">
+    <div class="container">
+      <div class="top-info">
+        <span class="badge-promo">NUEVO ⌚ APP SMARTWATCH</span>
+        <span>Marcador en vivo en tu muñeca + Sincronización instantánea con canchas y torneos</span>
+        <button class="btn-text-link" (click)="openContactModal()">Descargar o Probar 90 días gratis →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧭 HOMOLOGATED NAVBAR -->
+  <header class="nike-navbar">
+    <div class="navbar-inner">
+      <a routerLink="/" class="logo">
+        <div class="logo-wrapper">
+          <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox Logo">
+        </div>
+        <span class="brand-name">PADEL<span class="highlight">BLOX</span></span>
+      </a>
+
+      <nav class="nav-links">
+        <a routerLink="/" class="nav-link">Inicio</a>
+        <a routerLink="/gestion-club-padel" class="nav-link">Club & Canchas</a>
+        <a routerLink="/gestion-entrenamientos-padel" class="nav-link">Entrenamientos & IA</a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="nav-link">Torneos & Ligas 🏆</a>
+        <a routerLink="/smartwatch-padel" class="nav-link active">Reloj & Smartwatch ⌚</a>
+        <a routerLink="/precios" class="nav-link">Precios</a>
+      </nav>
+
+      <div class="navbar-actions">
+        <button class="btn-login" (click)="irALogin()">Iniciar Sesión</button>
+        <button class="btn-cta-nav" (click)="openContactModal()">Prueba Gratis</button>
+      </div>
+
+      <!-- Mobile Hamburger Toggle Button -->
+      <button class="mobile-nav-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'">
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+      </button>
+    </div>
+
+    <!-- MOBILE DRAWER MENU -->
+    <div class="mobile-drawer-overlay" [class.open]="mobileMenuOpen">
+      <div class="drawer-header">
+        <a routerLink="/" class="logo" (click)="closeMobileMenu()">
+          <div class="logo-wrapper">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox Logo">
+          </div>
+          <span class="brand-name">PADEL<span class="highlight">BLOX</span></span>
+        </a>
+        <button class="drawer-close-btn" (click)="closeMobileMenu()">✕</button>
+      </div>
+
+      <div class="drawer-nav-list">
+        <a routerLink="/" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏠</span> Inicio
+        </a>
+        <a routerLink="/gestion-club-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏢</span> Club & Canchas
+        </a>
+        <a routerLink="/gestion-entrenamientos-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⚡</span> Entrenamientos & IA
+        </a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏆</span> Torneos & Ligas
+        </a>
+        <a routerLink="/smartwatch-padel" class="drawer-nav-item active" (click)="closeMobileMenu()">
+          <span class="d-icon">⌚</span> Reloj & Smartwatch
+        </a>
+        <a routerLink="/precios" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">💎</span> Precios & Planes
+        </a>
+      </div>
+
+      <div class="drawer-action-buttons">
+        <button class="btn-drawer-login" (click)="closeMobileMenu(); irALogin()">Iniciar Sesión</button>
+        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal()">Prueba Gratis (90 Días)</button>
+      </div>
+
+      <div class="drawer-app-links">
+        <span class="app-label">Descargar App Móvil:</span>
+        <div class="app-pills">
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="app-pill"> App Store</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="app-pill">▶ Google Play</a>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-drawer-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
+  </header>
+
+  <!-- 🚀 HERO SECTION -->
+  <section class="hero-section reveal fade-in">
+    <div class="hero-bg-glow"></div>
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-text">
+          <div class="badge-pill">
+            <span class="pulse-dot"></span>
+            APP SMARTWATCH & APPLE WATCH DE PÁDEL
+          </div>
+          <h1 class="hero-title">
+            EL MARCADOR Y TU JUEGO <br>
+            <span class="text-gradient">EN TU MUÑECA</span>
+          </h1>
+          <p class="hero-subtitle">
+            Anota puntos con un toque sin sacar el móvil del bolso. Control de saque, métricas cardíacas, calorías y transmisión en tiempo real a las pantallas del club y torneos.
+          </p>
+
+          <div class="hero-cta-group">
+            <button class="btn-primary-glow" (click)="openContactModal()">
+              <span>PROBAR 90 DÍAS GRATIS</span>
+              <span class="arrow">→</span>
+            </button>
+            <a href="#galeria" class="btn-secondary-outline">
+              <span>VER PANTALLAS</span>
+            </a>
+          </div>
+
+          <!-- APP STORE & GOOGLE PLAY DOWNLOAD BADGES -->
+          <div class="app-buttons-group">
+            <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="btn-store-badge btn-apple">
+              <span class="store-icon"></span>
+              <div class="store-text">
+                <span class="store-small">Descárgalo en</span>
+                <span class="store-large">App Store</span>
+              </div>
+            </a>
+            
+            <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="btn-store-badge btn-google">
+              <span class="store-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.609 1.814C3.25 2.19 3 2.766 3 3.518v16.964c0 .752.25 1.328.609 1.704l.088.082 9.53-9.53v-.226l-9.53-9.53-.088.082z" fill="#00E676"/>
+                  <path d="M16.41 15.932l-3.183-3.184v-.226l3.184-3.184.072.042 3.768 2.14c1.077.61 1.077 1.613 0 2.224l-3.769 2.146-.072.042z" fill="#FFD600"/>
+                  <path d="M16.482 15.89l-3.255-3.255-9.618 9.618c.356.376.945.42 1.614.042l11.259-6.405" fill="#FF3D00"/>
+                  <path d="M16.482 8.788L5.223 2.383c-.669-.378-1.258-.334-1.614.042l9.618 9.618 3.255-3.255z" fill="#00B0FF"/>
+                </svg>
+              </span>
+              <div class="store-text">
+                <span class="store-small">Disponible en</span>
+                <span class="store-large">Google Play</span>
+              </div>
+            </a>
+          </div>
+
+          <div class="hero-stats-row">
+            <div class="stat-mini">
+              <span class="stat-number">0s</span>
+              <span class="stat-label">Latencia en Directo</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-mini">
+              <span class="stat-number">100%</span>
+              <span class="stat-label">Libertad en Pista</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-mini">
+              <span class="stat-number">Punto de Oro</span>
+              <span class="stat-label">Reglas Oficiales</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HERO SMARTWATCH 3D SHOWCASE -->
+        <div class="hero-mockup-wrapper">
+          <div class="saas-preview-glow"></div>
+          
+          <div class="watch-hero-display">
+            <!-- Floating 3D Badges -->
+            <div class="floating-badge badge-top-left">
+              <span class="badge-icon">⌚</span>
+              <div class="badge-info">
+                <span class="b-title">40 - 30</span>
+                <span class="b-sub">Punto de Oro Activo</span>
+              </div>
+            </div>
+
+            <div class="floating-badge badge-top-right">
+              <span class="badge-icon">❤️</span>
+              <div class="badge-info">
+                <span class="b-title">158 BPM</span>
+                <span class="b-sub">Zona Aeróbica Intensa</span>
+              </div>
+            </div>
+
+            <div class="floating-badge badge-bottom-left">
+              <span class="badge-icon">🎾</span>
+              <div class="badge-info">
+                <span class="b-title">Saque: Derecha</span>
+                <span class="b-sub">Pareja A al Servicio</span>
+              </div>
+            </div>
+
+            <!-- Dual Watch & Phone Centerpiece -->
+            <div class="device-composition">
+              <div class="watch-frame-mockup" (click)="openZoom('assets/img/Reloj/marcador.png', 'Marcador en Vivo en Smartwatch')">
+                <div class="watch-case">
+                  <div class="watch-screen">
+                    <img src="assets/img/Reloj/marcador.png" (error)="onImgError($event)" alt="App de tanteador y marcador de pádel en reloj Apple Watch PadelBlox" class="watch-screen-img">
+                  </div>
+                  <div class="digital-crown"></div>
+                  <div class="side-button"></div>
+                </div>
+                <div class="zoom-indicator">🔍 Pantalla Completa</div>
+              </div>
+
+              <div class="phone-companion-mockup" (click)="openZoom('assets/img/Celular/metricas-de-partido-con-reloj.png', 'Métricas de Partido Sincronizadas')">
+                <div class="phone-case-mini">
+                  <img src="assets/img/Celular/metricas-de-partido-con-reloj.png" (error)="onImgError($event)" alt="Métricas de frecuencia cardíaca y tanteador sincronizadas con smartphone PadelBlox" class="phone-screen-img">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🌟 BENEFICIOS PRINCIPALES (6 CARDS) -->
+  <section class="features-section reveal slide-up">
+    <div class="container">
+      <div class="section-heading text-center">
+        <span class="overline">RENDIMIENTO SIN LÍMITES</span>
+        <h2>¿POR QUÉ JUGAR CON <span class="text-gradient">PADELBLOX EN TU RELOJ?</span></h2>
+        <p>Diseñado por y para jugadores de pádel. Mantén la concentración en cada punto sin discusiones sobre el tanteador.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card" *ngFor="let feat of watchFeatures">
+          <div class="feature-icon-box">{{ feat.icon }}</div>
+          <h3>{{ feat.title }}</h3>
+          <p>{{ feat.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📸 GALERÍA INTERACTIVA DE PANTALLAS (TABS + ZOOM) -->
+  <section id="galeria" class="gallery-section reveal fade-in">
+    <div class="container">
+      <div class="section-heading text-center">
+        <span class="overline">TOUR VISUAL</span>
+        <h2>PANTALLAS DE LA APP <span class="text-gradient">EN SMARTWATCH Y MÓVIL</span></h2>
+        <p>Explora cada interfaz optimizada para pantallas táctiles de alta visibilidad bajo el sol.</p>
+      </div>
+
+      <!-- Tab Buttons -->
+      <div class="preview-tabs-container">
+        <button *ngFor="let tab of previewTabs; let i = index" 
+                class="tab-btn" 
+                [class.active]="activePreviewTab === i"
+                (click)="setPreviewTab(i)">
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- Tab Active Showcase -->
+      <div class="tab-showcase-card">
+        <div class="tab-desc-bar">
+          <span class="desc-text">{{ previewTabs[activePreviewTab].desc }}</span>
+          <span class="zoom-badge-pill">🔍 Clic en la imagen para Pantalla Completa</span>
+        </div>
+
+        <div class="tab-image-box" (click)="openZoom(previewTabs[activePreviewTab].img, previewTabs[activePreviewTab].label)">
+          <div class="ambient-glow"></div>
+          <div class="browser-window">
+            <div class="browser-header">
+              <div class="traffic-dots">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+              <div class="browser-address">padelblox.cl/app/watch/{{ previewTabs[activePreviewTab].label | lowercase }}</div>
+              <div class="browser-status">EN VIVO 🟢</div>
+            </div>
+            <div class="browser-content text-center" style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 480px; padding: 30px 20px; background: #000; text-align: center;">
+              <img [src]="previewTabs[activePreviewTab].img" 
+                   (error)="onImgError($event)" 
+                   [alt]="previewTabs[activePreviewTab].label" 
+                   class="tab-img-preview"
+                   style="margin: 0 auto; display: block; max-height: 480px; max-width: 90%; object-fit: contain; border-radius: 18px; box-shadow: 0 15px 40px rgba(0,0,0,0.8);">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⌚ DISPOSITIVOS COMPATIBLES -->
+  <section class="compatibility-section reveal slide-up">
+    <div class="container">
+      <div class="section-heading text-center">
+        <span class="overline">ECOSISTEMA ABIERTO</span>
+        <h2>COMPATIBLE CON <span class="text-gradient">TUS DISPOSITIVOS FAVORITOS</span></h2>
+        <p>Funciona de manera fluida en Apple Watch y los principales relojes inteligentes Android.</p>
+      </div>
+
+      <div class="compat-grid">
+        <div class="compat-card" *ngFor="let comp of compatibilityDevices">
+          <div class="compat-header">
+            <span class="compat-icon">{{ comp.icon }}</span>
+            <div class="compat-title-box">
+              <h3>{{ comp.brand }}</h3>
+              <span class="compat-models">{{ comp.models }}</span>
+            </div>
+          </div>
+          <div class="compat-action">
+            <a [href]="comp.link" target="_blank" rel="noopener noreferrer" class="btn-store-compat">
+              Descargar en {{ comp.store }} →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ❓ PREGUNTAS FRECUENTES (FAQ) -->
+  <section class="faq-section reveal fade-in">
+    <div class="container">
+      <div class="section-heading text-center">
+        <span class="overline">RESOLVEMOS TUS DUDAS</span>
+        <h2>PREGUNTAS <span class="text-gradient">FRECUENTES</span></h2>
+      </div>
+
+      <div class="faq-accordion">
+        <div class="faq-item" *ngFor="let item of faqs; let i = index" [class.open]="item.open">
+          <button class="faq-question" (click)="toggleFaq(i)">
+            <span>{{ item.q }}</span>
+            <span class="faq-arrow">{{ item.open ? '−' : '+' }}</span>
+          </button>
+          <div class="faq-answer" *ngIf="item.open">
+            <p>{{ item.a }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⚡ CTA FINAL -->
+  <section class="final-cta-section reveal slide-up">
+    <div class="cta-glow-bg"></div>
+    <div class="container text-center">
+      <div class="cta-box">
+        <span class="cta-badge">EXPERIENCIA PREMIUM EN CANCHA</span>
+        <h2>LLEVA TU PÁDEL AL <span class="text-gradient">SIGUIENTE NIVEL</span></h2>
+        <p>Descarga la app en tu reloj hoy mismo o activa la prueba de 90 días para tu club y alumnos.</p>
+        
+        <div class="cta-actions">
+          <button class="btn-primary-large" (click)="openContactModal()">
+            SOLICITAR DEMO GRATIS (90 DÍAS)
+          </button>
+          <button class="btn-secondary-large" (click)="irALogin()">
+            INGRESAR A LA PLATAFORMA
+          </button>
+        </div>
+
+        <div class="cta-store-links">
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="cta-mini-store"> App Store (iOS)</a>
+          <span class="cta-divider">•</span>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="cta-mini-store">▶ Google Play (Android)</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🦶 HOMOLOGATED FOOTER -->
+  <footer class="nike-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="brand-col">
+          <div class="footer-logo">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+            <h3>PADEL BLOX</h3>
+          </div>
+          <p>Elevando el rendimiento y la rentabilidad del pádel con tecnología de vanguardia.</p>
+          <div class="socials">
+            <a href="https://www.instagram.com/padelblox/" target="_blank" rel="noopener noreferrer" class="social-link">
+              <span>📸</span> Instagram
+            </a>
+            <a href="mailto:soporte@padelblox.cl" class="social-link">
+              <span>✉️</span> soporte@padelblox.cl
+            </a>
+          </div>
+        </div>
+        <div class="links-col">
+          <h4>Soluciones</h4>
+          <a routerLink="/gestion-club-padel">Gestión de Club de Pádel</a>
+          <a routerLink="/gestion-entrenamientos-padel">Gestión de Entrenamientos</a>
+          <a routerLink="/smartwatch-padel">Smartwatch & Wearables ⌚</a>
+          <a routerLink="/precios">Membresías & Planes</a>
+        </div>
+        <div class="links-col">
+          <h4>Apps Móviles</h4>
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer"> App Store (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">▶ Google Play (Android)</a>
+          <a routerLink="/smartwatch-padel">⌚ Smartwatch App</a>
+        </div>
+        <div class="links-col">
+          <h4>Legal & Ayuda</h4>
+          <a routerLink="/soporte">Soporte Técnico</a>
+          <a routerLink="/login">Iniciar Sesión</a>
+          <a routerLink="/register">Registrarse Gratis</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 PadelBlox Software. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 🔍 LIGHTBOX IMAGE ZOOM MODAL -->
+  <div class="image-zoom-modal-backdrop" *ngIf="showZoomModal" (click)="closeZoom()">
+    <div class="zoom-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="zoom-modal-header">
+        <div class="modal-tab-badge">{{ zoomTitle }}</div>
+        <button class="btn-close-zoom" (click)="closeZoom()">✕ Cerrar</button>
+      </div>
+      <div class="zoom-modal-body">
+        <img [src]="zoomImage" [alt]="zoomTitle" class="zoom-full-img">
+      </div>
+    </div>
+  </div>
+
+  <!-- 📩 CONTACT / DEMO MODAL -->
+  <div class="contact-modal-backdrop" *ngIf="showContactModal" (click)="closeContactModal()">
+    <div class="contact-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-badge">⌚ SMARTWATCH & SOFTWARE PÁDEL</div>
+        <h2>Prueba PadelBlox Gratis por 90 Días</h2>
+        <p>Ingresa tus datos y te activaremos acceso inmediato a la app de reloj y plataforma web.</p>
+        <button class="btn-close" (click)="closeContactModal()">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!contactSuccess">
+        <form (ngSubmit)="submitContact()">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" [(ngModel)]="contactForm.nombre" name="nombre" placeholder="Ej: Juan Pérez" required>
+          </div>
+          <div class="form-group">
+            <label>Email de Contacto</label>
+            <input type="email" [(ngModel)]="contactForm.email" name="email" placeholder="juan@miclubpadel.cl" required>
+          </div>
+          <div class="form-group">
+            <label>WhatsApp / Teléfono</label>
+            <input type="tel" [(ngModel)]="contactForm.telefono" name="telefono" placeholder="+56 9 1234 5678">
+          </div>
+          <div class="form-group">
+            <label>Club, Academia o si eres Jugador</label>
+            <input type="text" [(ngModel)]="contactForm.academia" name="academia" placeholder="Nombre de club o Jugador">
+          </div>
+
+          <button type="submit" class="btn-submit-modal" [disabled]="isSendingContact">
+            {{ isSendingContact ? 'Activando...' : 'ACTIVAR ACCESO GRATIS' }}
+          </button>
+        </form>
+      </div>
+
+      <div class="modal-body success-state" *ngIf="contactSuccess">
+        <div class="success-icon">🎉</div>
+        <h3>¡Solicitud Recibida con Éxito!</h3>
+        <p>Un especialista se pondrá en contacto contigo de inmediato para activar tus 90 días de prueba.</p>
+      </div>
+    </div>
+  </div>
+
+</div>

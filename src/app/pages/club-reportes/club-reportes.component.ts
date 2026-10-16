@@ -168,8 +168,11 @@ export class ClubReportesComponent implements OnInit {
     this.refreshData();
   }
 
+  isLoading: boolean = false;
+
   refreshData() {
     if (!this.clubId) return;
+    this.isLoading = true;
     this.loadSalesData();
     this.loadResData();
     this.loadSalesList();
@@ -178,20 +181,28 @@ export class ClubReportesComponent implements OnInit {
   }
 
   loadSalesData() {
-    this.clubesService.getReporteVentas(this.clubId).subscribe(res => {
-      this.salesData = res;
-      if (this.activeTab === 'ventas') {
-        setTimeout(() => this.createSalesChart(), 100);
-      }
+    this.clubesService.getReporteVentas(this.clubId).subscribe({
+      next: (res) => {
+        this.salesData = res;
+        this.isLoading = false;
+        if (this.activeTab === 'ventas') {
+          setTimeout(() => this.createSalesChart(), 100);
+        }
+      },
+      error: () => this.isLoading = false
     });
   }
 
   loadResData() {
-    this.clubesService.getReporteReservas(this.clubId).subscribe(res => {
-      this.resData = res;
-      if (this.activeTab === 'reservas') {
-        setTimeout(() => this.createResChart(), 100);
-      }
+    this.clubesService.getReporteReservas(this.clubId).subscribe({
+      next: (res) => {
+        this.resData = res;
+        this.isLoading = false;
+        if (this.activeTab === 'reservas') {
+          setTimeout(() => this.createResChart(), 100);
+        }
+      },
+      error: () => this.isLoading = false
     });
   }
 
@@ -328,6 +339,7 @@ export class ClubReportesComponent implements OnInit {
               producto_nombre: item.producto_nombre,
               cantidad: qty,
               precio_unitario: unitPrice,
+              precio_costo: parseFloat(item.precio_costo || 0),
               total: itemTotal
             });
           });
@@ -381,24 +393,28 @@ export class ClubReportesComponent implements OnInit {
       });
       
       const tax = Math.round(s.total - (s.total / 1.19));
+      const costPrice = Math.round(s.precio_costo || 0);
+      const unitPrice = Math.round(s.precio_unitario || 0);
+      const totalAmt = Math.round(s.total || 0);
       
       rowsHtml += `
         <tr>
           <td>${dateFormatted}</td>
           <td>${s.vendedor || 'Staff'}</td>
           <td>${s.producto_nombre}</td>
-          <td style="text-align: right;">$${Number(s.precio_unitario).toLocaleString('es-CL')}</td>
+          <td style="text-align: right;">$${costPrice.toLocaleString('es-CL')}</td>
+          <td style="text-align: right;">$${unitPrice.toLocaleString('es-CL')}</td>
           <td style="text-align: center;">${s.cantidad}</td>
           <td style="text-align: right; color: #7c3aed;">$${tax.toLocaleString('es-CL')}</td>
-          <td class="total">$${Number(s.total).toLocaleString('es-CL')}</td>
+          <td class="total">$${totalAmt.toLocaleString('es-CL')}</td>
           <td>${s.metodo_pago}</td>
         </tr>
       `;
     });
 
-    const totalPeriodo = this.filteredSalesList.reduce((acc, v) => acc + parseFloat(v.total), 0);
+    const totalPeriodo = Math.round(this.filteredSalesList.reduce((acc, v) => acc + parseFloat(v.total), 0));
     const totalCantidad = this.filteredSalesList.reduce((acc, v) => acc + v.cantidad, 0);
-    const totalImpuesto = this.filteredSalesList.reduce((acc, v) => acc + (parseFloat(v.total) - (parseFloat(v.total) / 1.19)), 0);
+    const totalImpuesto = Math.round(this.filteredSalesList.reduce((acc, v) => acc + (parseFloat(v.total) - (parseFloat(v.total) / 1.19)), 0));
 
     printWindow.document.write(`
       <html>
@@ -435,6 +451,7 @@ export class ClubReportesComponent implements OnInit {
                 <th>Fecha / Hora</th>
                 <th>Vendedor</th>
                 <th>Producto</th>
+                <th style="text-align: right;">Precio Costo</th>
                 <th style="text-align: right;">Precio Unit.</th>
                 <th style="text-align: center;">Cantidad</th>
                 <th style="text-align: right;">Impuesto (19%)</th>
@@ -471,7 +488,7 @@ export class ClubReportesComponent implements OnInit {
 
     // Generar formato CSV con BOM UTF-8 compatible con Excel
     let csvContent = "\uFEFF";
-    csvContent += "Fecha;Hora;Vendedor;Producto;Precio Unitario;Cantidad;Impuesto (19% IVA);Total;Método de Pago\n";
+    csvContent += "Fecha;Hora;Vendedor;Producto;Precio Costo;Precio Unitario;Cantidad;Impuesto (19% IVA);Total;Método de Pago\n";
 
     this.filteredSalesList.forEach((v: any) => {
       const dateOnly = v.fecha.split(' ')[0];
@@ -479,12 +496,13 @@ export class ClubReportesComponent implements OnInit {
       const seller = v.vendedor || 'Staff';
       const product = v.producto_nombre;
       const qty = v.cantidad;
-      const unitPrice = v.precio_unitario;
+      const costPrice = Math.round(v.precio_costo || 0);
+      const unitPrice = Math.round(v.precio_unitario || 0);
       const method = v.metodo_pago;
-      const total = v.total;
-      const tax = Math.round(total - (total / 1.19));
+      const total = Math.round(v.total || 0);
+      const tax = Math.round(v.total - (v.total / 1.19));
 
-      csvContent += `${dateOnly};${timeOnly};${seller};"${product.replace(/"/g, '""')}";${unitPrice};${qty};${tax};${total};${method}\n`;
+      csvContent += `${dateOnly};${timeOnly};${seller};"${product.replace(/"/g, '""')}";${costPrice};${unitPrice};${qty};${tax};${total};${method}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -662,6 +680,7 @@ export class ClubReportesComponent implements OnInit {
       const typePayment = r.metodo_pago === 'proporcional' ? 'Por Jugador' : 'Total Sede';
       const horaIni = r.hora_inicio ? r.hora_inicio.substring(0, 5) : '';
       const horaFin = r.hora_fin ? r.hora_fin.substring(0, 5) : '';
+      const precioRedondeado = Math.round(r.precio || 0);
       
       rowsHtml += `
         <tr>
@@ -671,12 +690,12 @@ export class ClubReportesComponent implements OnInit {
           <td>${players}</td>
           <td>${typePayment}</td>
           <td class="status ${isPaidClass}">${isPaid}</td>
-          <td class="total">$${Number(r.precio || 0).toLocaleString('es-CL')}</td>
+          <td class="total">$${precioRedondeado.toLocaleString('es-CL')}</td>
         </tr>
       `;
     });
 
-    const totalIngresos = this.filteredReservasList.reduce((acc, r) => acc + parseFloat(r.precio || 0), 0);
+    const totalIngresos = Math.round(this.filteredReservasList.reduce((acc, r) => acc + parseFloat(r.precio || 0), 0));
 
     printWindow.document.write(`
       <html>
@@ -763,7 +782,7 @@ export class ClubReportesComponent implements OnInit {
       const typePayment = r.metodo_pago === 'proporcional' ? 'Por Jugador' : 'Total Sede';
       const payStatus = this.getPaymentStatus(r);
       const isPaid = payStatus === 'total' ? 'PAGADO' : (payStatus === 'parcial' ? 'PARCIAL' : (payStatus === 'no_aplica' ? 'N/A' : 'DEBE'));
-      const precio = r.precio;
+      const precio = Math.round(r.precio || 0);
 
       csvContent += `${dateFormatted};${horario};${cancha};${players};${typePayment};${isPaid};${precio}\n`;
     });

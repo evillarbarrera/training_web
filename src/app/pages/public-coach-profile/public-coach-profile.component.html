@@ -1,0 +1,815 @@
+<div class="public-page-wrapper"
+     [style.--accent-lime]="colorAcento"
+     [style.--bg-primary]="colorFondo"
+     [style.background-color]="colorFondo"
+     [style.background-image]="fondoStyleImage"
+     [class.has-custom-bg]="!!perfil.fondo_url">
+  
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Cargando perfil del entrenador...</p>
+  </div>
+
+  <!-- Error / Inactive State -->
+  <div class="error-state" *ngIf="!isLoading && errorMessage">
+    <div class="error-card">
+      <i class="fas fa-lock"></i>
+      <h2>Perfil no disponible</h2>
+      <p>{{ errorMessage }}</p>
+      
+      <a routerLink="/perfil-publico" class="btn-home" style="margin-top: 14px; background: #ccff00; color: #000; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;" *ngIf="isLoggedInCoach">
+        <i class="fas fa-toggle-on"></i> Activar y Publicar Perfil en mi Panel
+      </a>
+      <a routerLink="/" class="btn-home" *ngIf="!isLoggedInCoach">Ir a la página principal</a>
+    </div>
+  </div>
+
+  <!-- Profile Content -->
+  <div class="profile-content" *ngIf="!isLoading && !errorMessage && data">
+    
+    <!-- Draft Banner for Owner -->
+    <div class="owner-draft-alert" *ngIf="isOwner && !perfil.publicado">
+      <span><i class="fas fa-eye-slash"></i> Estás viendo tu perfil en modo <strong>Borrador / Pausado</strong>. Tus alumnos no pueden verlo hasta que lo publiques.</span>
+      <a routerLink="/perfil-publico" class="btn-publish-draft">
+        <i class="fas fa-globe"></i> Publicar Ahora
+      </a>
+    </div>
+    
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <a routerLink="/" class="brand-logo" title="Ir a PadelBlox">
+        <img src="assets/images/logo-transparent.png" alt="PadelBlox Logo" class="brand-logo-img">
+        <span class="brand-name">Padel<span class="brand-accent">Blox</span></span>
+      </a>
+      <div class="nav-links">
+        <button class="nav-btn" (click)="scrollTo('sec-packs')" *ngIf="perfil.mostrar_packs && packs.length > 0">
+          <i class="fas fa-box-archive"></i>
+          <span>Packs & Precios</span>
+        </button>
+        <button class="nav-btn" (click)="scrollTo('sec-horarios')" *ngIf="perfil.mostrar_horarios && horarios.length > 0">
+          <i class="fas fa-calendar-check"></i>
+          <span>Horarios</span>
+        </button>
+        <button class="nav-btn" (click)="scrollTo('sec-resenas')" *ngIf="perfil.mostrar_resenas">
+          <i class="fas fa-star"></i>
+          <span>Reseñas</span>
+        </button>
+        <button class="nav-cta" (click)="openReviewModal()">
+          <i class="fas fa-star"></i>
+          <span>Calificar</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Banner Preview Alert if in preview mode -->
+    <div class="preview-mode-bar" *ngIf="isPreview">
+      <i class="fas fa-eye"></i>
+      <span>Estás viendo este perfil en <strong>Modo Vista Previa</strong> (visible solo para ti).</span>
+    </div>
+
+    <!-- Hero Header -->
+    <section class="hero-section">
+      <div class="banner-box" [style.background-image]="'url(' + bannerUrl + ')'">
+        <div class="banner-overlay"></div>
+      </div>
+
+      <!-- Master Profile Header Card -->
+      <div class="coach-hero-info">
+        <!-- Upper Section: Identity & Primary Actions -->
+        <div class="coach-hero-upper">
+          <div class="avatar-box">
+            <img [src]="coachFoto" [alt]="coach.nombre">
+            <div class="verified-avatar-badge" title="Entrenador Verificado PadelBlox">
+              <i class="fas fa-check"></i>
+            </div>
+          </div>
+
+          <div class="meta-box">
+            <h1 class="coach-name">{{ coach.nombre }}</h1>
+
+            <div class="meta-badges-row">
+              <span class="tag-verified"><i class="fas fa-certificate"></i> ENTRENADOR VERIFICADO</span>
+              <span class="tag-rating" *ngIf="stats.total_resenas > 0">
+                <i class="fas fa-star"></i> {{ stats.promedio_rating }} ({{ stats.total_resenas }} {{ stats.total_resenas === 1 ? 'reseña' : 'reseñas' }})
+              </span>
+            </div>
+
+            <p class="coach-headline" *ngIf="perfil.titulo">{{ perfil.titulo }}</p>
+
+            <div class="hero-actions">
+              <button class="btn-hero-primary" (click)="iniciarReservaGeneral()">
+                <i class="fas fa-bolt"></i> Reservar Clase / Pack
+              </button>
+              <button class="btn-hero-wsp" (click)="openWhatsApp()" *ngIf="perfil.whatsapp || perfil.telefono_contacto">
+                <i class="fab fa-whatsapp"></i> WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lower Shelf: Información del Profesor (Integrada sin duplicidades) -->
+        <div class="coach-info-shelf">
+          <div class="shelf-header">
+            <span class="shelf-title"><i class="fas fa-id-card"></i> Información del Profesor</span>
+          </div>
+
+          <div class="shelf-grid">
+            <div class="shelf-item" *ngIf="locationText">
+              <i class="fas fa-map-marker-alt"></i>
+              <div>
+                <span class="si-label">Zona de Entrenamiento</span>
+                <strong class="si-val">{{ locationText }}</strong>
+              </div>
+            </div>
+
+            <div class="shelf-item" *ngIf="clubes.length > 0">
+              <i class="fas fa-building"></i>
+              <div>
+                <span class="si-label">Clubes Asociados</span>
+                <div class="si-clubs">
+                  <span class="club-chip" *ngFor="let c of clubes">{{ c.nombre }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="shelf-item" *ngIf="perfil.anios_experiencia">
+              <i class="fas fa-award"></i>
+              <div>
+                <span class="si-label">Experiencia</span>
+                <strong class="si-val">{{ perfil.anios_experiencia }} años de trayectoria</strong>
+              </div>
+            </div>
+
+            <div class="shelf-item" *ngIf="perfil.instagram">
+              <i class="fab fa-instagram"></i>
+              <div>
+                <span class="si-label">Instagram</span>
+                <a href="javascript:void(0)" (click)="openSocial('ig')" class="si-link">
+                  {{ perfil.instagram }} <i class="fas fa-external-link-alt"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="shelf-item" *ngIf="perfil.google_business_url">
+              <i class="fab fa-google"></i>
+              <div>
+                <span class="si-label">Google Maps</span>
+                <a href="javascript:void(0)" (click)="openSocial('gmaps')" class="si-link">
+                  Ver perfil <i class="fas fa-external-link-alt"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="shelf-item" *ngIf="perfil.certificaciones">
+              <i class="fas fa-graduation-cap"></i>
+              <div>
+                <span class="si-label">Certificaciones</span>
+                <strong class="si-val">{{ perfil.certificaciones }}</strong>
+              </div>
+            </div>
+
+            <div class="shelf-item shelf-clickable" *ngIf="certificados.length > 0" (click)="setTab('sobre-mi'); scrollToCerts()" title="Ver diplomas y títulos acreditados">
+              <i class="fas fa-file-shield" style="color: #10b981;"></i>
+              <div>
+                <span class="si-label">Diplomas Acreditados</span>
+                <strong class="si-val" style="color: #ccff00;">{{ certificados.length }} {{ certificados.length === 1 ? 'Título Verificado' : 'Títulos Verificados' }} &rarr;</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Container -->
+    <main class="page-container" id="tabs-anchor">
+      <div class="layout-grid">
+        
+        <!-- Main Column -->
+        <div class="content-col">
+          
+          <!-- Modern Tab Navigation Bar -->
+          <nav class="profile-tabs-bar" role="tablist">
+            <button 
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'sobre-mi'"
+              class="tab-item-btn" 
+              [class.active]="activeTab === 'sobre-mi'" 
+              (click)="setTab('sobre-mi')">
+              <i class="fas fa-user-tie"></i>
+              <span>Sobre Mí</span>
+            </button>
+
+            <button 
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'packs'"
+              class="tab-item-btn" 
+              [class.active]="activeTab === 'packs'" 
+              (click)="setTab('packs')"
+              *ngIf="perfil.mostrar_packs && packs.length > 0">
+              <i class="fas fa-box-archive"></i>
+              <span>Packs & Precios</span>
+              <span class="tab-badge-pill">{{ packs.length }}</span>
+            </button>
+
+            <button 
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'horarios'"
+              class="tab-item-btn" 
+              [class.active]="activeTab === 'horarios'" 
+              (click)="setTab('horarios')"
+              *ngIf="perfil.mostrar_horarios && horarios.length > 0">
+              <i class="fas fa-calendar-check"></i>
+              <span>Horarios</span>
+              <span class="tab-badge-pill">{{ horarios.length }}</span>
+            </button>
+
+            <button 
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'resenas'"
+              class="tab-item-btn" 
+              [class.active]="activeTab === 'resenas'" 
+              (click)="setTab('resenas')"
+              *ngIf="perfil.mostrar_resenas">
+              <i class="fas fa-star"></i>
+              <span>Reseñas</span>
+              <span class="tab-badge-pill rating" *ngIf="stats.total_resenas > 0">
+                <i class="fas fa-star"></i> {{ stats.promedio_rating }}
+              </span>
+            </button>
+          </nav>
+
+          <!-- TAB 1: Bio -->
+          <section id="sec-sobre-mi" class="card-section tab-pane-content" *ngIf="activeTab === 'sobre-mi'">
+            <div class="cs-title">
+              <i class="fas fa-user-tie"></i>
+              <h2>Sobre Mí</h2>
+            </div>
+
+            <div class="about-coach-layout">
+              <!-- Columna Foto del Profesor -->
+              <div class="about-coach-photo-col">
+                <div class="about-photo-card">
+                  <img [src]="coachFoto" [alt]="coach.nombre" class="about-photo-img">
+                  <div class="about-photo-overlay">
+                    <span class="about-photo-name">{{ coach.nombre }}</span>
+                    <span class="about-photo-badge"><i class="fas fa-certificate"></i> Entrenador Verificado</span>
+                  </div>
+                </div>
+
+                <div class="about-quick-stats" *ngIf="perfil.anios_experiencia || stats.total_resenas > 0">
+                  <div class="aqs-item" *ngIf="perfil.anios_experiencia">
+                    <span class="aqs-num">{{ perfil.anios_experiencia }}+</span>
+                    <span class="aqs-lbl">Años Exp.</span>
+                  </div>
+                  <div class="aqs-item" *ngIf="stats.total_resenas > 0">
+                    <span class="aqs-num">⭐ {{ stats.promedio_rating }}</span>
+                    <span class="aqs-lbl">{{ stats.total_resenas }} {{ stats.total_resenas === 1 ? 'Reseña' : 'Reseñas' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Columna Texto y Especialidades -->
+              <div class="about-coach-text-col">
+                <p class="bio-paragraph">{{ perfil.bio }}</p>
+
+                <!-- Especialidades -->
+                <div class="meta-tags-block" *ngIf="perfil.especialidades?.length > 0">
+                  <span class="block-label">Especialidades Técnicas y Tácticas</span>
+                  <div class="tags-cluster">
+                    <span class="tag-pill accent" *ngFor="let esp of perfil.especialidades">
+                      <i class="fas fa-check"></i> {{ esp }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Niveles -->
+                <div class="meta-tags-block" *ngIf="perfil.niveles?.length > 0">
+                  <span class="block-label">Niveles que imparto</span>
+                  <div class="tags-cluster">
+                    <span class="tag-pill" *ngFor="let niv of perfil.niveles">{{ niv }}</span>
+                  </div>
+                </div>
+
+                <!-- Certificaciones si existen -->
+                <div class="meta-tags-block" *ngIf="perfil.certificaciones">
+                  <span class="block-label">Formación y Certificaciones</span>
+                  <p class="cert-text"><i class="fas fa-graduation-cap"></i> {{ perfil.certificaciones }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Diplomas y Certificaciones Verificadas Subidas (Full Width Gallery) -->
+            <div class="certs-public-block" id="certs-gallery" *ngIf="certificados.length > 0">
+              <div class="cpb-header">
+                <div class="cpb-title-area">
+                  <span class="cpb-badge"><i class="fas fa-shield-check"></i> Acreditación Oficial</span>
+                  <h3 class="cpb-title">Diplomas y Certificaciones ({{ certificados.length }})</h3>
+                  <p class="cpb-desc">Documentos presentados por el entrenador que acreditan su formación técnica y pedagógica. Haz clic para ver en alta resolución.</p>
+                </div>
+              </div>
+
+              <div class="certs-public-grid">
+                <div class="cert-public-card" *ngFor="let cert of certificados" (click)="openCertModal(cert)" [title]="'Clic para ampliar ' + cert.titulo">
+                  <div class="cpc-media">
+                    <img *ngIf="cert.tipo_archivo === 'image'" [src]="formatearCertUrl(cert.archivo_url)" [alt]="cert.titulo" loading="lazy">
+                    <div *ngIf="cert.tipo_archivo === 'pdf'" class="cpc-pdf-view">
+                      <div class="pdf-icon-ring">
+                        <i class="fas fa-file-pdf"></i>
+                      </div>
+                      <span class="pdf-lbl">DOCUMENTO PDF</span>
+                    </div>
+                    <div class="cpc-overlay-hover">
+                      <div class="coh-pill">
+                        <i class="fas" [ngClass]="cert.tipo_archivo === 'pdf' ? 'fa-arrow-up-right-from-square' : 'fa-magnifying-glass-plus'"></i>
+                        <span>{{ cert.tipo_archivo === 'pdf' ? 'Abrir PDF' : 'Ver Diploma' }}</span>
+                      </div>
+                    </div>
+                    <span class="cpc-type-tag">
+                      <i class="fas" [ngClass]="cert.tipo_archivo === 'pdf' ? 'fa-file-pdf' : 'fa-image'"></i>
+                      {{ cert.tipo_archivo === 'pdf' ? 'PDF' : 'IMAGEN' }}
+                    </span>
+                  </div>
+
+                  <div class="cpc-meta">
+                    <h4 class="cpc-name" [title]="cert.titulo">{{ cert.titulo }}</h4>
+                    <span class="cpc-issuer" *ngIf="cert.institucion">
+                      <i class="fas fa-building-columns"></i> {{ cert.institucion }}
+                    </span>
+                    <div class="cpc-footer-row">
+                      <span class="cpc-status"><i class="fas fa-circle-check"></i> Verificado</span>
+                      <span class="cpc-action-hint">Ampliar <i class="fas fa-chevron-right"></i></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 2: Packs & Pricing -->
+          <section id="sec-packs" class="card-section tab-pane-content" *ngIf="activeTab === 'packs' && perfil.mostrar_packs && packs.length > 0">
+            <div class="cs-title">
+              <i class="fas fa-box-archive"></i>
+              <h2>Packs y Precios de Clases</h2>
+            </div>
+            <p class="section-intro">Elige la modalidad de entrenamiento que mejor se adapte a tu nivel y objetivos:</p>
+
+            <!-- Subtabs Modalidades -->
+            <div class="pack-subtabs-nav">
+              <button 
+                type="button" 
+                class="subtab-btn" 
+                [class.active]="packSegment === 'todos'" 
+                (click)="setPackSegment('todos')">
+                <i class="fas fa-layer-group"></i>
+                <span>Todos</span>
+                <span class="subtab-count">{{ packs.length }}</span>
+              </button>
+
+              <button 
+                type="button" 
+                class="subtab-btn" 
+                [class.active]="packSegment === 'individual'" 
+                (click)="setPackSegment('individual')">
+                <i class="fas fa-user"></i>
+                <span>Individual</span>
+                <span class="subtab-count">{{ packsIndividuales.length }}</span>
+              </button>
+
+              <button 
+                type="button" 
+                class="subtab-btn" 
+                [class.active]="packSegment === 'multijugador'" 
+                (click)="setPackSegment('multijugador')">
+                <i class="fas fa-user-group"></i>
+                <span>Multijugador</span>
+                <span class="subtab-count">{{ packsMultijugador.length }}</span>
+              </button>
+
+              <button 
+                type="button" 
+                class="subtab-btn" 
+                [class.active]="packSegment === 'grupal'" 
+                (click)="setPackSegment('grupal')">
+                <i class="fas fa-users-rectangle"></i>
+                <span>Grupal</span>
+                <span class="subtab-count">{{ packsGrupales.length }}</span>
+              </button>
+            </div>
+
+            <!-- Listado de Packs Filtrados -->
+            <div class="packs-cards-list" *ngIf="packsFiltrados.length > 0">
+              <div class="pack-item-card" *ngFor="let p of packsFiltrados" [id]="'pack-' + p.id">
+                <div class="pic-left">
+                  <span class="pic-type" [ngClass]="p.tipo || 'individual'">
+                    <i class="fas fa-user" *ngIf="!p.tipo || p.tipo === 'individual' && (!p.cantidad_personas || p.cantidad_personas <= 1)"></i>
+                    <i class="fas fa-user-group" *ngIf="(p.tipo === 'individual' && p.cantidad_personas > 1) || p.tipo === 'multijugador'"></i>
+                    <i class="fas fa-users-rectangle" *ngIf="p.tipo === 'grupal' || p.tipo === 'pack_grupal'"></i>
+                    {{ p.tipo === 'grupal' ? 'Grupal' : (p.cantidad_personas > 1 ? 'Multijugador (' + p.cantidad_personas + ' pers.)' : 'Individual') }}
+                  </span>
+                  <h3 class="pic-title">{{ p.nombre }}</h3>
+                  <p class="pic-desc" *ngIf="p.descripcion">{{ p.descripcion }}</p>
+                  <div class="pic-badges">
+                    <span class="badge" *ngIf="p.club_nombre"><i class="fas fa-building"></i> {{ p.club_nombre }}</span>
+                    <span class="badge" *ngIf="p.sesiones_totales"><i class="fas fa-calendar-check"></i> {{ p.sesiones_totales }} {{ p.sesiones_totales === 1 ? 'clase' : 'clases' }}</span>
+                    <span class="badge" *ngIf="p.tipo === 'grupal' && p.cupos_disponibles"><i class="fas fa-users"></i> {{ p.cupos_disponibles }} cupos libres</span>
+                  </div>
+                </div>
+
+                <div class="pic-right">
+                  <div class="pic-price">
+                    <span class="currency">$</span>
+                    <span class="val">{{ p.precio | number }}</span>
+                    <span class="unit">CLP</span>
+                  </div>
+                  <button class="btn-buy-pack" (click)="iniciarReservaPack(p)">
+                    <span>Comprar / Reservar</span>
+                    <i class="fas fa-arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state si no hay en esa modalidad -->
+            <div class="empty-packs-segment" *ngIf="packsFiltrados.length === 0">
+              <i class="fas fa-box-open"></i>
+              <p>No hay packs disponibles en la modalidad <strong>{{ packSegment }}</strong> actualmente.</p>
+              <button class="btn-reset-segment" (click)="setPackSegment('todos')">Ver todos los packs ({{ packs.length }})</button>
+            </div>
+          </section>
+
+          <!-- TAB 3: Horarios Disponibles (Calendario Interactivo UX) -->
+          <section id="sec-horarios" class="card-section tab-pane-content" *ngIf="activeTab === 'horarios' && perfil.mostrar_horarios">
+            <div class="cs-header-flex">
+              <div class="cs-title">
+                <i class="fas fa-calendar-days"></i>
+                <div>
+                  <h2>Agenda & Disponibilidad en Vivo</h2>
+                  <p class="section-intro" style="margin: 2px 0 0;">Selecciona una fecha en el calendario para ver los horarios disponibles de {{ coach.nombre }}:</p>
+                </div>
+              </div>
+              <span class="live-agenda-badge">
+                <span class="live-pulse"></span>
+                <span>Agenda Actualizada</span>
+              </span>
+            </div>
+
+            <div *ngIf="horarios.length > 0; else noHorariosTpl">
+              <!-- Calendar Date Timeline Strip -->
+              <div class="calendar-timeline-wrapper">
+                <div class="calendar-timeline-scroll">
+                  <button 
+                    type="button"
+                    *ngFor="let dia of diasDisponibles"
+                    class="cal-day-card"
+                    [class.active]="activeScheduleDate === dia.fecha"
+                    (click)="selectScheduleDate(dia.fecha)">
+                    <span class="cdc-tag" [class.highlight]="dia.isToday || dia.isTomorrow">{{ dia.tag }}</span>
+                    <span class="cdc-num">{{ dia.diaNumero }}</span>
+                    <span class="cdc-month">{{ dia.mes }}</span>
+                    <div class="cdc-badge">
+                      <span class="cdc-dot"></span>
+                      <span>{{ dia.total }} {{ dia.total === 1 ? 'hora' : 'horas' }}</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Day Focus View -->
+              <div class="calendar-day-focus" *ngIf="activeScheduleDate">
+                <div class="focus-date-header">
+                  <div class="fdh-info">
+                    <i class="fas fa-calendar-day"></i>
+                    <div>
+                      <h3>{{ formatDateHeader(activeScheduleDate) }}</h3>
+                      <span class="fdh-sub">{{ horariosDelDia.length }} {{ horariosDelDia.length === 1 ? 'bloque horario disponible' : 'bloques horarios disponibles' }} para reservar</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Periods (Mañana, Tarde, Noche) -->
+                <div class="day-periods-stack">
+                  <!-- Mañana -->
+                  <div class="period-group" *ngIf="getSlotsByCategory('morning').length > 0">
+                    <div class="period-title">
+                      <span class="period-icon">🌅</span>
+                      <span>Bloques de Mañana (08:00 - 12:00)</span>
+                      <span class="period-count">{{ getSlotsByCategory('morning').length }}</span>
+                    </div>
+                    <div class="period-slots-grid">
+                      <div class="slot-tile" *ngFor="let h of getSlotsByCategory('morning')" (click)="iniciarReservaHorario(h)" title="Clic para agendar esta clase">
+                        <div class="st-time">
+                          <i class="far fa-clock"></i>
+                          <span>{{ h.hora }} hrs</span>
+                        </div>
+                        <div class="st-club" *ngIf="h.club_nombre">
+                          <i class="fas fa-location-dot"></i> {{ h.club_nombre }}
+                        </div>
+                        <button class="btn-tile-book" type="button">
+                          <i class="fas fa-calendar-plus"></i> Reservar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tarde -->
+                  <div class="period-group" *ngIf="getSlotsByCategory('afternoon').length > 0">
+                    <div class="period-title">
+                      <span class="period-icon">☀️</span>
+                      <span>Bloques de Tarde (12:00 - 18:00)</span>
+                      <span class="period-count">{{ getSlotsByCategory('afternoon').length }}</span>
+                    </div>
+                    <div class="period-slots-grid">
+                      <div class="slot-tile" *ngFor="let h of getSlotsByCategory('afternoon')" (click)="iniciarReservaHorario(h)" title="Clic para agendar esta clase">
+                        <div class="st-time">
+                          <i class="far fa-clock"></i>
+                          <span>{{ h.hora }} hrs</span>
+                        </div>
+                        <div class="st-club" *ngIf="h.club_nombre">
+                          <i class="fas fa-location-dot"></i> {{ h.club_nombre }}
+                        </div>
+                        <button class="btn-tile-book" type="button">
+                          <i class="fas fa-calendar-plus"></i> Reservar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Noche -->
+                  <div class="period-group" *ngIf="getSlotsByCategory('evening').length > 0">
+                    <div class="period-title">
+                      <span class="period-icon">🌙</span>
+                      <span>Bloques de Noche (18:00 - 23:00)</span>
+                      <span class="period-count">{{ getSlotsByCategory('evening').length }}</span>
+                    </div>
+                    <div class="period-slots-grid">
+                      <div class="slot-tile" *ngFor="let h of getSlotsByCategory('evening')" (click)="iniciarReservaHorario(h)" title="Clic para agendar esta clase">
+                        <div class="st-time">
+                          <i class="far fa-clock"></i>
+                          <span>{{ h.hora }} hrs</span>
+                        </div>
+                        <div class="st-club" *ngIf="h.club_nombre">
+                          <i class="fas fa-location-dot"></i> {{ h.club_nombre }}
+                        </div>
+                        <button class="btn-tile-book" type="button">
+                          <i class="fas fa-calendar-plus"></i> Reservar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Premium Bottom Action Banner ("Mejorar ese botón") -->
+              <div class="calendar-booking-banner">
+                <div class="cbb-glow"></div>
+                <div class="cbb-inner">
+                  <div class="cbb-left">
+                    <div class="cbb-icon-box">
+                      <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="cbb-text">
+                      <h4>¿Buscas un horario recurrente o agendar con pack?</h4>
+                      <p>Elige tu horario favorito arriba o accede directamente a la agenda completa de {{ coach.nombre }} para reservar tu clase.</p>
+                    </div>
+                  </div>
+                  <div class="cbb-actions">
+                    <button class="btn-calendar-primary" (click)="reservarHorario()" type="button">
+                      <i class="fas fa-calendar-check"></i>
+                      <span>Ver Agenda Completa y Reservar Clase</span>
+                    </button>
+                    <button class="btn-calendar-wsp" (click)="openWhatsApp()" *ngIf="perfil.whatsapp" type="button">
+                      <i class="fab fa-whatsapp"></i>
+                      <span>Consultar por WhatsApp</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Empty State if no slots -->
+            <ng-template #noHorariosTpl>
+              <div class="empty-schedule-card">
+                <div class="esc-icon"><i class="fas fa-calendar-xmark"></i></div>
+                <h3>Sin bloques públicos disponibles por el momento</h3>
+                <p>El profesor {{ coach.nombre }} está actualizando su agenda o gestiona sus cupos de forma directa.</p>
+                <div class="esc-actions">
+                  <button class="btn-calendar-primary" (click)="reservarHorario()" type="button">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Ir a Reservas de Jugador</span>
+                  </button>
+                  <button class="btn-calendar-wsp" (click)="openWhatsApp()" *ngIf="perfil.whatsapp" type="button">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Consultar Horarios por WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+            </ng-template>
+          </section>
+
+          <!-- TAB 4: Reseñas Verificadas -->
+          <section id="sec-resenas" class="card-section tab-pane-content" *ngIf="activeTab === 'resenas' && perfil.mostrar_resenas">
+            <div class="cs-header-flex">
+              <div class="cs-title">
+                <i class="fas fa-star"></i>
+                <h2>Reseñas de Alumnos Verificados</h2>
+              </div>
+              <button class="btn-leave-review" (click)="openReviewModal()">
+                <i class="fas fa-pen"></i> Dejar mi Reseña
+              </button>
+            </div>
+
+            <!-- Score banner -->
+            <div class="reviews-summary-card">
+              <div class="rsc-left">
+                <span class="rsc-score">{{ stats.promedio_rating }}</span>
+                <div class="rsc-stars">
+                  <i class="fas fa-star" *ngFor="let s of [1,2,3,4,5]"></i>
+                  <span>{{ stats.total_resenas }} {{ stats.total_resenas === 1 ? 'reseña' : 'reseñas' }}</span>
+                </div>
+              </div>
+              <div class="rsc-right">
+                <i class="fas fa-shield-halved"></i>
+                <span>Garantía PadelBlox: Reseñas emitidas exclusivamente por alumnos con clases registradas.</span>
+              </div>
+            </div>
+
+            <!-- Reviews List -->
+            <div class="reviews-list" *ngIf="resenas.length > 0">
+              <div class="review-box" *ngFor="let r of resenas">
+                <div class="rb-header">
+                  <div class="rb-user">
+                    <div class="rb-avatar">
+                      <img [src]="r.alumno_foto || 'assets/icons/icon-192x192.png'" alt="Alumno">
+                    </div>
+                    <div>
+                      <h4 class="rb-name">{{ r.alumno_nombre }}</h4>
+                      <span class="rb-badge"><i class="fas fa-circle-check"></i> Alumno Verificado</span>
+                    </div>
+                  </div>
+                  <div class="rb-rating">
+                    <span class="rating-num">{{ r.rating }} / 5</span>
+                    <i class="fas fa-star" style="color: #f59e0b;"></i>
+                  </div>
+                </div>
+
+                <p class="rb-comment">{{ r.comentario }}</p>
+
+                <!-- Coach reply -->
+                <div class="rb-reply" *ngIf="r.respuesta_entrenador">
+                  <div class="reply-tag"><i class="fas fa-reply"></i> Respuesta de {{ coach.nombre }}:</div>
+                  <p>{{ r.respuesta_entrenador }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="empty-reviews-box" *ngIf="resenas.length === 0">
+              <i class="fas fa-comment-dots"></i>
+              <h4>Aún no hay opiniones registradas</h4>
+              <p>¿Has tomado clases con {{ coach.nombre }}? ¡Sé el primero en compartir tu experiencia!</p>
+              <button class="btn-first-review" (click)="openReviewModal()">Calificar Ahora</button>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- PadelBlox Bottom Promo Widget (Full Width) -->
+        <div class="padelblox-footer-promo">
+          <div class="pfp-content">
+            <div class="psp-tag">SOFTWARE DE PÁDEL Nº1</div>
+            <h4>¿Quieres tu propio perfil como entrenador?</h4>
+            <p>Crea tu cuenta gratis, recibe reservas automáticas y gestiona a tus alumnos con PadelBlox.</p>
+          </div>
+          <a routerLink="/register" class="btn-create-profile">Comenzar Gratis &rarr;</a>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Review Modal -->
+  <app-resena-modal 
+    *ngIf="showReviewModal"
+    [entrenadorId]="coach.id"
+    [entrenadorNombre]="coach.nombre"
+    (close)="showReviewModal = false"
+    (saved)="onReviewSaved()">
+  </app-resena-modal>
+
+  <!-- Mobile App Reservation Bottom Sheet / Modal -->
+  <div class="app-booking-overlay" *ngIf="showAppBookingModal" (click)="cerrarAppBookingModal()">
+    <div class="app-booking-sheet" (click)="$event.stopPropagation()">
+      <button class="sheet-close-btn" (click)="cerrarAppBookingModal()" aria-label="Cerrar modal">&times;</button>
+      
+      <div class="abs-header">
+        <div class="abs-app-icon">
+          <img src="assets/images/logo-transparent.png" alt="PadelBlox Logo">
+        </div>
+        <div class="abs-tag"><i class="fas fa-bolt"></i> APP OFICIAL PADELBLOX</div>
+        <h3 class="abs-title">Reserva en la App PadelBlox</h3>
+        <p class="abs-subtitle">
+          Para una experiencia más rápida, recordatorios en tu celular y seguimiento de tus clases:
+        </p>
+      </div>
+
+      <!-- Item to Book -->
+      <div class="abs-target-pill" *ngIf="selectedBookingTarget">
+        <div class="atp-icon"><i class="fas fa-ticket-simple"></i></div>
+        <div class="atp-info">
+          <span class="atp-title">{{ selectedBookingTarget.title }}</span>
+          <span class="atp-sub" *ngIf="selectedBookingTarget.subtitle">{{ selectedBookingTarget.subtitle }}</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="abs-actions">
+        <!-- 1. Abrir App -->
+        <button class="btn-sheet-primary" (click)="ejecutarAbrirApp()">
+          <i class="fas fa-mobile-screen-button"></i>
+          <span>Abrir en la App PadelBlox</span>
+        </button>
+
+        <!-- Status indicator if attempting to open -->
+        <div class="abs-opening-status" *ngIf="appOpeningStatus !== 'idle'">
+          <div class="pulse-indicator"></div>
+          <span>Abriendo la App... Si no la tienes instalada, te redirigiremos a la tienda.</span>
+        </div>
+
+        <!-- 2. Descargar App -->
+        <a [href]="appDeepLink.getStoreUrl()" target="_blank" rel="noopener noreferrer" class="btn-sheet-store">
+          <i class="fab fa-apple" *ngIf="appDeepLink.isIOS()"></i>
+          <i class="fab fa-google-play" *ngIf="!appDeepLink.isIOS()"></i>
+          <span>Descargar en {{ appDeepLink.getStoreName() }}</span>
+        </a>
+
+        <!-- 3. Continuar en Web -->
+        <button class="btn-sheet-web" (click)="continuarReservaWeb()">
+          <i class="fas fa-globe"></i>
+          <span>Continuar en el navegador web</span>
+        </button>
+      </div>
+
+      <div class="abs-footer-note">
+        <i class="fas fa-shield-halved"></i> Reserva segura y garantizada por PadelBlox
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Visualizador de Certificados en Alta Resolución (Lightbox) -->
+  <div class="cert-lightbox-modal" *ngIf="selectedCertModal" (click)="closeCertModal()">
+    <div class="clm-dialog" (click)="$event.stopPropagation()">
+      <div class="clm-header">
+        <div class="clm-title-box">
+          <div class="clm-tag"><i class="fas fa-shield-check"></i> Documento Acreditado PadelBlox</div>
+          <h3 class="clm-title">{{ selectedCertModal.titulo }}</h3>
+          <p class="clm-inst" *ngIf="selectedCertModal.institucion">
+            <i class="fas fa-building-columns"></i> {{ selectedCertModal.institucion }}
+          </p>
+        </div>
+        <button type="button" class="btn-close-modal" (click)="closeCertModal()" title="Cerrar ventana">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="clm-body">
+        <!-- Visualizador de Imagen -->
+        <div *ngIf="selectedCertModal.tipo_archivo === 'image'" class="clm-image-container">
+          <img [src]="formatearCertUrl(selectedCertModal.archivo_url)" [alt]="selectedCertModal.titulo" class="clm-img">
+        </div>
+
+        <!-- Visualizador de PDF -->
+        <div *ngIf="selectedCertModal.tipo_archivo === 'pdf'" class="clm-pdf-container">
+          <iframe [src]="getSafePdfUrl(selectedCertModal.archivo_url)" title="Certificado PDF" class="clm-pdf-frame"></iframe>
+          <div class="clm-pdf-fallback">
+            <i class="fas fa-file-pdf"></i>
+            <div>
+              <strong>Visualizador de documento PDF</strong>
+              <p>Si tu navegador bloquea la vista previa embebida, puedes abrirlo directamente:</p>
+            </div>
+            <a [href]="formatearCertUrl(selectedCertModal.archivo_url)" target="_blank" class="btn-open-pdf-direct">
+              <i class="fas fa-arrow-up-right-from-square"></i> Abrir PDF en pestaña nueva
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="clm-footer">
+        <a [href]="formatearCertUrl(selectedCertModal.archivo_url)" target="_blank" class="btn-download-cert">
+          <i class="fas fa-arrow-up-right-from-square"></i>
+          <span>Abrir Original en Alta Resolución</span>
+        </a>
+        <button type="button" class="btn-close-cert" (click)="closeCertModal()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+

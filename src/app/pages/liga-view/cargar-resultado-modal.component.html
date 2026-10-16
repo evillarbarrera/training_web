@@ -19,11 +19,24 @@
 
     <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
 
-    <div class="wo-toggle">
-      <label class="checkbox-label">
-        <input type="checkbox" [(ngModel)]="esWO" />
-        <span>Declarar Walkover (WO / No Show)</span>
-      </label>
+    <!-- Mode Selector: Marcador por Sets vs Walkover -->
+    <div class="mode-tabs-selector" style="display: flex; gap: 8px; margin-bottom: 20px; background: #f1f5f9; padding: 4px; border-radius: 12px;">
+      <button 
+        type="button" 
+        style="flex: 1; padding: 8px 12px; border-radius: 9px; border: none; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s ease;"
+        [style.background]="!esWO ? '#0f172a' : 'transparent'"
+        [style.color]="!esWO ? '#a8ff00' : '#64748b'"
+        (click)="esWO = false">
+        🎾 Marcador Normal (Sets / Juegos)
+      </button>
+      <button 
+        type="button" 
+        style="flex: 1; padding: 8px 12px; border-radius: 9px; border: none; font-weight: 800; font-size: 0.82rem; cursor: pointer; transition: all 0.2s ease;"
+        [style.background]="esWO ? '#fee2e2' : 'transparent'"
+        [style.color]="esWO ? '#b91c1c' : '#64748b'"
+        (click)="esWO = true">
+        ⚠️ Walkover (WO / No Show)
+      </button>
     </div>
 
     <!-- Si es WO -->
@@ -34,32 +47,35 @@
         <option [value]="partido.pareja1_id">{{ partido.pareja1_nombre }}</option>
         <option [value]="partido.pareja2_id">{{ partido.pareja2_nombre }}</option>
       </select>
+      <small style="display: block; margin-top: 6px; color: #b91c1c; font-weight: 600; font-size: 0.78rem;">
+        La pareja perdedora recibirá 0 puntos y 0 juegos. La pareja presente ganará automáticamente el partido por Walkover.
+      </small>
     </div>
 
     <!-- Si es partido normal -->
     <div *ngIf="!esWO" class="sets-input-grid">
       <div class="set-row header">
-        <span>Set</span>
-        <span>{{ partido.pareja1_nombre }}</span>
-        <span>{{ partido.pareja2_nombre }}</span>
+        <span>SET</span>
+        <span style="font-weight: 800; color: #0f172a;">{{ partido.pareja1_nombre }}</span>
+        <span style="font-weight: 800; color: #0f172a;">{{ partido.pareja2_nombre }}</span>
       </div>
 
       <div class="set-row">
         <span class="set-name">SET 1</span>
-        <input type="number" [(ngModel)]="set1_p1" min="0" max="7" class="score-input" />
-        <input type="number" [(ngModel)]="set1_p2" min="0" max="7" class="score-input" />
+        <input type="number" [(ngModel)]="set1_p1" min="0" max="7" class="score-input" placeholder="0" />
+        <input type="number" [(ngModel)]="set1_p2" min="0" max="7" class="score-input" placeholder="0" />
       </div>
 
       <div class="set-row">
         <span class="set-name">SET 2</span>
-        <input type="number" [(ngModel)]="set2_p1" min="0" max="7" class="score-input" />
-        <input type="number" [(ngModel)]="set2_p2" min="0" max="7" class="score-input" />
+        <input type="number" [(ngModel)]="set2_p1" min="0" max="7" class="score-input" placeholder="0" />
+        <input type="number" [(ngModel)]="set2_p2" min="0" max="7" class="score-input" placeholder="0" />
       </div>
 
       <div class="set-row">
         <span class="set-name">SET 3 / Super TB</span>
-        <input type="number" [(ngModel)]="set3_p1" min="0" max="15" class="score-input" />
-        <input type="number" [(ngModel)]="set3_p2" min="0" max="15" class="score-input" />
+        <input type="number" [(ngModel)]="set3_p1" min="0" max="15" class="score-input" placeholder="0" />
+        <input type="number" [(ngModel)]="set3_p2" min="0" max="15" class="score-input" placeholder="0" />
       </div>
     </div>
 

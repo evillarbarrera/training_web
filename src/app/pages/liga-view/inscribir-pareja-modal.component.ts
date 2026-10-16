@@ -85,6 +85,7 @@ export class InscribirParejaModalComponent implements OnInit {
     this.j1Id = null;
     this.filterJ1();
     this.showDropJ1 = true;
+    this.actualizarNombreParejaSiAplica();
   }
 
   filterJ1(): void {
@@ -103,12 +104,14 @@ export class InscribirParejaModalComponent implements OnInit {
     this.j1Id = user.id;
     this.j1Nombre = `${user.nombre || ''} ${user.apellido || ''}`.trim() || user.usuario || user.email;
     this.showDropJ1 = false;
+    this.actualizarNombreParejaSiAplica();
   }
 
   onInputJ2(): void {
     this.j2Id = null;
     this.filterJ2();
     this.showDropJ2 = true;
+    this.actualizarNombreParejaSiAplica();
   }
 
   filterJ2(): void {
@@ -127,6 +130,15 @@ export class InscribirParejaModalComponent implements OnInit {
     this.j2Id = user.id;
     this.j2Nombre = `${user.nombre || ''} ${user.apellido || ''}`.trim() || user.usuario || user.email;
     this.showDropJ2 = false;
+    this.actualizarNombreParejaSiAplica();
+  }
+
+  actualizarNombreParejaSiAplica(): void {
+    if (!this.nombrePareja || this.nombrePareja.includes(' / ') || this.nombrePareja === 'Pareja') {
+      const n1 = this.j1Nombre.trim() || 'J1';
+      const n2 = this.j2Nombre.trim() || 'J2';
+      this.nombrePareja = `${n1} / ${n2}`;
+    }
   }
 
   @HostListener('document:click', ['$event'])
@@ -140,6 +152,10 @@ export class InscribirParejaModalComponent implements OnInit {
   guardar(): void {
     const nom1 = this.j1Nombre.trim();
     const nom2 = this.j2Nombre.trim();
+
+    if (!this.nombrePareja || this.nombrePareja.trim() === '' || this.nombrePareja.includes(' / ') || this.nombrePareja === 'Pareja') {
+      this.nombrePareja = `${nom1 || 'J1'} / ${nom2 || 'J2'}`;
+    }
 
     if (!this.j1Id && !nom1) {
       this.errorMsj = 'Debes ingresar el nombre o seleccionar al Jugador 1';

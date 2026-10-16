@@ -42,7 +42,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Entrenador</th>
+                <th>Entrenador / Cancha</th>
                 <th>Fecha</th>
                 <th>Horario</th>
                 <th>Modalidad</th>
@@ -55,9 +55,13 @@
                 <td>
                   <div class="user-cell">
                     <div class="avatar-wrapper">
-                      <img class="avatar-small"
+                      <img *ngIf="reserva.tipo !== 'cancha'" class="avatar-small"
                         [src]="reserva.entrenador_foto || 'assets/images/placeholder_avatar.png'"
                         style="object-fit: cover;">
+                      <div *ngIf="reserva.tipo === 'cancha'" class="avatar-small"
+                        style="display:flex;align-items:center;justify-content:center;background:#e0f2fe;font-size:18px;">
+                        🎾
+                      </div>
                       <div class="online-indicator"></div>
                     </div>
                     <div class="user-info">
@@ -80,16 +84,19 @@
                 <td>
                   <div class="modalidad-cell">
                     <span class="badge-modalidad" [class.grupal]="reserva.tipo === 'grupal'"
-                      [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal'"
-                      [class.individual]="reserva.tipo !== 'grupal' && reserva.cantidad_personas <= 1">
+                      [class.cancha]="reserva.tipo === 'cancha'"
+                      [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'"
+                      [class.individual]="reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha' && reserva.cantidad_personas <= 1">
 
-                      <i class="icon">{{ (reserva.tipo === 'grupal' || reserva.cantidad_personas > 1) ? '👥' : '👤'
-                        }}</i>
+                      <i class="icon">{{ reserva.tipo === 'cancha' ? '🎾' : ((reserva.tipo === 'grupal' || reserva.cantidad_personas > 1) ? '👥' : '👤') }}</i>
 
                       <ng-container *ngIf="reserva.tipo === 'grupal'">
                         GRUPAL ({{ reserva.cupos_ocupados }}/{{ reserva.capacidad_maxima }})
                       </ng-container>
-                      <ng-container *ngIf="reserva.tipo !== 'grupal'">
+                      <ng-container *ngIf="reserva.tipo === 'cancha'">
+                        CANCHA
+                      </ng-container>
+                      <ng-container *ngIf="reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'">
                         {{ reserva.cantidad_personas > 1 ? 'MULTIJUGADOR' : 'INDIVIDUAL' }}
                       </ng-container>
                     </span>
@@ -122,7 +129,7 @@
                   <div class="actions-column">
                     <div class="actions-buttons">
                       <button class="btn-action cancel" (click)="cancelarReserva(reserva)"
-                        [disabled]="reserva.estado !== 'reservado' && reserva.estado !== 'activo' && reserva.estado !== 'pendiente'"
+                        [disabled]="reserva.estado?.toLowerCase() === 'cancelada' || reserva.estado?.toLowerCase() === 'cancelado'"
                         title="Cancelar Reserva">
                         CANCELAR RESERVA
                       </button>
@@ -157,10 +164,10 @@
               <div class="card-header-mobile">
                 <span class="date">{{ reserva.fecha | date: 'dd MMM' }}</span>
                 <span class="badge-modalidad-mobile" [class.grupal]="reserva.tipo === 'grupal'"
-                  [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal'">
-                  {{ (reserva.tipo === 'grupal') ? ('👥 Grupal (' + reserva.cupos_ocupados + '/' +
-                  reserva.capacidad_maxima + ')') : (reserva.cantidad_personas > 1 ? '👥 MULTIJUGADOR' : '👤
-                  Individual') }}
+                  [class.cancha]="reserva.tipo === 'cancha'"
+                  [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'">
+                  {{ (reserva.tipo === 'cancha') ? '🎾 Pista' : ((reserva.tipo === 'grupal') ? ('👥 Grupal (' + reserva.cupos_ocupados + '/' +
+                  reserva.capacidad_maxima + ')') : (reserva.cantidad_personas > 1 ? '👥 MULTIJUGADOR' : '👤 Individual')) }}
                 </span>
               </div>
               <div class="card-body-mobile">
@@ -240,7 +247,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Entrenador</th>
+                <th>Entrenador / Cancha</th>
                 <th>Fecha</th>
                 <th>Horario</th>
                 <th>Estado</th>

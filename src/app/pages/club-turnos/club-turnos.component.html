@@ -1,0 +1,857 @@
+<div class="admin-layout">
+    <app-sidebar [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto" [role]="userRole" activePage="club-turnos"></app-sidebar>
+
+    <main class="main-content">
+        <!-- 🏢 CLUB TABS NAV (CORE APP STYLE) -->
+        <div class="club-tabs-nav" *ngIf="clubes.length > 1">
+            <div class="tabs-scroll-container">
+                <button *ngFor="let c of clubes" 
+                        class="club-tab-btn" 
+                        [class.active]="selectedClub?.id === c.id"
+                        (click)="selectedClub = c; onClubChange()">
+                    <span class="tab-icon">🏢</span>
+                    <span>{{ c.nombre }}</span>
+                    <span class="tab-badge" *ngIf="selectedClub?.id === c.id">ACTIVO</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- TOP HEADER -->
+        <header class="page-header">
+            <div class="header-titles">
+                <div class="title-with-badge">
+                    <h1>👥 Turnos de Atención</h1>
+                    <span class="badge-role">Staff & Operación</span>
+                </div>
+                <p class="subtitle">Organiza y visualiza a quién le corresponde atender y operar el club cada día.</p>
+            </div>
+
+            <div class="header-actions">
+                <!-- Botón Alternar Panel Lateral de Resumen -->
+                <button class="btn-toggle-panels" (click)="toggleTopPanels()" [title]="isTopPanelsCollapsed ? 'Mostrar panel lateral de resumen y equipo' : 'Ocultar panel lateral y maximizar calendario'">
+                    <span class="btn-icon">{{ isTopPanelsCollapsed ? '📊' : '⤢' }}</span>
+                    <span>{{ isTopPanelsCollapsed ? 'Mostrar Resumen' : 'Ocultar Resumen' }}</span>
+                </button>
+
+                <!-- Botón Asignar Turno -->
+                <button class="btn-primary-add" (click)="openCreateModal()">
+                    <span class="btn-icon">➕</span>
+                    <span>Asignar Turno</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENEDOR WORKSPACE: LADO IZQUIERDO (RESUMEN Y PAGOS) + LADO DERECHO (CALENDARIO COMPLETO) -->
+        <div class="turnos-workspace-grid" [class.sidebar-collapsed]="isTopPanelsCollapsed">
+            
+            <!-- ============================================== -->
+            <!-- ⬅️ LADO IZQUIERDO: RESUMEN, PAGOS & STAFF       -->
+            <!-- ============================================== -->
+            <aside class="turnos-left-sidebar" *ngIf="!isTopPanelsCollapsed">
+                
+                <!-- 1. RESUMEN DE TURNOS Y PAGOS DEL MES -->
+                <section class="staff-summary-card">
+                    <div class="summary-card-header">
+                        <div class="summary-header-badge">
+                            <span class="summary-icon">📊</span>
+                            <h3 class="summary-title">Resumen de Turnos y Pagos en {{ monthNames[selectedMonth] }}</h3>
+                        </div>
+                    </div>
+
+                    <!-- METRICAS GLOBALES DE PAGO (3 TARJETAS COMPACTAS) -->
+                    <div class="payment-metrics-grid">
+                        <div class="metric-card total">
+                            <span class="metric-val">{{ paymentStats.totalTurnos }}</span>
+                            <span class="metric-label">Total Turnos</span>
+                        </div>
+                        <div class="metric-card paid">
+                            <span class="metric-val">✅ {{ paymentStats.pagadosCount }}</span>
+                            <span class="metric-label">Pagados</span>
+                            <span class="metric-amount" *ngIf="paymentStats.totalMontoPagado > 0">${{ paymentStats.totalMontoPagado | number }}</span>
+                        </div>
+                        <div class="metric-card pending">
+                            <span class="metric-val">⏳ {{ paymentStats.pendientesCount }}</span>
+                            <span class="metric-label">Pendientes</span>
+                            <span class="metric-amount" *ngIf="paymentStats.totalMontoPendiente > 0">${{ paymentStats.totalMontoPendiente | number }}</span>
+                        </div>
+                    </div>
+
+                    <!-- DESGLOSE POR INTEGRANTE DEL EQUIPO -->
+                    <div class="staff-breakdown-section">
+                        <h4 class="breakdown-subtitle">Equipo & Estado de Pagos</h4>
+                        <div class="staff-stats-vertical-list" *ngIf="staffStats.length > 0; else noStaffStats">
+                            <div class="stat-sidebar-item" *ngFor="let s of staffStats" [style.borderLeftColor]="s.color">
+                                <div class="stat-avatar-wrap" [style.background]="s.color">
+                                    <img *ngIf="s.foto" [src]="s.foto" alt="Foto">
+                                    <span *ngIf="!s.foto">{{ getInitials(s.name) }}</span>
+                                </div>
+                                <div class="stat-info-col">
+                                    <div class="stat-name-row">
+                                        <strong class="stat-staff-name">{{ s.name }}</strong>
+                                        <span class="stat-total-badge">{{ s.count }} {{ s.count === 1 ? 'turno' : 'turnos' }}</span>
+                                    </div>
+                                    <div class="stat-pay-chips">
+                                        <span class="chip-paid">🟢 {{ s.pagados }} pagados</span>
+                                        <span class="chip-pending">⏳ {{ s.pendientes }} pend.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ng-template #noStaffStats>
+                            <div class="empty-stats-msg">
+                                <span>📋 No hay turnos asignados en este mes.</span>
+                            </div>
+                        </ng-template>
+                    </div>
+                </section>
+
+                <!-- 2. BANDEJA DE PERSONAL ARRASTRABLE (DRAG & DROP) -->
+                <section class="staff-drag-sidebar-card" *ngIf="staffList.length > 0">
+                    <div class="dock-header">
+                        <div class="dock-title-wrap">
+                            <span class="dock-icon">🖐️</span>
+                            <div>
+                                <span class="dock-title">Arrastra al Calendario</span>
+                                <span class="dock-subtitle">Toma un integrante y suéltalo en el día</span>
+                            </div>
+                        </div>
+                        <span class="dock-badge">{{ staffList.length }}</span>
+                    </div>
+
+                    <div class="staff-drag-vertical-list">
+                        <div class="staff-drag-item-side" 
+                             *ngFor="let s of staffList"
+                             draggable="true"
+                             (dragstart)="onStaffDragStart($event, s)"
+                             (dragend)="onStaffDragEnd()"
+                             (click)="openQuickScheduleModal(s, formattedTodayDate)"
+                             [title]="'Arrastra a ' + s.nombre + ' hacia el calendario o clic para asignar hoy'">
+                            <div class="drag-handle" title="Arrastrar">⠿</div>
+                            <div class="drag-avatar" [style.background]="getColorForStaff(s.nombre || s.id)">
+                                <span>{{ getInitials(s.nombre) }}</span>
+                            </div>
+                            <div class="drag-info">
+                                <strong class="drag-name">{{ s.nombre }}</strong>
+                                <span class="drag-role">{{ s.rol | titlecase }}</span>
+                            </div>
+                            <span class="drag-btn-add" title="Asignar">+</span >
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. BANNER: ¿QUIÉN ATIENDE HOY? (COMPACTO) -->
+                <section class="today-banner-sidebar" [class.has-staff]="todayTurnos.length > 0" [class.empty-staff]="todayTurnos.length === 0">
+                    <div class="today-banner-header">
+                        <div class="today-tag">
+                            <span class="pulse-dot" [class.pulse-amber]="todayTurnos.length === 0"></span>
+                            <span>EN TURNO HOY</span>
+                        </div>
+                        <span class="today-date">{{ formattedTodayDate }}</span>
+                    </div>
+
+                    <!-- CUANDO HAY PERSONAL ASIGNADO HOY -->
+                    <div class="today-side-cards" *ngIf="todayTurnos.length > 0">
+                        <div class="today-side-item" *ngFor="let t of todayTurnos" [style.borderLeftColor]="t.color || '#10b981'">
+                            <div class="today-side-top">
+                                <div class="today-avatar-mini" [style.background]="t.color || '#10b981'">
+                                    <img *ngIf="t.foto" [src]="t.foto" alt="Foto">
+                                    <span *ngIf="!t.foto">{{ getInitials(t.nombre_responsable) }}</span>
+                                </div>
+                                <div class="today-side-text">
+                                    <strong class="today-name">{{ t.nombre_responsable }}</strong>
+                                    <span class="today-hours">🕒 {{ t.hora_inicio }} a {{ t.hora_fin }} hrs</span>
+                                </div>
+                            </div>
+                            <div class="today-side-actions">
+                                <button class="btn-today-pay mini" 
+                                        [class.paid]="t.pagado == 1" 
+                                        [class.pending]="t.pagado != 1"
+                                        (click)="toggleTurnoPago(t, $event)"
+                                        [title]="t.pagado == 1 ? 'Turno Pagado' : 'Pendiente de pago'">
+                                    <span>{{ t.pagado == 1 ? '💵 Pagado' : '⏳ Pendiente' }}</span>
+                                </button>
+                                <a *ngIf="t.telefono" [href]="getWhatsAppUrl(t.telefono, t.nombre_responsable, t.fecha, t.hora_inicio)" 
+                                   target="_blank" rel="noopener noreferrer" class="btn-wa-direct mini" title="WhatsApp">
+                                    <span>💬</span>
+                                </a>
+                                <button class="btn-icon-action mini" (click)="openEditModal(t, $event)" title="Editar">
+                                    ✏️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CUANDO NO HAY PERSONAL HOY -->
+                    <div class="no-staff-side" *ngIf="todayTurnos.length === 0">
+                        <p>⚠️ No hay personal asignado hoy.</p>
+                        <button class="btn-assign-today-side" (click)="openCreateModal()">
+                            + Asignar Turno Hoy
+                        </button>
+                    </div>
+                </section>
+
+            </aside>
+
+            <!-- ============================================== -->
+            <!-- ➡️ LADO DERECHO: CALENDARIO COMPLETO            -->
+            <!-- ============================================== -->
+            <section class="turnos-right-main">
+                
+                <!-- CONTROLES DEL CALENDARIO -->
+                <section class="calendar-controls-bar">
+                    <!-- Navegación Mes -->
+                    <div class="month-navigator">
+                        <button class="btn-nav" (click)="prevMonth()" title="Mes Anterior">◀</button>
+                        <div class="month-title-wrap">
+                            <span class="month-icon">📅</span>
+                            <span class="month-label">{{ monthNames[selectedMonth] }} {{ selectedYear }}</span>
+                        </div>
+                        <button class="btn-nav" (click)="nextMonth()" title="Mes Siguiente">▶</button>
+                        <button class="btn-today" (click)="goToToday()">Hoy</button>
+                    </div>
+
+                    <!-- Filtros y Vistas -->
+                    <div class="view-and-filters">
+                        <!-- Filtro por Miembro -->
+                        <div class="filter-staff-wrap">
+                            <label for="filterStaff">Personal:</label>
+                            <select id="filterStaff" [(ngModel)]="selectedStaffFilter" (ngModelChange)="buildCalendar()" class="filter-select">
+                                <option value="all">👥 Todo el Personal</option>
+                                <option *ngFor="let s of staffList" [value]="'user_' + s.id">{{ s.nombre }} ({{ s.rol | titlecase }})</option>
+                            </select>
+                        </div>
+
+                        <!-- Filtro por Estado de Pago -->
+                        <div class="filter-staff-wrap">
+                            <label for="filterPago">Pago:</label>
+                            <select id="filterPago" [(ngModel)]="selectedPaymentFilter" (ngModelChange)="buildCalendar()" class="filter-select">
+                                <option value="all">💳 Todos los Pagos</option>
+                                <option value="pagado">🟢 Solo Pagados</option>
+                                <option value="pendiente">⏳ Solo Pendientes</option>
+                            </select>
+                        </div>
+
+                        <!-- Selector de Vista -->
+                        <div class="view-switch-tabs">
+                            <button class="view-tab" [class.active]="activeView === 'mes'" (click)="activeView = 'mes'">
+                                <span>📅</span> Mes
+                            </button>
+                            <button class="view-tab" [class.active]="activeView === 'lista'" (click)="activeView = 'lista'">
+                                <span>📋</span> Lista
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SPINNER CARGA -->
+                <div class="loading-state" *ngIf="isLoadingTurnos">
+                    <div class="spinner"></div>
+                    <span>Actualizando calendario de turnos...</span>
+                </div>
+
+                <!-- VISTA 1: CALENDARIO MENSUAL COMPLETO -->
+                <section class="calendar-grid-container full-mode" *ngIf="!isLoadingTurnos && activeView === 'mes'">
+                    <!-- Encabezado Días Semana -->
+                    <div class="calendar-week-header">
+                        <div class="week-col-name" *ngFor="let dayName of weekDays">
+                            {{ dayName }}
+                        </div>
+                    </div>
+
+                    <!-- Celdas de Días -->
+                    <div class="calendar-days-grid">
+                        <div class="calendar-day-cell" 
+                             *ngFor="let day of calendarDays"
+                             [class.other-month]="!day.isCurrentMonth"
+                             [class.is-today]="day.isToday"
+                             [class.is-past]="day.isPast"
+                             [class.drop-target-active]="dragOverDate === day.date"
+                             (dragover)="onDayDragOver($event, day)"
+                             (dragleave)="onDayDragLeave($event, day)"
+                             (drop)="onDayDrop($event, day)"
+                             (click)="openCreateModal(day.date)">
+                            
+                            <!-- Overlay visual al arrastrar sobre el día -->
+                            <div class="drop-zone-overlay" *ngIf="dragOverDate === day.date">
+                                <span class="drop-zone-pill">➕ Soltar aquí</span>
+                            </div>
+
+                            <div class="day-cell-top">
+                                <span class="day-number">{{ day.dayNumber }}</span>
+                                <span class="today-pill" *ngIf="day.isToday">HOY</span>
+                                <button class="btn-cell-add" (click)="$event.stopPropagation(); openCreateModal(day.date)" title="Asignar turno en este día">
+                                    +
+                                </button>
+                            </div>
+
+                            <!-- Lista de Turnos en el día -->
+                            <div class="day-turnos-list">
+                                <div class="turno-chip" 
+                                     *ngFor="let t of day.turnos"
+                                     [style.borderLeftColor]="t.color || '#10b981'"
+                                     [style.backgroundColor]="(t.color || '#10b981') + '12'"
+                                     (click)="$event.stopPropagation(); openEditModal(t, $event)">
+                                    
+                                    <div class="turno-chip-header">
+                                        <span class="turno-staff-name" [title]="t.nombre_responsable">{{ t.nombre_responsable }}</span>
+                                        <div class="turno-chip-actions">
+                                            <button class="btn-chip-action" (click)="duplicateTurno(t, $event)" title="Duplicar a la siguiente semana">
+                                                🔁
+                                            </button>
+                                            <button class="btn-chip-action delete" (click)="deleteTurno(t, $event)" title="Eliminar">
+                                                ✖
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="turno-chip-time-role">
+                                        <span class="turno-hours">🕒 {{ t.hora_inicio }} - {{ t.hora_fin }}</span>
+                                        <span class="turno-role-tag" [style.color]="t.color || '#10b981'" [title]="t.rol_turno">
+                                            {{ t.rol_turno }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Badge interactivo de Pago del Día -->
+                                    <div class="turno-payment-row">
+                                        <button type="button" 
+                                                class="turno-pay-badge" 
+                                                [class.paid]="t.pagado == 1" 
+                                                [class.pending]="t.pagado != 1"
+                                                (click)="toggleTurnoPago(t, $event)"
+                                                [title]="t.pagado == 1 ? 'Turno PAGADO (' + (t.monto_pago ? '$' + (t.monto_pago | number) : 'Sin monto') + ') - Clic para cambiar' : 'Pago PENDIENTE - Clic para registrar pago'">
+                                            <span class="pay-icon">{{ t.pagado == 1 ? '✅' : '⏳' }}</span>
+                                            <span class="pay-text">{{ t.pagado == 1 ? 'Pagado' : 'Pendiente' }}</span>
+                                            <span *ngIf="t.pagado == 1 && t.monto_pago" class="pay-amount">${{ t.monto_pago | number }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="no-turnos-placeholder" *ngIf="day.turnos.length === 0 && day.isCurrentMonth">
+                                    <span class="placeholder-text">+ Asignar</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VISTA 2: LISTA CRONOLÓGICA -->
+                <section class="turnos-list-container" *ngIf="!isLoadingTurnos && activeView === 'lista'">
+                    <div class="table-responsive" *ngIf="filteredTurnosList.length > 0; else emptyList">
+                        <table class="turnos-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Personal a Cargo</th>
+                                    <th>Horario</th>
+                                    <th>Tipo de Turno</th>
+                                    <th>Rol / Función</th>
+                                    <th>Estado de Pago</th>
+                                    <th>Notas</th>
+                                    <th>Contacto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let t of filteredTurnosList">
+                                    <td class="td-date">
+                                        <strong>{{ t.fecha }}</strong>
+                                        <span class="td-dayname">{{ getDayName(t.fecha) }}</span>
+                                    </td>
+                                    <td class="td-staff">
+                                        <div class="staff-cell-info">
+                                            <div class="staff-avatar-mini" [style.background]="t.color || '#10b981'">
+                                                <img *ngIf="t.foto" [src]="t.foto" alt="Foto">
+                                                <span *ngIf="!t.foto">{{ getInitials(t.nombre_responsable) }}</span>
+                                            </div>
+                                            <span class="staff-name-text">{{ t.nombre_responsable }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="td-hours">
+                                        <span class="hours-badge">🕒 {{ t.hora_inicio }} a {{ t.hora_fin }} hrs</span>
+                                    </td>
+                                    <td>
+                                        <span class="type-badge">{{ t.tipo_turno }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="role-badge-table" [style.borderColor]="t.color" [style.color]="t.color">
+                                            {{ t.rol_turno }}
+                                        </span>
+                                    </td>
+                                    <td class="td-payment">
+                                        <button type="button" 
+                                                class="table-pay-btn" 
+                                                [class.paid]="t.pagado == 1" 
+                                                [class.pending]="t.pagado != 1"
+                                                (click)="toggleTurnoPago(t, $event)"
+                                                [title]="t.pagado == 1 ? 'Clic para revertir a pendiente' : 'Clic para marcar pagado'">
+                                            <span class="pay-status-icon">{{ t.pagado == 1 ? '✅' : '⏳' }}</span>
+                                            <div class="pay-btn-labels">
+                                                <strong class="pay-status-title">{{ t.pagado == 1 ? 'Pagado' : 'Pendiente' }}</strong>
+                                                <span *ngIf="t.pagado == 1 && t.monto_pago" class="pay-monto-label">${{ t.monto_pago | number }} ({{ t.metodo_pago || 'Transf' }})</span>
+                                            </div>
+                                        </button>
+                                    </td>
+                                    <td class="td-notes">
+                                        <span *ngIf="t.notas">{{ t.notas }}</span>
+                                        <span *ngIf="!t.notas" class="text-muted">-</span>
+                                    </td>
+                                    <td class="td-contact">
+                                        <a *ngIf="t.telefono" [href]="getWhatsAppUrl(t.telefono, t.nombre_responsable, t.fecha, t.hora_inicio)" 
+                                           target="_blank" rel="noopener noreferrer" class="btn-table-wa">
+                                            💬 WhatsApp
+                                        </a>
+                                        <span *ngIf="!t.telefono" class="text-muted">Sin teléfono</span>
+                                    </td>
+                                    <td class="td-actions">
+                                        <button class="btn-action edit" (click)="openEditModal(t)" title="Editar">✏️</button>
+                                        <button class="btn-action duplicate" (click)="duplicateTurno(t)" title="Duplicar +7 días">🔁</button>
+                                        <button class="btn-action delete" (click)="deleteTurno(t)" title="Eliminar">🗑️</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <ng-template #emptyList>
+                        <div class="empty-list-card">
+                            <div class="empty-icon">📋</div>
+                            <h3>No hay turnos registrados en este mes</h3>
+                            <p>Haz clic en "Asignar Turno" para planificar la atención de tu club.</p>
+                            <button class="btn-primary-add" (click)="openCreateModal()">+ Asignar Turno</button>
+                        </div>
+                    </ng-template>
+                </section>
+
+            </section>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL UX PREMIUM: ASIGNAR / EDITAR TURNO -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+        
+        <!-- HEADER DEL MODAL -->
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <div class="modal-badge-icon">
+                    <span>{{ editingTurnoId ? '✏️' : '👥' }}</span>
+                </div>
+                <div>
+                    <h3>{{ editingTurnoId ? 'Editar Turno de Atención' : 'Asignar Turno de Atención' }}</h3>
+                    <p class="modal-header-sub">Programa al personal a cargo, define horarios y responsabilidades operativas.</p>
+                </div>
+            </div>
+            <button class="modal-close-btn" (click)="closeModal()" title="Cerrar">✕</button>
+        </div>
+
+        <!-- CUERPO CON SECCIONES UX -->
+        <div class="modal-body">
+            
+            <!-- SECCIÓN 1: RESPONSABLE Y FECHA -->
+            <div class="ux-card-section">
+                <div class="section-badge-title">
+                    <span class="sec-num">1</span>
+                    <h4>Personal y Fecha</h4>
+                </div>
+
+                <!-- Selección visual de Miembros de Staff -->
+                <div class="staff-selection-container" *ngIf="staffList.length > 0">
+                    <label class="ux-label">Selecciona el integrante del equipo:</label>
+                    <div class="staff-pills-grid">
+                        <div class="staff-pill-btn" 
+                             *ngFor="let s of staffList"
+                             [class.selected]="!isManualStaffInput && modalTurno.usuario_id === s.id"
+                             (click)="selectStaffMember(s)">
+                            <div class="pill-avatar" [style.background]="getColorForStaff(s.nombre || s.id)">
+                                <span>{{ getInitials(s.nombre) }}</span>
+                            </div>
+                            <div class="pill-meta">
+                                <strong class="pill-name">{{ s.nombre }}</strong>
+                                <span class="pill-role">{{ s.rol | titlecase }}</span>
+                            </div>
+                            <span class="pill-check" *ngIf="!isManualStaffInput && modalTurno.usuario_id === s.id">✓</span>
+                        </div>
+
+                        <!-- Opción de Nombre Externo / Manual -->
+                        <div class="staff-pill-btn manual-btn" 
+                             [class.selected]="isManualStaffInput"
+                             (click)="setManualMode()">
+                            <div class="pill-avatar manual">✍️</div>
+                            <div class="pill-meta">
+                                <strong class="pill-name">Otro / Externo</strong>
+                                <span class="pill-role">Ingreso manual</span>
+                            </div>
+                            <span class="pill-check" *ngIf="isManualStaffInput">✓</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Nombre Manual (solo visible si se activa modo manual) -->
+                <div class="form-group mt-3" *ngIf="isManualStaffInput || staffList.length === 0">
+                    <label class="ux-label">Nombre del Responsable: <span class="req">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">👤</span>
+                        <input type="text" 
+                               [(ngModel)]="modalTurno.nombre_responsable" 
+                               placeholder="Ej: Juan Pérez / Camila González"
+                               class="ux-input" 
+                               required>
+                    </div>
+                </div>
+
+                <!-- Fecha del Turno -->
+                <div class="form-group mt-3">
+                    <label class="ux-label">Fecha del Turno: <span class="req">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">📅</span>
+                        <input type="date" [(ngModel)]="modalTurno.fecha" class="ux-input" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: HORARIO Y JORNADA -->
+            <div class="ux-card-section">
+                <div class="section-badge-title">
+                    <span class="sec-num">2</span>
+                    <h4>Horario de Operación</h4>
+                </div>
+
+                <label class="ux-label">Plantillas rápidas:</label>
+                <div class="preset-cards-grid">
+                    <div class="preset-card" 
+                         [class.active]="modalTurno.tipo_turno === 'Día Completo'" 
+                         (click)="setPresetTurno('dia_completo')">
+                        <div class="preset-card-top">
+                            <span class="preset-icon">☀️</span>
+                            <strong class="preset-title">Día Completo</strong>
+                        </div>
+                        <span class="preset-time">08:00 a 23:30 hrs</span>
+                        <span class="preset-tag">Jornada Total</span>
+                    </div>
+
+                    <div class="preset-card" 
+                         [class.active]="modalTurno.tipo_turno === 'Mañana'" 
+                         (click)="setPresetTurno('manana')">
+                        <div class="preset-card-top">
+                            <span class="preset-icon">🌅</span>
+                            <strong class="preset-title">Apertura / Mañana</strong>
+                        </div>
+                        <span class="preset-time">08:00 a 15:30 hrs</span>
+                        <span class="preset-tag">Turno 1</span>
+                    </div>
+
+                    <div class="preset-card" 
+                         [class.active]="modalTurno.tipo_turno === 'Tarde'" 
+                         (click)="setPresetTurno('tarde')">
+                        <div class="preset-card-top">
+                            <span class="preset-icon">🌙</span>
+                            <strong class="preset-title">Cierre / Tarde</strong>
+                        </div>
+                        <span class="preset-time">15:30 a 23:30 hrs</span>
+                        <span class="preset-tag">Turno 2</span>
+                    </div>
+                </div>
+
+                <!-- Inputs Horas Inicio / Fin -->
+                <div class="time-range-row mt-3">
+                    <div class="time-field">
+                        <label class="ux-sublabel">Hora de Inicio:</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">⏰</span>
+                            <input type="time" [(ngModel)]="modalTurno.hora_inicio" class="ux-input">
+                        </div>
+                    </div>
+                    <div class="time-separator">➔</div>
+                    <div class="time-field">
+                        <label class="ux-sublabel">Hora de Término:</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🏁</span>
+                            <input type="time" [(ngModel)]="modalTurno.hora_fin" class="ux-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 3: ROL, COLOR Y DETALLES -->
+            <div class="ux-card-section">
+                <div class="section-badge-title">
+                    <span class="sec-num">3</span>
+                    <h4>Rol y Detalles</h4>
+                </div>
+
+                <!-- Selección de Rol en chips -->
+                <div class="form-group">
+                    <label class="ux-label">Función Principal:</label>
+                    <div class="role-chips-wrapper">
+                        <button type="button" 
+                                class="role-chip" 
+                                *ngFor="let r of rolesDisponibles"
+                                [class.active]="modalTurno.rol_turno === r"
+                                (click)="selectRole(r)">
+                            {{ r }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Estado & Teléfono en 2 Columnas -->
+                <div class="two-cols-row mt-3">
+                    <div class="col-item">
+                        <label class="ux-label">Estado del Turno:</label>
+                        <select [(ngModel)]="modalTurno.estado" class="ux-select">
+                            <option value="Programado">📅 Programado</option>
+                            <option value="En Curso">⚡ En Curso</option>
+                            <option value="Completado">✅ Completado</option>
+                            <option value="Ausente">❌ Ausente</option>
+                        </select>
+                    </div>
+
+                    <div class="col-item">
+                        <label class="ux-label">WhatsApp / Teléfono:</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">💬</span>
+                            <input type="text" [(ngModel)]="modalTurno.telefono" placeholder="Ej: +56 9 1234 5678" class="ux-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Selector -->
+                <div class="form-group mt-3">
+                    <label class="ux-label">Color de Identificación en Calendario:</label>
+                    <div class="color-swatches-grid">
+                        <button type="button" 
+                                *ngFor="let c of colorPalette" 
+                                class="color-swatch-item" 
+                                [style.background]="c"
+                                [class.selected]="modalTurno.color === c"
+                                (click)="selectColor(c)"
+                                title="Seleccionar color">
+                            <span class="color-check" *ngIf="modalTurno.color === c">✓</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notas e Instrucciones -->
+                <div class="form-group mt-3">
+                    <label class="ux-label">Notas e Instrucciones Operativas (Opcional):</label>
+                    <textarea [(ngModel)]="modalTurno.notas" 
+                              rows="2" 
+                              placeholder="Ej: Llaves del portón, recibir proveedor de pelotas, cuadratura de caja..." 
+                              class="ux-textarea"></textarea>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 4: ESTADO DE PAGO DEL TURNO -->
+            <div class="ux-card-section payment-card-section">
+                <div class="section-badge-title">
+                    <span class="sec-num">4</span>
+                    <h4>Registro de Pago del Turno</h4>
+                </div>
+
+                <div class="payment-toggle-wrapper">
+                    <label class="payment-switch-label">
+                        <input type="checkbox" [(ngModel)]="modalTurno.pagado" name="turnoPagado">
+                        <span class="switch-custom"></span>
+                        <div class="switch-text">
+                            <strong>{{ modalTurno.pagado ? '✅ Turno Pagado' : '⏳ Pendiente de Pago' }}</strong>
+                            <span>{{ modalTurno.pagado ? 'El pago correspondiente a este turno ya ha sido realizado al personal.' : 'Marcar si el pago aún está pendiente por transferir o liquidar.' }}</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="two-cols-row mt-3" *ngIf="modalTurno.pagado">
+                    <div class="col-item">
+                        <label class="ux-label">Monto Pagado ($ CLP):</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">💵</span>
+                            <input type="number" [(ngModel)]="modalTurno.monto_pago" placeholder="Ej: 25000" class="ux-input">
+                        </div>
+                    </div>
+                    <div class="col-item">
+                        <label class="ux-label">Método de Pago:</label>
+                        <select [(ngModel)]="modalTurno.metodo_pago" class="ux-select">
+                            <option value="Transferencia">🏦 Transferencia Bancaria</option>
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Débito / Tarjeta">💳 Débito / Tarjeta</option>
+                            <option value="Otro">✨ Otro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER FIJO (NUNCA SE CORTA) -->
+        <div class="modal-footer">
+            <button type="button" class="btn-ux-delete" *ngIf="editingTurnoId" (click)="deleteTurno(modalTurno)" [disabled]="isSaving">
+                🗑️ Eliminar Turno
+            </button>
+            <div class="modal-footer-spacer"></div>
+            <button type="button" class="btn-ux-cancel" (click)="closeModal()" [disabled]="isSaving">
+                Cancelar
+            </button>
+            <button type="button" class="btn-ux-save" (click)="saveTurno()" [disabled]="isSaving">
+                <span class="btn-spinner" *ngIf="isSaving"></span>
+                <span *ngIf="!isSaving">{{ editingTurnoId ? '💾 Actualizar Turno' : '✨ Guardar y Asignar' }}</span>
+                <span *ngIf="isSaving">Guardando...</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL RÁPIDO: SOLO HORARIO TRAS ARRASTRAR Y SOLTAR -->
+<div class="modal-overlay quick-modal-overlay" *ngIf="showQuickModal && quickTurno" (click)="closeQuickModal()">
+    <div class="modal-card quick-modal-card" (click)="$event.stopPropagation()">
+        
+        <!-- HEADER COMPACTO CON STAFF Y FECHA -->
+        <div class="quick-modal-header">
+            <div class="quick-staff-badge">
+                <div class="quick-avatar" [style.background]="quickTurno.color || '#10b981'">
+                    <img *ngIf="quickTurno.foto" [src]="quickTurno.foto" alt="Foto">
+                    <span *ngIf="!quickTurno.foto">{{ getInitials(quickTurno.nombre_responsable) }}</span>
+                </div>
+                <div class="quick-header-text">
+                    <div class="quick-title-row">
+                        <span class="quick-bolt">⚡</span>
+                        <h3>Definir Horario de Turno</h3>
+                    </div>
+                    <div class="quick-staff-meta">
+                        <strong class="staff-highlight">{{ quickTurno.nombre_responsable }}</strong>
+                        <span class="meta-dot">•</span>
+                        <span class="date-highlight">📅 {{ getDayName(quickTurno.fecha) }} {{ quickTurno.fecha }}</span>
+                    </div>
+                </div>
+            </div>
+            <button class="modal-close-btn" (click)="closeQuickModal()" title="Cerrar">✕</button>
+        </div>
+
+        <!-- CUERPO: SELECCIÓN RÁPIDA DE HORARIO -->
+        <div class="quick-modal-body">
+            
+            <!-- 1. JORNADAS PREDEFINIDAS DE UN CLIC -->
+            <div class="quick-section">
+                <label class="quick-label">Selecciona una plantilla de horario:</label>
+                <div class="quick-presets-grid">
+                    <button type="button" 
+                            class="quick-preset-btn"
+                            [class.active]="quickTurno.tipo_turno === 'Día Completo'"
+                            (click)="setQuickPreset('dia_completo')">
+                        <div class="preset-badge-icon">☀️</div>
+                        <div class="preset-btn-info">
+                            <strong>Día Completo</strong>
+                            <span>08:00 a 23:30 hrs</span>
+                        </div>
+                        <span class="preset-tag-mini">Total</span>
+                    </button>
+
+                    <button type="button" 
+                            class="quick-preset-btn"
+                            [class.active]="quickTurno.tipo_turno === 'Mañana'"
+                            (click)="setQuickPreset('manana')">
+                        <div class="preset-badge-icon">🌅</div>
+                        <div class="preset-btn-info">
+                            <strong>Apertura / Mañana</strong>
+                            <span>08:00 a 15:30 hrs</span>
+                        </div>
+                        <span class="preset-tag-mini">Turno 1</span>
+                    </button>
+
+                    <button type="button" 
+                            class="quick-preset-btn"
+                            [class.active]="quickTurno.tipo_turno === 'Tarde'"
+                            (click)="setQuickPreset('tarde')">
+                        <div class="preset-badge-icon">🌙</div>
+                        <div class="preset-btn-info">
+                            <strong>Cierre / Tarde</strong>
+                            <span>15:30 a 23:30 hrs</span>
+                        </div>
+                        <span class="preset-tag-mini">Turno 2</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. AJUSTE EXACTO DE HORAS -->
+            <div class="quick-section">
+                <label class="quick-label">O ajusta las horas exactas:</label>
+                <div class="quick-time-row">
+                    <div class="quick-time-field">
+                        <label class="time-label">Inicio</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">⏰</span>
+                            <input type="time" [(ngModel)]="quickTurno.hora_inicio" class="ux-input">
+                        </div>
+                    </div>
+                    <div class="quick-time-divider">➔</div>
+                    <div class="quick-time-field">
+                        <label class="time-label">Término</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🏁</span>
+                            <input type="time" [(ngModel)]="quickTurno.hora_fin" class="ux-input">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ROL / NOTA (OPCIONALES Y COMPACTOS) -->
+            <div class="quick-section quick-extra-row">
+                <div class="quick-extra-col">
+                    <label class="quick-label">Función:</label>
+                    <select [(ngModel)]="quickTurno.rol_turno" class="ux-select compact">
+                        <option *ngFor="let r of rolesDisponibles" [value]="r">{{ r }}</option>
+                    </select>
+                </div>
+                <div class="quick-extra-col">
+                    <label class="quick-label">Nota (opcional):</label>
+                    <input type="text" [(ngModel)]="quickTurno.notas" placeholder="Ej: Apertura, Llaves..." class="ux-input compact">
+                </div>
+            </div>
+
+            <!-- 4. PAGO RÁPIDO -->
+            <div class="quick-section quick-pay-section">
+                <label class="quick-label">Estado del Pago:</label>
+                <div class="quick-pay-toggle-row">
+                    <button type="button" 
+                            class="quick-pay-btn" 
+                            [class.active]="quickTurno.pagado == 0"
+                            (click)="quickTurno.pagado = 0">
+                        ⏳ Pendiente
+                    </button>
+                    <button type="button" 
+                            class="quick-pay-btn paid" 
+                            [class.active]="quickTurno.pagado == 1"
+                            (click)="quickTurno.pagado = 1">
+                        💵 Pagado Ahora
+                    </button>
+                </div>
+                <div class="two-cols-row mt-2" *ngIf="quickTurno.pagado == 1">
+                    <div class="col-item">
+                        <input type="number" [(ngModel)]="quickTurno.monto_pago" placeholder="Monto $ CLP (opcional)" class="ux-input compact">
+                    </div>
+                    <div class="col-item">
+                        <select [(ngModel)]="quickTurno.metodo_pago" class="ux-select compact">
+                            <option value="Transferencia">🏦 Transferencia</option>
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Débito / Tarjeta">💳 Tarjeta</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="quick-modal-footer">
+            <button type="button" class="btn-ux-cancel" (click)="closeQuickModal()" [disabled]="isSaving">
+                Cancelar
+            </button>
+            <button type="button" class="btn-quick-confirm" (click)="saveQuickTurno()" [disabled]="isSaving">
+                <span class="btn-spinner" *ngIf="isSaving"></span>
+                <span *ngIf="!isSaving">⚡ Confirmar y Asignar Turno</span>
+                <span *ngIf="isSaving">Guardando...</span>
+            </button>
+        </div>
+
+    </div>
+</div>

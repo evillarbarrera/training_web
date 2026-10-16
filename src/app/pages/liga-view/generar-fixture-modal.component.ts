@@ -24,16 +24,26 @@ import Swal from 'sweetalert2';
 
         <div *ngIf="errorMsj" class="alert-error">{{ errorMsj }}</div>
 
-        <!-- 1. Distribución de Grupos -->
+        <!-- Alerta si la categoría ya tiene jornadas generadas -->
+        <div *ngIf="categoria?.jornadas && categoria.jornadas.length > 0" style="background: #fffdf5; border: 1.5px solid #fde68a; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 12px; margin-bottom: 16px;">
+          <div style="font-weight: 800; font-size: 0.85rem; color: #b45309; display: flex; align-items: center; gap: 6px;">
+            <span>⚠️</span> <span>Esta categoría ya tiene un fixture generado</span>
+          </div>
+          <p style="font-size: 0.78rem; color: #78350f; margin: 4px 0 0 0; line-height: 1.4;">
+            Si solo deseas asignar canchas y horarios a una nueva semana, utiliza el botón <strong>"⚡ Programar Jornada"</strong>. Re-generar el fixture reestructurará todos los partidos de la fase regular.
+          </p>
+        </div>
+
+        <!-- 1. Formato de Competición Regular -->
         <div class="form-group">
-          <label>🏆 Cantidad de Grupos en los que se dividirá la categoría</label>
-          <select [(ngModel)]="numGrupos" class="custom-input">
-            <option [ngValue]="1">1 Grupo Único (Todos contra todos)</option>
-            <option [ngValue]="2">2 Grupos (Distribución Víbora / Snake)</option>
-            <option [ngValue]="3">3 Grupos</option>
-            <option [ngValue]="4">4 Grupos</option>
-          </select>
-          <small class="hint-text">Se organizarán las {{ categoria?.parejas_count || 0 }} parejas inscritas en el sistema Round-Robin.</small>
+          <label>🏆 Modalidad de Fase Regular (Primera Etapa)</label>
+          <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-left: 4px solid #2563eb; padding: 10px 14px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">🔄</span>
+            <div>
+              <div>Todos contra Todos (Grupo Único por Categoría)</div>
+              <small style="font-weight: 600; color: #64748b; font-size: 0.75rem; display: block; margin-top: 2px;">Todas las parejas juegan entre sí acumulando puntos en la tabla de posiciones general.</small>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -294,10 +304,11 @@ import Swal from 'sweetalert2';
 })
 export class GenerarFixtureModalComponent implements OnInit {
   @Input() categoria: any;
+  @Input() ligaId: number = 0;
   @Input() canchas: any[] = [];
   @Output() cerrar = new EventEmitter<boolean>();
 
-  numGrupos: number = 2;
+  numGrupos: number = 1;
   numClasificanModo: string = 'todas';
   numClasificanCant: number = 8;
   programarSemana1: boolean = true;
@@ -313,7 +324,7 @@ export class GenerarFixtureModalComponent implements OnInit {
     { nombre: 'Domingo', selected: true }
   ];
 
-  horarios: string[] = ['18:00', '19:30', '21:00'];
+  horarios: string[] = ['18:00', '19:00', '20:00', '21:00', '22:00'];
   nuevoHorario: string = '';
   canchasSeleccionadas: number[] = [];
   respetarRestricciones: boolean = true;
@@ -392,6 +403,28 @@ export class GenerarFixtureModalComponent implements OnInit {
       }
     }
 
+    if (this.categoria?.jornadas && this.categoria.jornadas.length > 0) {
+      Swal.fire({
+        title: '¿Re-generar Fixture de la Categoría?',
+        html: `<p style="color: #334155; font-size: 0.95rem; margin-bottom: 8px;">Estás a punto de re-generar el fixture de <strong>"${this.categoria.nombre}"</strong>.</p><p style="color: #b45309; font-weight: 700; font-size: 0.85rem; background: #fffdf5; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">⚠️ Si solo deseas agendar los partidos de una jornada semanal, utiliza el botón "Programar Jornada" en vez de re-generar el fixture.</p><p style="color: #64748b; font-size: 0.8rem; margin-top: 8px;">¿Deseas continuar con la re-generación?</p>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, re-generar',
+        cancelButtonText: 'Cancelar'
+      }).then((resConfirm) => {
+        if (resConfirm.isConfirmed) {
+          this.ejecutarGeneracionFixture();
+        }
+      });
+      return;
+    }
+
+    this.ejecutarGeneracionFixture();
+  }
+
+  ejecutarGeneracionFixture(): void {
     this.loading = true;
     this.errorMsj = '';
 
@@ -401,20 +434,22 @@ export class GenerarFixtureModalComponent implements OnInit {
         if (res.success) {
           // Si el usuario quiere programar semana 1 de inmediato:
           if (this.programarSemana1) {
-            // Cargar datos actualizados de la liga para obtener el ID de la Jornada 1
-            this.ligaService.obtenerLiga(this.categoria.liga_id || this.categoria.id).subscribe({
+            const targetLigaId = this.ligaId || this.categoria?.liga_id || 0;
+            this.ligaService.obtenerLiga(targetLigaId).subscribe({
               next: (resLiga) => {
                 const catActualizada = resLiga?.liga?.categorias?.find((c: any) => c.id === this.categoria.id);
-                const jornada1 = catActualizada?.jornadas?.find((j: any) => j.numero_jornada === 1) || catActualizada?.jornadas?.[0];
+                const jornada1 = catActualizada?.jornadas?.find((j: any) => parseInt(j.numero_jornada, 10) === 1) || catActualizada?.jornadas?.[0];
 
                 if (jornada1 && jornada1.id) {
                   const payloadJ1 = {
                     jornada_id: jornada1.id,
+                    jornada_ids: [jornada1.id],
                     fecha_inicio: this.fechaInicio,
                     dias_semana: this.diasSemanaList.filter(d => d.selected).map(d => d.nombre),
                     horarios: this.horarios,
                     canchas_ids: this.canchasSeleccionadas,
-                    respetar_restricciones: this.respetarRestricciones
+                    respetar_restricciones: this.respetarRestricciones,
+                    max_partidos_por_pareja: 1
                   };
 
                   this.ligaService.programarJornadaSemanal(payloadJ1).subscribe({

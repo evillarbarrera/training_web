@@ -77,173 +77,186 @@
 
         <!-- CREACIÓN DE TORNEO -->
         <section class="create-form-container" *ngIf="activeTab === 'create'">
-            <div class="form-card animate-up">
-                <h2>Detalles del Torneo</h2>
+            <div class="form-card compact-tournament-card animate-up">
+                <!-- TOP HEADER BAR -->
+                <div class="compact-card-header">
+                    <div class="header-titles">
+                        <span class="header-badge"><i class="fas fa-trophy"></i> NUEVO TORNEO</span>
+                        <h2>Detalles del Torneo</h2>
+                        <p class="header-subtitle">Completa la configuración base, formato y categorías</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn-outline btn-sm" (click)="activeTab = 'list'">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </button>
+                        <button class="btn-primary btn-sm" (click)="crearTorneo()">
+                            <i class="fas fa-check-circle"></i> Crear Torneo
+                        </button>
+                    </div>
+                </div>
 
-                <div class="premium-creation-grid">
-                    <!-- COLUMNA 1: DATOS -->
-                    <div class="form-main-fields">
-                        <div class="form-group" style="grid-column: span 2;">
-                            <label>Nombre del Torneo</label>
+                <!-- MAIN COMPACT FORM GRID: INPUTS + POSTER -->
+                <div class="compact-tournament-grid">
+                    <!-- LEFT/CENTER: FORM CONTROLS -->
+                    <div class="compact-fields-grid">
+                        <div class="form-group col-span-2">
+                            <label><i class="fas fa-heading"></i> Nombre del Torneo</label>
                             <input type="text" [(ngModel)]="newTorneo.nombre" placeholder="Ej: Open Verano Padel Center">
                         </div>
+
                         <div class="form-group">
-                            <label>Club Anfitrión</label>
+                            <label><i class="fas fa-building"></i> Club Anfitrión</label>
                             <select [(ngModel)]="newTorneo.club_id">
                                 <option *ngFor="let c of clubes" [value]="c.id">{{ c.nombre }}</option>
                             </select>
                         </div>
+
                         <div class="form-group">
-                            <label>Fecha de Inicio</label>
+                            <label><i class="fas fa-dollar-sign"></i> Precio Inscripción ($)</label>
+                            <input type="number" [(ngModel)]="newTorneo.precio" placeholder="Ej: 15000">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-alt"></i> Fecha Inicio</label>
                             <input type="date" [(ngModel)]="newTorneo.fecha_inicio">
                         </div>
+
                         <div class="form-group">
-                            <label>Tipo de Formato</label>
+                            <label><i class="fas fa-calendar-check"></i> Fecha Fin</label>
+                            <input type="date" [(ngModel)]="newTorneo.fecha_fin">
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-sitemap"></i> Tipo Formato</label>
                             <select [(ngModel)]="newTorneo.tipo">
                                 <option value="Grupos + Playoffs">Grupos + Playoffs</option>
                                 <option value="Eliminación Directa">Eliminación Directa</option>
                             </select>
                         </div>
+
                         <div class="form-group">
-                            <label>Formato de Grupos</label>
+                            <label><i class="fas fa-layer-group"></i> Formato Grupos</label>
                             <select [(ngModel)]="newTorneo.formato_grupos">
-                                <option [ngValue]="4">Grupos de 4 (Priorizar Partidos)</option>
-                                <option [ngValue]="3">Grupos de 3 (Priorizar Tiempo)</option>
+                                <option [ngValue]="4">Grupos de 4 (Más Partidos)</option>
+                                <option [ngValue]="3">Grupos de 3 (Más Rápido)</option>
                             </select>
                         </div>
+
                         <div class="form-group">
-                            <label>Formato de Set</label>
+                            <label><i class="fas fa-bolt"></i> Formato de Set</label>
                             <select [(ngModel)]="newTorneo.formato_sets">
-                                <option value="Full Sets">Full Sets (Estandard)</option>
+                                <option value="Full Sets">Full Sets (Estándar)</option>
                                 <option value="Pro-set">Pro-set (1 Set a 9)</option>
                                 <option value="Golden Point">Punto de Oro</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Precio de Inscripción</label>
-                            <input type="number" [(ngModel)]="newTorneo.precio" placeholder="Ej: 15000">
+
+                        <div class="form-group col-span-full">
+                            <label><i class="fas fa-align-left"></i> Descripción / Reglas del Torneo</label>
+                            <textarea [(ngModel)]="newTorneo.descripcion" rows="2"
+                                placeholder="Reglas, premios, indumentaria, información adicional..."></textarea>
                         </div>
                     </div>
 
-                    <!-- COLUMNA 2: PÓSTER -->
-                    <div class="poster-upload-section">
-                        <label style="font-size: 11px; font-weight: 1000; color: #64748b; text-transform: uppercase;">Póster Promocional</label>
-                        <div class="poster-preview-card" (click)="posterInput.click()">
+                    <!-- RIGHT: COMPACT POSTER UPLOADER -->
+                    <div class="compact-poster-box">
+                        <label class="poster-label"><i class="fas fa-image"></i> Póster Promocional</label>
+                        <div class="poster-card-compact" (click)="posterInput.click()" [title]="newTorneo.poster_url ? 'Clic para cambiar afiche' : 'Clic para subir afiche'">
                             <img *ngIf="newTorneo.poster_url" [src]="newTorneo.poster_url" alt="Póster">
-                            <div class="upload-placeholder" *ngIf="!newTorneo.poster_url">
-                                <i class="fas fa-image"></i>
-                                <p>Cargar Afiche</p>
+                            <div class="upload-placeholder-compact" *ngIf="!newTorneo.poster_url">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Subir Afiche</span>
+                            </div>
+                            <div class="poster-overlay-badge" *ngIf="newTorneo.poster_url">
+                                <i class="fas fa-camera"></i> Cambiar
                             </div>
                         </div>
                         <input type="file" #posterInput style="display: none;" (change)="onPosterSelected($event)" accept="image/*">
-                        <p style="font-size: 10px; color: #94a3b8; text-align: center; margin-top: 5px;">Recomendado: Vertical 1080x1350px</p>
+                        <span class="poster-hint">1080×1350px recomendado</span>
                     </div>
                 </div>
 
-                <!-- CATEGORÍAS PREDEFINIDAS -->
-                <div class="categories-setup">
-                    <h3>Selecciona las Categorías del Torneo</h3>
-
-                    <div class="preset-groups">
-                        <!-- VARONES -->
-                        <div class="preset-group">
-                            <h4>VARONES</h4>
-                            <div class="chips-container">
-                                <ng-container *ngFor="let p of presetCategories">
-                                    <div *ngIf="p.type === 'varones'" [class.selected]="isCategorySelected(p.nombre)"
-                                        (click)="toggleCategory(p)" class="cat-chip">
-                                        <span class="chip-check" *ngIf="isCategorySelected(p.nombre)">✓</span>
-                                        {{ p.nombre }}
-                                    </div>
-                                </ng-container>
-                            </div>
+                <!-- CATEGORÍAS COMPACTAS -->
+                <div class="compact-categories-section">
+                    <div class="categories-header-compact">
+                        <div class="cat-title-block">
+                            <span class="cat-section-tag">CATEGORÍAS</span>
+                            <h3>Selecciona y Configura Cupos</h3>
                         </div>
-
-                        <!-- DAMAS -->
-                        <div class="preset-group">
-                            <h4>DAMAS</h4>
-                            <div class="chips-container">
-                                <ng-container *ngFor="let p of presetCategories">
-                                    <div *ngIf="p.type === 'damas'" [class.selected]="isCategorySelected(p.nombre)"
-                                        (click)="toggleCategory(p)" class="cat-chip">
-                                        <span class="chip-check" *ngIf="isCategorySelected(p.nombre)">✓</span>
-                                        {{ p.nombre }}
-                                    </div>
-                                </ng-container>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- DETALLES DE LAS SELECCIONADAS -->
-                    <div class="selected-details" *ngIf="newTorneo.categorias.length > 0">
-                        <header>
-                            <h3>Configurar Puntos y Cupos</h3>
-                        </header>
-
-                        <!-- PESTAÑAS DE CATEGORÍAS -->
-                        <div class="category-tabs-nav">
-                            <div *ngFor="let cat of newTorneo.categorias; let i = index" (click)="activeConfigIndex = i"
-                                [class.active]="activeConfigIndex === i" class="config-tab-btn"
-                                [style.borderBottomColor]="activeConfigIndex === i ? getCategoryColor(cat.nombre) : 'transparent'">
-                                <span class="cat-tab-dot" [style.background]="getCategoryColor(cat.nombre)"></span>
-                                {{ cat.nombre || 'Sin nombre' }}
-                                <button class="tab-remove-btn"
-                                    (click)="$event.stopPropagation(); newTorneo.categorias.splice(i, 1); activeConfigIndex = 0;">×</button>
-                            </div>
-                        </div>
-
-                        <!-- CONTENIDO DE LA PESTAÑA ACTIVA -->
-                        <div class="tab-config-content" *ngIf="newTorneo.categorias[activeConfigIndex]">
-                            <div class="config-card">
-                                <div class="config-header"
-                                    [style.borderLeftColor]="getCategoryColor(newTorneo.categorias[activeConfigIndex].nombre)">
-                                    <h4>Editando: {{ newTorneo.categorias[activeConfigIndex].nombre }}</h4>
-                                    <p>Ajusta los parámetros específicos para esta categoría.</p>
-                                </div>
-
-                                <div class="config-form-grid">
-                                    <div class="form-group">
-                                        <label>Nombre</label>
-                                        <input type="text" [(ngModel)]="newTorneo.categorias[activeConfigIndex].nombre"
-                                            placeholder="Nombre...">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Parejas Máximas</label>
-                                        <div class="input-icon-box">
-                                            <i class="fas fa-users"></i>
-                                            <input type="number"
-                                                [(ngModel)]="newTorneo.categorias[activeConfigIndex].max_parejas">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Puntos a Repartir</label>
-                                        <div class="input-icon-box">
-                                            <i class="fas fa-trophy"></i>
-                                            <input type="number"
-                                                [(ngModel)]="newTorneo.categorias[activeConfigIndex].puntos_repartir">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="custom-category-add">
-                        <button class="btn-text-action"
+                        <button type="button" class="btn-add-custom-cat"
                             (click)="newTorneo.categorias.push({nombre:'', max_parejas:16, puntos_repartir:0})">
-                            <i class="fas fa-plus-circle"></i> Añadir categoría personalizada
+                            <i class="fas fa-plus"></i> Personalizada
                         </button>
                     </div>
+
+                    <!-- PRESET SELECTOR (CHIPS EN UNA SOLA LÍNEA/COMPACTO) -->
+                    <div class="preset-chips-compact">
+                        <div class="chip-branch">
+                            <span class="branch-label">VARONES:</span>
+                            <div class="branch-chips">
+                                <ng-container *ngFor="let p of presetCategories">
+                                    <button type="button" *ngIf="p.type === 'varones'"
+                                        [class.selected]="isCategorySelected(p.nombre)"
+                                        (click)="toggleCategory(p)" class="cat-chip-compact">
+                                        <span class="chip-color-dot" [style.background]="p.color"></span>
+                                        {{ p.nombre.replace(' Varones', '') }}
+                                        <i class="fas fa-check chip-check-icon" *ngIf="isCategorySelected(p.nombre)"></i>
+                                    </button>
+                                </ng-container>
+                            </div>
+                        </div>
+                        <div class="chip-branch">
+                            <span class="branch-label">DAMAS:</span>
+                            <div class="branch-chips">
+                                <ng-container *ngFor="let p of presetCategories">
+                                    <button type="button" *ngIf="p.type === 'damas'"
+                                        [class.selected]="isCategorySelected(p.nombre)"
+                                        (click)="toggleCategory(p)" class="cat-chip-compact">
+                                        <span class="chip-color-dot" [style.background]="p.color"></span>
+                                        {{ p.nombre.replace('Damas ', 'Dama ') }}
+                                        <i class="fas fa-check chip-check-icon" *ngIf="isCategorySelected(p.nombre)"></i>
+                                    </button>
+                                </ng-container>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SELECTED CATEGORIES COMPACT TABLE/GRID -->
+                    <div class="selected-categories-matrix" *ngIf="newTorneo.categorias.length > 0">
+                        <div class="matrix-grid">
+                            <div class="cat-config-row" *ngFor="let cat of newTorneo.categorias; let i = index">
+                                <div class="cat-badge-col">
+                                    <span class="cat-color-indicator" [style.background]="getCategoryColor(cat.nombre)"></span>
+                                    <input type="text" [(ngModel)]="cat.nombre" placeholder="Categoría..." class="cat-name-input">
+                                </div>
+                                <div class="cat-field-col">
+                                    <label>Cupo Parejas</label>
+                                    <div class="mini-input-box">
+                                        <i class="fas fa-users"></i>
+                                        <input type="number" [(ngModel)]="cat.max_parejas" min="2" max="64">
+                                    </div>
+                                </div>
+                                <div class="cat-field-col">
+                                    <label>Puntos Ganador</label>
+                                    <div class="mini-input-box">
+                                        <i class="fas fa-trophy"></i>
+                                        <input type="number" [(ngModel)]="cat.puntos_repartir" min="0" step="50">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-cat-remove" (click)="newTorneo.categorias.splice(i, 1)" title="Quitar categoría">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group" style="margin-top: 30px;">
-                    <label>Descripción / Reglas del Torneo</label>
-                    <textarea [(ngModel)]="newTorneo.descripcion" rows="4"
-                        placeholder="Escribe aquí las reglas, premios o información adicional..."></textarea>
-                </div>
-
-                <div class="form-footer">
-                    <button class="btn-primary btn-large" (click)="crearTorneo()">Crear Torneo</button>
+                <!-- FOOTER COMPACTO -->
+                <div class="compact-card-footer">
+                    <button class="btn-outline btn-sm" (click)="activeTab = 'list'">Cancelar</button>
+                    <button class="btn-primary btn-sm" (click)="crearTorneo()">
+                        <i class="fas fa-trophy"></i> Crear Torneo
+                    </button>
                 </div>
             </div>
         </section>
@@ -338,58 +351,88 @@
                 <!-- CATEGORÍAS REMOVED AS PER USER REQUEST -->
 
                 <!-- TAB: EDITAR -->
-                <div *ngIf="activeDetailTab === 'editar'" style="padding: 10px;">
-                    <div class="form-card animate-up" style="max-width: 800px; margin: 0 auto; box-shadow: none; border: 1px solid #e2e8f0;">
-                        <h3 style="margin-bottom: 20px;">Editar Información del Torneo</h3>
-                        <div class="premium-creation-grid">
-                            <!-- COLUMNA 1: DATOS -->
-                            <div class="form-main-fields">
-                                <div class="form-group" style="grid-column: span 2;">
-                                    <label>Nombre del Torneo</label>
-                                    <input type="text" [(ngModel)]="selectedTorneo.nombre">
+                <div *ngIf="activeDetailTab === 'editar'" class="edit-tab-container">
+                    <div class="form-card compact-tournament-card animate-up">
+                        <!-- TOP HEADER BAR -->
+                        <div class="compact-card-header">
+                            <div class="header-titles">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="header-badge"><i class="fas fa-edit"></i> EDICIÓN</span>
+                                    <span class="id-badge">ID: #{{ selectedTorneo.id }}</span>
                                 </div>
-                                <div class="form-group">
-                                    <label>Fecha de Inicio</label>
-                                    <input type="date" [(ngModel)]="selectedTorneo.fecha_inicio">
+                                <h2>Detalles del Torneo</h2>
+                                <p class="header-subtitle">Modifica la información principal, fechas y afiche promocional</p>
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn-primary btn-sm" (click)="actualizarTorneo()">
+                                    <i class="fas fa-save"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- MAIN COMPACT FORM GRID: INPUTS + POSTER -->
+                        <div class="compact-tournament-grid">
+                            <!-- LEFT/CENTER: FORM CONTROLS -->
+                            <div class="compact-fields-grid">
+                                <div class="form-group col-span-2">
+                                    <label><i class="fas fa-heading"></i> Nombre del Torneo</label>
+                                    <input type="text" [(ngModel)]="selectedTorneo.nombre" placeholder="Nombre del torneo">
                                 </div>
+
                                 <div class="form-group">
-                                    <label>Fecha de Fin</label>
-                                    <input type="date" [(ngModel)]="selectedTorneo.fecha_fin">
+                                    <label><i class="fas fa-dollar-sign"></i> Precio Inscripción ($)</label>
+                                    <input type="number" [(ngModel)]="selectedTorneo.precio" placeholder="0">
                                 </div>
+
                                 <div class="form-group">
-                                    <label>Precio de Inscripción</label>
-                                    <input type="number" [(ngModel)]="selectedTorneo.precio">
-                                </div>
-                                <div class="form-group">
-                                    <label>Formato de Set</label>
+                                    <label><i class="fas fa-bolt"></i> Formato de Set</label>
                                     <select [(ngModel)]="selectedTorneo.formato_sets">
-                                        <option value="Full Sets">Full Sets (Estandard)</option>
+                                        <option value="Full Sets">Full Sets (Estándar)</option>
                                         <option value="Pro-set">Pro-set (1 Set a 9)</option>
                                         <option value="Golden Point">Punto de Oro</option>
                                     </select>
                                 </div>
-                                <div class="form-group" style="grid-column: span 2;">
-                                    <label>Descripción / Reglas</label>
-                                    <textarea [(ngModel)]="selectedTorneo.descripcion" rows="4"></textarea>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-calendar-alt"></i> Fecha Inicio</label>
+                                    <input type="date" [(ngModel)]="selectedTorneo.fecha_inicio">
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fas fa-calendar-check"></i> Fecha Fin</label>
+                                    <input type="date" [(ngModel)]="selectedTorneo.fecha_fin">
+                                </div>
+
+                                <div class="form-group col-span-full">
+                                    <label><i class="fas fa-align-left"></i> Descripción / Reglas del Torneo</label>
+                                    <textarea [(ngModel)]="selectedTorneo.descripcion" rows="3"
+                                        placeholder="Escribe aquí las reglas, premios o información adicional..."></textarea>
                                 </div>
                             </div>
-                            
-                            <!-- COLUMNA 2: PÓSTER -->
-                            <div class="poster-upload-section">
-                                <label style="font-size: 11px; font-weight: 1000; color: #64748b; text-transform: uppercase;">Póster Promocional</label>
-                                <div class="poster-preview-card" (click)="posterInputEdit.click()">
+
+                            <!-- RIGHT: COMPACT POSTER UPLOADER -->
+                            <div class="compact-poster-box">
+                                <label class="poster-label"><i class="fas fa-image"></i> Póster Promocional</label>
+                                <div class="poster-card-compact" (click)="posterInputEdit.click()" [title]="selectedTorneo.poster_url ? 'Clic para cambiar afiche' : 'Clic para subir afiche'">
                                     <img *ngIf="selectedTorneo.poster_url" [src]="selectedTorneo.poster_url" alt="Póster">
-                                    <div class="upload-placeholder" *ngIf="!selectedTorneo.poster_url">
-                                        <i class="fas fa-image"></i>
-                                        <p>Cambiar Afiche</p>
+                                    <div class="upload-placeholder-compact" *ngIf="!selectedTorneo.poster_url">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span>Subir Afiche</span>
+                                    </div>
+                                    <div class="poster-overlay-badge" *ngIf="selectedTorneo.poster_url">
+                                        <i class="fas fa-camera"></i> Cambiar
                                     </div>
                                 </div>
                                 <input type="file" #posterInputEdit style="display: none;" (change)="onPosterSelectedEdit($event)" accept="image/*">
-                                <p style="font-size: 10px; color: #94a3b8; text-align: center; margin-top: 5px;">Recomendado: Vertical 1080x1350px</p>
+                                <span class="poster-hint">1080×1350px recomendado</span>
                             </div>
                         </div>
-                        <div class="form-footer" style="margin-top: 20px;">
-                            <button class="btn-primary" (click)="actualizarTorneo()"><i class="fas fa-save"></i> Guardar Cambios</button>
+
+                        <!-- FOOTER COMPACTO -->
+                        <div class="compact-card-footer">
+                            <button class="btn-primary btn-sm" (click)="actualizarTorneo()">
+                                <i class="fas fa-save"></i> Guardar Cambios
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1220,13 +1263,24 @@
                     </div>
 
                     <!-- EMPTY PLAYOFFS -->
-                    <div *ngIf="playoffMatches.length === 0" style="text-align: center; padding: 100px 40px;">
-                        <div style="font-size: 60px; margin-bottom: 20px;">🏆</div>
-                        <h2 style="font-weight: 900; color: #0f172a; margin-bottom: 15px;">CUADRO DE ELIMINACIÓN
-                            GENERADO</h2>
-                        <p style="color: #64748b; font-size: 16px; max-width: 500px; margin: 0 auto 30px;">
-                            El cuadro se activará al simular o al finalizar los grupos.
+                    <div *ngIf="playoffMatches.length === 0" style="text-align: center; padding: 80px 40px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 12px; margin-top: 20px;">
+                        <div style="font-size: 50px; margin-bottom: 15px;">🏆</div>
+                        <h2 style="font-weight: 900; color: #0f172a; margin-bottom: 10px; text-transform: uppercase;">CUADRO DE ELIMINACIÓN PENDIENTE</h2>
+                        <p style="color: #64748b; font-size: 14px; max-width: 520px; margin: 0 auto 25px;">
+                            Configura las parejas en la pestaña de <strong>Inscritos / Categorías</strong> y genera el cuadro eliminatorio con sus respectivas cabezas de serie (Dieciseisavos, Octavos, Cuartos, Semis y Final).
                         </p>
+                        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                            <button *ngIf="selectedCategoria && selectedTorneo.tipo === 'Eliminación Directa'" 
+                                    class="btn-primary" (click)="generarCuadroDirecto()" 
+                                    style="background: #ccff00; color: #000; font-weight: 900; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer;">
+                                ⚡ Generar Cuadro Directo Ahora
+                            </button>
+                            <button *ngIf="selectedCategoria && selectedTorneo.tipo !== 'Eliminación Directa'" 
+                                    class="btn-primary" (click)="cerrarGrupos()" 
+                                    style="background: #0f172a; color: #ccff00; font-weight: 900; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer;">
+                                🏆 Cerrar Grupos y Generar Cuadro
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1352,14 +1406,35 @@
                                     </button>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 10px;">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                                 <button *ngIf="!selectedCategoria" class="btn-outline"
-                                    (click)="activeDetailTab = 'resumen'" style="font-size: 11px;">VER RESUMEN POR
-                                    CAT.</button>
-                                <button *ngIf="selectedCategoria" class="btn-primary" (click)="anadirParejaManual()"
-                                    style="font-size: 11px; padding: 12px 24px; border-radius: 0px; background: #0f172a; color: #fff; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;">
-                                    + AÑADIR PAREJA MANUAL
-                                </button>
+                                    (click)="activeDetailTab = 'resumen'" style="font-size: 11px;">VER RESUMEN POR CAT.</button>
+                                
+                                <ng-container *ngIf="selectedCategoria">
+                                    <button class="btn-primary" (click)="anadirParejaManual()"
+                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #0f172a; color: #fff; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        + Añadir Pareja
+                                    </button>
+
+                                    <!-- BOTÓN GENERAR CUADRO DIRECTO (Para eliminación directa) -->
+                                    <button *ngIf="selectedTorneo.tipo === 'Eliminación Directa'"
+                                        class="btn-primary" (click)="generarCuadroDirecto()"
+                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #ccff00; color: #000; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(204,255,0,0.3);">
+                                        ⚡ Generar Cuadro Eliminatorio
+                                    </button>
+
+                                    <!-- BOTONES PARA GRUPOS + PLAYOFFS -->
+                                    <button *ngIf="selectedTorneo.tipo !== 'Eliminación Directa'"
+                                        class="btn-primary" (click)="generarGrupos()"
+                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #0f172a; color: #ccff00; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        ⚡ Generar Grupos
+                                    </button>
+                                    <button *ngIf="selectedTorneo.tipo !== 'Eliminación Directa'"
+                                        class="btn-outline" (click)="cerrarGrupos()"
+                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #0f172a; color: #0f172a;">
+                                        🏆 Cerrar Grupos y Generar Cuadro
+                                    </button>
+                                </ng-container>
                             </div>
                         </div>
 
@@ -1369,11 +1444,11 @@
                                 style="background: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
                                 <div>
                                     <div
-                                        style="font-weight: 900; color: #0f172a; font-size: 14px; display: flex; align-items: center; gap: 10px; text-transform: uppercase;">
+                                        style="font-weight: 900; color: #0f172a; font-size: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase;">
                                         <span *ngIf="ins.es_semilla"
-                                            style="background: #fbbf24; color: #000; font-size: 8px; font-weight: 900; padding: 2px 5px; border-radius: 2px;"
-                                            title="Cabeza de Serie">
-                                            SEED {{ ins.nro_siembra }}
+                                            style="background: #ccff00; color: #000; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 4px; border: 1px solid #b8e600; display: inline-flex; align-items: center; gap: 3px;"
+                                            title="Cabeza de Serie Oficial">
+                                            👑 CS #{{ ins.nro_siembra }}
                                         </span>
                                         <span *ngIf="!ins.es_semilla" style="font-size: 12px; opacity: 0.5;">●</span>
                                         {{ ins.nombre_jugador_1 }} / {{ ins.nombre_jugador_2 }}
@@ -1388,17 +1463,18 @@
                                         <span>📅 {{ ins.fecha_inscripcion | date:'dd/MM/yyyy' }}</span>
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 12px; align-items: center;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
                                     <button (click)="toggleSemilla(ins)"
-                                        [style.background]="ins.es_semilla ? '#fbbf24' : '#f1f5f9'"
-                                        [style.color]="ins.es_semilla ? '#000' : '#64748b'"
-                                        style="padding: 6px 12px; border: none; border-radius: 0px; font-size: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                        <i class="fas fa-star" *ngIf="ins.es_semilla"></i>
-                                        {{ ins.es_semilla ? 'Seed #' + ins.nro_siembra : '+ Seed' }}
+                                        [style.background]="ins.es_semilla ? '#ccff00' : '#f8fafc'"
+                                        [style.color]="ins.es_semilla ? '#000' : '#475569'"
+                                        [style.borderColor]="ins.es_semilla ? '#b8e600' : '#e2e8f0'"
+                                        style="padding: 6px 12px; border: 1px solid; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+                                        title="Click para asignar o editar Cabeza de Serie">
+                                        <span>{{ ins.es_semilla ? '👑 CS #' + ins.nro_siembra : '+ Cabeza de Serie' }}</span>
                                     </button>
                                     <div [style.background]="ins.validado ? '#0f172a' : '#f1f5f9'"
                                         [style.color]="ins.validado ? '#fff' : '#64748b'"
-                                        style="padding: 6px 12px; border-radius: 0px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">
                                         {{ ins.validado ? '✓ Validada' : '⏳ Pendiente' }}
                                     </div>
                                     <button class="btn-mini-danger" (click)="eliminarPareja(ins.id)"

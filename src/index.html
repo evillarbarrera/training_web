@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 
 <head>
   <meta charset="utf-8">
@@ -20,27 +20,185 @@
 
     gtag('config', 'G-Q20DYE2X1V');
   </script>
-  <title>PadelBlox | Software de Gestión para Academias de Pádel</title>
+  <script>
+    (function() {
+      try {
+        var path = window.location.pathname;
+        if (path && path !== '/' && path !== '/index.html') {
+          var mCoach = path.match(/^\/(?:entrenador|e)\/([a-zA-Z0-9_-]+)/);
+          if (mCoach && mCoach[1]) {
+            window.location.replace('/#/e/' + mCoach[1] + window.location.search);
+            return;
+          }
+          var mClub = path.match(/^\/(?:c|club-landing)\/([a-zA-Z0-9_-]+)/);
+          if (mClub && mClub[1]) {
+            window.location.replace('/#/c/' + mClub[1] + window.location.search);
+            return;
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <title>PadelBlox | Software de Gestión de Clubes de Pádel y Entrenadores Nº1</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="canonical" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="es" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="es-CL" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="es-ES" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="es-AR" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="es-MX" href="https://padelblox.cl/">
+  <link rel="alternate" hreflang="x-default" href="https://padelblox.cl/">
+
+  <meta name="theme-color" content="#070a12">
+  <meta name="geo.region" content="CL">
+  <meta name="geo.placename" content="Santiago, Chile">
   <meta name="google-site-verification" content="5Hyklo3ryZmsFkE9NsOXHeiZFMuraObr0bVbDyIsDWE" />
-  <meta name="description" content="El software de gestión definitivo para academias y entrenadores de pádel. Administra alumnos, clases, pagos y métricas de rendimiento en una plataforma integral.">
-  <meta name="keywords" content="gestión academia padel, software para entrenadores, administracion clubes padel, padelblox, control de alumnos padel, sistema de reservas padel">
+  <meta name="description" content="PadelBlox es el software Nº1 de gestión de clubes de pádel y entrenadores: reservas de pistas en tiempo real, torneos americanos automáticos con IA, pizarra táctica 3D, gestión de alumnos y app para Smartwatch (Apple Watch / Wear OS). Prueba 90 días gratis.">
+  <meta name="keywords" content="gestion de padel, software club padel, gestion de club de padel, entrenadores de padel, software para entrenadores de padel, app entrenadores padel, software canchas padel, administracion pistas padel, torneos americanos padel software, pizarra tactica padel 3d, clases de padel software, evaluacion tecnica padel IA, padelblox chile, padelblox">
   <meta name="author" content="PadelBlox Software">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   
   <!-- Open Graph / Social Media -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="PadelBlox | Tu Academia de Pádel Online">
-  <meta property="og:description" content="Entrenamiento de pádel de alto rendimiento. Mejora tu técnica y táctica con nuestra plataforma profesional.">
+  <meta property="og:locale" content="es_CL">
+  <meta property="og:site_name" content="PadelBlox">
+  <meta property="og:title" content="PadelBlox | Software de Gestión de Clubes, Entrenamientos y Smartwatch de Pádel">
+  <meta property="og:description" content="La plataforma más avanzada para clubes y entrenadores de pádel: reservas online, canchas ilimitadas, torneos con IA y marcador en vivo en tu smartwatch.">
   <meta property="og:image" content="https://padelblox.cl/assets/images/og-image.png">
-  <meta property="og:url" content="https://padelblox.cl">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://padelblox.cl/">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PadelBlox | Software de Gestión de Clubes y Smartwatch de Pádel">
+  <meta name="twitter:description" content="Automatiza tus canchas, reservas, torneos y entrenamientos de pádel con IA y app smartwatch. Prueba 90 días gratis.">
+  <meta name="twitter:image" content="https://padelblox.cl/assets/images/og-image.png">
+
+  <!-- Schema.org JSON-LD Structured Data (Comprehensive Knowledge Graph) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://padelblox.cl/#website",
+        "url": "https://padelblox.cl/",
+        "name": "PadelBlox",
+        "description": "Software integral de gestión de clubes de pádel, torneos y entrenamientos con IA",
+        "publisher": {
+          "@id": "https://padelblox.cl/#organization"
+        },
+        "inLanguage": "es"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://padelblox.cl/#software",
+        "name": "PadelBlox",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "Sports Club Management & Coaching Software",
+        "operatingSystem": "Web Browser, iOS, Android, watchOS (Apple Watch), Wear OS",
+        "url": "https://padelblox.cl",
+        "description": "Software integral especializado en la gestión de clubes de pádel, reservas en tiempo real de canchas, pagos automáticos Webpay/Stripe, torneos americanos con IA, marcador en smartwatch y pizarra táctica 3D para entrenadores.",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Gestión de Club de Pádel",
+            "price": "49990",
+            "priceCurrency": "CLP",
+            "priceValidUntil": "2027-12-31",
+            "description": "Plan completo para clubes de pádel con canchas ilimitadas, reservas, torneos y app smartwatch. 90 días gratis."
+          },
+          {
+            "@type": "Offer",
+            "name": "Entrenadores Inicial 20",
+            "price": "19990",
+            "priceCurrency": "CLP",
+            "priceValidUntil": "2027-12-31",
+            "description": "Plan para entrenadores de pádel hasta 20 alumnos con IA y pizarra táctica. 90 días gratis."
+          }
+        ],
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "154",
+          "bestRating": "5",
+          "worstRating": "1"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://padelblox.cl/#organization",
+        "name": "PadelBlox",
+        "url": "https://padelblox.cl/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://padelblox.cl/assets/images/logo-transparent.png",
+          "caption": "PadelBlox Logo"
+        },
+        "sameAs": [
+          "https://www.instagram.com/padelblox/",
+          "https://apps.apple.com/cl/app/padelblox-chile/id6759664729",
+          "https://play.google.com/store/apps/details?id=cl.padelacademy.app"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+56969083124",
+          "email": "soporte@padelblox.cl",
+          "contactType": "customer support",
+          "availableLanguage": ["Spanish", "English"]
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://padelblox.cl/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Cuál es el mejor software para la gestión de un club de pádel?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PadelBlox es el software líder para la gestión de clubes de pádel en Chile y Latinoamérica. Permite administrar canchas en tiempo real, automatizar reservas online sin comisiones abusivas, organizar torneos americanos y ligas con Inteligencia Artificial, y controlar inventario y TPV de cafetería."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué software utilizan los entrenadores de pádel para sus clases?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PadelBlox cuenta con el software más avanzado para entrenadores y academias de pádel, incluyendo pizarra táctica interactiva 3D, seguimiento de alumnos, control de asistencia, venta de packs de clases particulares y análisis de rendimiento técnico con IA."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cómo ayuda PadelBlox a organizar torneos americanos de pádel?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "El sistema genera automáticamente fixtures, rotación de parejas por nivel, horarios de pistas y marcadores en vivo, eliminando las hojas de cálculo y reduciendo los tiempos muertos en los torneos."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Tiene app para Smartwatch (Apple Watch y Wear OS)?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí, PadelBlox permite llevar el tanteador en tiempo real desde la muñeca en Apple Watch y relojes Wear OS (Samsung Galaxy Watch, etc.), registrando sets, golpes y frecuencia cardíaca que se reflejan en las pantallas Padelblox TV del club."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;600;800;950&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;950&family=Outfit:wght@400;600;800;950&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -50,7 +208,39 @@
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-53GRCQ75"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
-  <app-root></app-root>
+
+  <app-root>
+    <!-- Contenido semántico para rastreo e indexación inmediata en buscadores (Google / Bing) -->
+    <noscript>
+      <div style="padding: 24px; font-family: sans-serif; color: #1e293b; background: #f8fafc; max-width: 900px; margin: 0 auto;">
+        <h1>PadelBlox: Software de Gestión de Clubes de Pádel y Entrenadores</h1>
+        <p>PadelBlox es la plataforma SaaS líder en gestión de pádel en Chile, España y Latinoamérica. Diseñada específicamente para optimizar la rentabilidad de clubes, automatizar reservas de canchas, emparejar torneos americanos con IA y potenciar el trabajo de entrenadores de pádel con pizarras tácticas y app para smartwatch.</p>
+        
+        <h2>Software para la Gestión Integral de Clubes de Pádel</h2>
+        <p>Administra tus pistas con cuadrícula visual en tiempo real, cobros online Webpay/Stripe, inventario de bar/tienda, ligas oficiales y carteleras Smart TV para el club.</p>
+        <p>
+          <a href="/gestion-club-padel">Software para Club de Pádel</a> | 
+          <a href="/software-gestion-padel">Gestión de Canchas de Pádel</a> | 
+          <a href="/administracion-club-padel">Administración de Clubes</a>
+        </p>
+
+        <h2>Software para Entrenadores y Profesores de Pádel</h2>
+        <p>Pizarra táctica 3D, gestión de alumnos particulares y grupales, venta de packs de clases online, control de asistencia y análisis técnico con Inteligencia Artificial.</p>
+        <p>
+          <a href="/gestion-entrenamientos-padel">Software para Entrenadores de Pádel</a> | 
+          <a href="/software-entrenadores-padel">App para Profesores de Pádel</a> | 
+          <a href="/entrenadores-padel">Pizarra Táctica y Alumnos</a>
+        </p>
+      </div>
+    </noscript>
+
+    <!-- Preloader inicial de alta velocidad mientras hidrata Angular -->
+    <div style="position:fixed;inset:0;background:#070a12;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ffffff;font-family:'Outfit',sans-serif;z-index:99999;">
+      <div style="width:48px;height:48px;border:3px solid rgba(204,255,0,0.2);border-top-color:#ccff00;border-radius:50%;animation:spinLoader 0.8s linear infinite;"></div>
+      <span style="margin-top:16px;font-size:0.95rem;font-weight:800;letter-spacing:1px;color:#ccff00;">PADEL<span style="color:#ffffff;">BLOX</span></span>
+      <style>@keyframes spinLoader{to{transform:rotate(360deg)}}</style>
+    </div>
+  </app-root>
 </body>
 
 </html>

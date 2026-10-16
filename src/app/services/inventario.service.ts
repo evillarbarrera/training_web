@@ -62,6 +62,11 @@ export class InventarioService {
     return this.http.post(`${this.apiUrl}/delete_consumo.php`, { id }, { headers: this.getHeaders() });
   }
 
+  updateConsumo(id: number, cantidad: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/update_consumo.php`, { id, cantidad }, { headers: this.getHeaders() });
+  }
+
+
   getCategorias(clubId: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/get_categorias.php?club_id=${clubId}`);
   }

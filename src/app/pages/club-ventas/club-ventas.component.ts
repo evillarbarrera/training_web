@@ -372,8 +372,12 @@ export class ClubVentasComponent implements OnInit {
         this.filteredPlayers = [];
     }
 
+    isServicio(item: any): boolean {
+        return item && String(item.tipo || '').trim().toLowerCase() === 'servicio';
+    }
+
     addToCart(p: any) {
-        if (p.stock_actual <= 0) {
+        if (!this.isServicio(p) && p.stock_actual <= 0) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Sin Stock',
@@ -385,7 +389,7 @@ export class ClubVentasComponent implements OnInit {
 
         const existing = this.cart.find(item => item.id === p.id);
         if (existing) {
-            if (existing.cantidad >= p.stock_actual) {
+            if (!this.isServicio(p) && existing.cantidad >= p.stock_actual) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Límite de Stock',
@@ -409,7 +413,7 @@ export class ClubVentasComponent implements OnInit {
     }
 
     increaseQty(item: any) {
-        if (item.cantidad >= item.stock_actual) {
+        if (!this.isServicio(item) && item.cantidad >= item.stock_actual) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Límite de Stock',

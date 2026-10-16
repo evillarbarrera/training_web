@@ -1,0 +1,40 @@
+name: Deploy Web Production to Hosting
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to Ferozo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Instalar dependencias
+        run: npm ci || npm install
+
+      - name: 🔨 Compilar Angular en Producción
+        run: npm run build:prod
+
+      - name: 🚀 Sincronizar dist/ al Servidor (Ferozo)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_SERVER || 'c2632100.ferozo.com' }}
+          username: ${{ secrets.SFTP_USERNAME || 'c2632100' }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          port: ${{ secrets.SFTP_PORT || 21 }}
+          protocol: ${{ secrets.SFTP_PROTOCOL || 'ftps' }}
+          local-dir: ./dist/
+          server-dir: ${{ secrets.SFTP_REMOTE_DIR || '/public_html/' }}
+          dangerous-clean-slate: false

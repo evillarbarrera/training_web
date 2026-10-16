@@ -6,6 +6,30 @@
   <!-- Main Content Area -->
   <main class="main-content">
 
+    <!-- Mobile App Smart Banner -->
+    <div class="mobile-app-banner" *ngIf="isMobile && showMobileBanner">
+      <div class="mab-left">
+        <div class="mab-icon-box">
+          <img src="assets/images/logo-transparent.png" alt="PadelBlox Logo">
+        </div>
+        <div class="mab-info">
+          <strong>¿Prefieres reservar desde la App?</strong>
+          <p>Disfruta de recordatorios en tu celular y acceso directo a tus clases.</p>
+        </div>
+      </div>
+      <div class="mab-actions">
+        <button class="mab-btn-open" (click)="openInMobileApp()">
+          <i class="fas fa-mobile-screen"></i> Abrir App
+        </button>
+        <a [href]="storeDownloadUrl" target="_blank" rel="noopener noreferrer" class="mab-btn-download">
+          <i class="fab fa-apple" *ngIf="appDeepLink.isIOS()"></i>
+          <i class="fab fa-google-play" *ngIf="!appDeepLink.isIOS()"></i>
+          Descargar
+        </a>
+        <button class="mab-btn-close" (click)="dismissMobileBanner()" aria-label="Cerrar banner">&times;</button>
+      </div>
+    </div>
+
     <!-- Content -->
     <div class="dashboard-grid">
 

@@ -48,10 +48,18 @@ export class AlumnosComponent implements OnInit {
 
   // Paginación y Ordenamiento
   currentPage = 1;
-  itemsPerPage = 6;
+  itemsPerPage = 12;
   pagedAlumnos: any[] = [];
   sortCriteria: 'nombre' | 'saldo' = 'nombre';
   filterTab: 'todos' | 'pendientes' | 'sin_credito' = 'todos';
+
+  get totalConCreditos(): number {
+    return this.alumnos.filter(a => Number(a.sesiones_pendientes) > 0).length;
+  }
+
+  get totalSaldoBajo(): number {
+    return this.alumnos.filter(a => Number(a.sesiones_pendientes) <= 1).length;
+  }
 
   @HostListener('window:resize', ['$event'])
   onResize(event: any) {
@@ -59,12 +67,14 @@ export class AlumnosComponent implements OnInit {
   }
 
   private calcularItemsPerPage() {
-    if (window.innerWidth >= 1200) {
-      this.itemsPerPage = 9; // 3 rows, 3 columns
-    } else if (window.innerWidth >= 768) {
-      this.itemsPerPage = 6; // iPad/Tablet
+    if (window.innerWidth >= 1400) {
+      this.itemsPerPage = 12; // 4 columns
+    } else if (window.innerWidth >= 900) {
+      this.itemsPerPage = 9; // 3 columns
+    } else if (window.innerWidth >= 600) {
+      this.itemsPerPage = 6; // 2 columns
     } else {
-      this.itemsPerPage = 4; // Mobile
+      this.itemsPerPage = 6; // Mobile
     }
     this.updatePagedAlumnos();
   }

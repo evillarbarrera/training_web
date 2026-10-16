@@ -6,16 +6,20 @@
   <main class="main-content">
 
 
-    <div class="dashboard-grid">
-      <!-- Hero Section -->
-      <div class="hero-section">
-        <div class="hero-text">
+    <div class="dashboard-grid compact-view">
+      <!-- COMPACT HEADER WITH STATS SUMMARY -->
+      <div class="compact-header-row">
+        <div class="header-titles">
           <h2>Gestión de Alumnos</h2>
-          <p>Administra el progreso y créditos de tus estudiantes</p>
+          <p>Administra créditos, progreso y evaluaciones de tus estudiantes</p>
         </div>
-        <div class="header-btns">
-          <button class="btn-help" (click)="startTutorial()">
+
+        <div class="header-actions">
+          <button class="btn-help-compact" (click)="startTutorial()" title="Ver tutorial interactivo">
             💡 Ayuda
+          </button>
+          <button class="btn-create-compact" (click)="mostrarModalCrear()">
+            <i class="fas fa-user-plus"></i> + Registrar Alumno
           </button>
         </div>
       </div>
@@ -40,30 +44,61 @@
         </div>
       </div>
 
-      <!-- Search Bar -->
-      <div class="search-section">
-        <div class="search-bar">
-          <span class="search-icon">🔍</span>
+      <!-- COMPACT KPI METRIC CHIPS -->
+      <div class="kpi-mini-bar">
+        <div class="kpi-pill" [class.active]="filterTab === 'todos' && sortCriteria === 'nombre'" (click)="sortCriteria = 'nombre'; cambiarFiltro('todos')">
+          <div class="kpi-icon-box total"><i class="fas fa-users"></i></div>
+          <div class="kpi-meta">
+            <span class="kpi-label">TOTAL ALUMNOS</span>
+            <b class="kpi-num">{{ alumnos.length }}</b>
+          </div>
+        </div>
+
+        <div class="kpi-pill" [class.active]="filterTab === 'pendientes'" (click)="cambiarFiltro('pendientes')">
+          <div class="kpi-icon-box active-credits"><i class="fas fa-baseball-bat-ball"></i></div>
+          <div class="kpi-meta">
+            <span class="kpi-label">CON CRÉDITOS (≥1)</span>
+            <b class="kpi-num">{{ totalConCreditos }}</b>
+          </div>
+        </div>
+
+        <div class="kpi-pill" [class.active]="sortCriteria === 'saldo'" (click)="cambiarOrden('saldo')">
+          <div class="kpi-icon-box low-credits"><i class="fas fa-triangle-exclamation"></i></div>
+          <div class="kpi-meta">
+            <span class="kpi-label">SALDO BAJO / RENOVACIÓN</span>
+            <b class="kpi-num">{{ totalSaldoBajo }}</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPACT SEARCH & FILTER CONTROLS BAR -->
+      <div class="compact-search-bar">
+        <div class="search-input-wrapper">
+          <i class="fas fa-search search-icon"></i>
           <input type="text" [(ngModel)]="searchTerm" (input)="filtrarAlumnos()"
             placeholder="Buscar alumno por nombre..." class="search-input" />
+          <button class="btn-clear-search" *ngIf="searchTerm" (click)="searchTerm = ''; filtrarAlumnos()">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
-        <div class="sort-controls">
-          <span class="sort-label">Filtrar:</span>
-          <button class="sort-btn" [class.active]="filterTab === 'todos'" (click)="cambiarFiltro('todos')">
+
+        <div class="filter-pills-row">
+          <button class="pill-btn" [class.active]="filterTab === 'todos' && sortCriteria === 'nombre'" (click)="sortCriteria = 'nombre'; cambiarFiltro('todos')">
             Todos ({{ alumnos.length }})
           </button>
-          <button class="sort-btn" [class.active]="filterTab === 'pendientes'" (click)="cambiarFiltro('pendientes')">
-            🎾 Clases Pendientes (≥1)
+          <button class="pill-btn" [class.active]="filterTab === 'pendientes'" (click)="cambiarFiltro('pendientes')">
+            🎾 Con Clases ({{ totalConCreditos }})
           </button>
-          <button class="sort-btn" [class.active]="sortCriteria === 'saldo'" (click)="cambiarOrden('saldo')">
-            ⚠️ Saldo Bajo
+          <button class="pill-btn" [class.active]="filterTab === 'sin_credito'" (click)="cambiarFiltro('sin_credito')">
+            ⚠️ Sin Créditos ({{ alumnos.length - totalConCreditos }})
           </button>
-          <button class="create-btn" (click)="mostrarModalCrear()">
-            + Registrar Alumno
+          <button class="pill-btn" [class.active]="sortCriteria === 'saldo'" (click)="cambiarOrden('saldo')">
+            🔻 Saldo Crítico
           </button>
         </div>
       </div>
 
+      <!-- SKELETON LOADERS -->
       <div *ngIf="isLoading" class="skeleton-grid">
         <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]">
           <div class="skeleton-header">
@@ -79,69 +114,86 @@
         </div>
       </div>
 
+      <!-- EMPTY STATE -->
       <div *ngIf="!isLoading && alumnosFiltrados.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
-        <h3>No tienes alumnos</h3>
-        <p>Registra a tu primer alumno usando el botón superior.</p>
+        <h3>No se encontraron alumnos</h3>
+        <p>Prueba ajustando los filtros o registra a un nuevo alumno.</p>
+        <button class="btn-create-compact mt-3" (click)="mostrarModalCrear()">+ Registrar Alumno</button>
       </div>
 
+      <!-- COMPACT ALUMNOS GRID -->
       <div *ngIf="!isLoading && pagedAlumnos.length > 0">
-        <div class="alumnos-grid">
-          <div *ngFor="let alumno of pagedAlumnos" class="alumno-card"
+        <div class="alumnos-grid compact">
+          <div *ngFor="let alumno of pagedAlumnos" class="alumno-card-compact"
             [class.critical-balance]="alumno.sesiones_pendientes <= 1">
-            <div class="card-header">
-              <div class="critical-badge" *ngIf="alumno.sesiones_pendientes <= 1">
-                ⚠️ RENOVACIÓN
-              </div>
-              <div class="avatar-container">
+            
+            <!-- TOP CARD ROW: AVATAR, NAME, BADGE -->
+            <div class="card-main-row">
+              <div class="avatar-box">
                 <span class="initials">{{ alumno.jugador_nombre?.charAt(0) || '👤' }}</span>
                 <img *ngIf="alumno.foto" [src]="alumno.foto" class="student-img"
                   (error)="$event.target.style.display='none'" />
               </div>
-              <div class="header-info">
-                <h3>{{ alumno.jugador_nombre }}</h3>
-              </div>
-            </div>
-
-            <div class="card-body">
-              <div class="session-info">
-                <div class="session-stat">
-                  <span class="label">Pag.</span>
-                  <span class="value">{{ alumno.sesiones_pagadas || 0 }}</span>
+              
+              <div class="meta-box">
+                <div class="name-status-row">
+                  <h3 class="student-name" [title]="alumno.jugador_nombre">{{ alumno.jugador_nombre }}</h3>
+                  <span class="status-badge" [ngClass]="alumno.sesiones_pendientes <= 1 ? 'critical' : 'active'">
+                    {{ alumno.sesiones_pendientes <= 1 ? '⚠️ Renovación' : 'Activo' }}
+                  </span>
                 </div>
-                <div class="session-stat">
-                  <span class="label">Res.</span>
-                  <span class="value">{{ alumno.sesiones_reservadas || 0 }}</span>
-                </div>
-                <div class="session-stat">
-                  <span class="label">Grup.</span>
-                  <span class="value" style="color: #2196f3; font-weight: 800;">{{ alumno.sesiones_grupales || 0
-                    }}</span>
-                </div>
-                <div class="session-stat">
-                  <span class="label">Pend.</span>
-                  <span class="value highlight">{{ alumno.sesiones_pendientes || 0 }}</span>
+                <div class="pack-sub" *ngIf="alumno.pack_nombre">
+                  <i class="fas fa-box-archive"></i> {{ alumno.pack_nombre }}
                 </div>
               </div>
             </div>
 
-            <div class="card-footer" style="padding: 15px;">
-              <button class="action-btn" (click)="verClases(alumno)"
-                style="width: 100%; background-color: #111; color: #ccff00; border: 2px solid #ccff00; font-weight: 800; border-radius: 12px; height: 50px;">
-                📋 Malla / Evaluar
+            <!-- COMPACT STATS ROW (PAG | RES | GRUP | PEND) -->
+            <div class="stats-ribbon">
+              <div class="stat-col" title="Sesiones Pagadas">
+                <small>Pagadas</small>
+                <b>{{ alumno.sesiones_pagadas || 0 }}</b>
+              </div>
+              <div class="stat-col" title="Sesiones Reservadas">
+                <small>Reservadas</small>
+                <b>{{ alumno.sesiones_reservadas || 0 }}</b>
+              </div>
+              <div class="stat-col" title="Sesiones Grupales">
+                <small>Grupales</small>
+                <b class="text-blue">{{ alumno.sesiones_grupales || 0 }}</b>
+              </div>
+              <div class="stat-col highlight-col" [class.low]="alumno.sesiones_pendientes <= 1" title="Sesiones Pendientes / Disponibles">
+                <small>Disponibles</small>
+                <b class="disp-count">{{ alumno.sesiones_pendientes || 0 }}</b>
+              </div>
+            </div>
+
+            <!-- COMPACT ACTION BUTTONS -->
+            <div class="card-actions-row">
+              <button class="btn-action-main" (click)="verClases(alumno)" title="Ver Malla y Plan de Clases">
+                <i class="fas fa-clipboard-list"></i> Malla & Clases
+              </button>
+              <button class="btn-action-eval" (click)="irAEvaluar(alumno)" title="Evaluar Alumno">
+                <i class="fas fa-star"></i>
+              </button>
+              <button class="btn-action-prog" (click)="verProgreso(alumno)" title="Ver Progreso y Estadísticas">
+                <i class="fas fa-chart-line"></i>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Pagination Controls -->
-        <div class="pagination-controls" *ngIf="totalPages > 1">
-          <button class="page-btn" (click)="prevPage()" [disabled]="currentPage === 1">
-            Anterior
+        <!-- COMPACT PAGINATION -->
+        <div class="compact-pagination" *ngIf="totalPages > 1">
+          <button class="btn-page-ctrl" (click)="prevPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i> Anterior
           </button>
-          <span class="page-indicator">Página {{ currentPage }} de {{ totalPages }}</span>
-          <button class="page-btn next-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
-            Siguiente
+          <span class="page-indicator-compact">
+            <b>{{ currentPage }}</b> / {{ totalPages }} <small>({{ alumnosFiltrados.length }} alumnos)</small>
+          </span>
+          <button class="btn-page-ctrl" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            Siguiente <i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -149,35 +201,37 @@
   </main>
 
   <!-- MODAL CREACIÓN ALUMNO -->
-  <div class="modal-overlay" *ngIf="isCreatingAlumno">
-    <div class="modal-content">
+  <div class="modal-overlay" *ngIf="isCreatingAlumno" (click)="cerrarModalCrear()">
+    <div class="modal-content compact-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Nuevo Alumno</h3>
+        <div class="modal-title-box">
+          <span class="m-kicker"><i class="fas fa-user-plus"></i> NUEVO REGISTRO</span>
+          <h3>Crear Alumno</h3>
+        </div>
         <button class="close-btn" (click)="cerrarModalCrear()">×</button>
       </div>
       <div class="modal-body">
-        <p class="modal-intro">Ingresa los datos del alumno para crear su cuenta y enviarle sus credenciales de acceso.</p>
+        <p class="modal-intro">Ingresa los datos del alumno para generar su cuenta y enviarle sus credenciales de acceso.</p>
         
         <div class="form-group">
-          <label>Nombre Completo</label>
+          <label><i class="fas fa-user"></i> Nombre Completo</label>
           <input type="text" [(ngModel)]="nuevoAlumno.nombre" placeholder="Ej: Juan Pérez" class="form-input">
         </div>
 
         <div class="form-group">
-          <label>Correo Electrónico (Será su Usuario)</label>
+          <label><i class="fas fa-envelope"></i> Correo Electrónico (Será su Usuario)</label>
           <input type="email" [(ngModel)]="nuevoAlumno.email" placeholder="alumno@correo.com" class="form-input">
         </div>
 
-        <div class="info-box" style="background: #eef2ff; padding: 12px; border-radius: 8px; display: flex; align-items: flex-start; gap: 10px; margin-top: 15px;">
-          <span style="font-size: 1.2rem;">📧</span>
-          <p style="margin: 0; font-size: 0.9rem; color: #4338ca;">Se enviará un correo automáticamente con una contraseña genérica vinculada a tu perfil de entrenador.</p>
+        <div class="info-callout">
+          <i class="fas fa-paper-plane"></i>
+          <p>Se enviará automáticamente un correo con una clave de acceso vinculada a tu perfil de entrenador.</p>
         </div>
       </div>
-      <div class="modal-footer" style="padding: 20px; display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #eee;">
-        <button class="btn-secondary" (click)="cerrarModalCrear()" style="background: none; border: 1px solid #ccc; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancelar</button>
-        <button class="btn-primary" (click)="crearAlumno()" [disabled]="!nuevoAlumno.nombre || !nuevoAlumno.email" 
-          style="background: #111; color: #ccff00; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">
-          Crear y Notificar
+      <div class="modal-footer">
+        <button class="btn-secondary-compact" (click)="cerrarModalCrear()">Cancelar</button>
+        <button class="btn-primary-compact" (click)="crearAlumno()" [disabled]="!nuevoAlumno.nombre || !nuevoAlumno.email">
+          <i class="fas fa-check"></i> Crear y Notificar
         </button>
       </div>
     </div>

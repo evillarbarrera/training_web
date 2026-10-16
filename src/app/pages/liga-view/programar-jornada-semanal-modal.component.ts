@@ -18,10 +18,10 @@ import Swal from 'sweetalert2';
               <span>📅</span>
             </div>
             <div>
-              <h3>Programar Horarios — {{ jornada?.nombre || 'Jornada' }}</h3>
+              <h3>⚡ Programar Semana — {{ jornada?.nombre || ('Jornada #' + jornada?.numero_jornada) }}</h3>
               <div class="header-subtitle-row">
-                <span class="category-pill">Todas las Categorías</span>
-                <span class="jornada-subtext">Agendamiento semanal completo con restricciones por jugador y parejas demo</span>
+                <span class="category-pill">Jornada #{{ jornada?.numero_jornada || 1 }}</span>
+                <span class="jornada-subtext">Asigna fecha de inicio, días, canchas y bloques de 60 min para esta jornada</span>
               </div>
             </div>
           </div>
@@ -108,7 +108,20 @@ import Swal from 'sweetalert2';
             </div>
           </div>
 
-          <!-- Sección 5: Límite de Partidos por Pareja por Semana -->
+          <!-- Sección 5: Duración de cada partido -->
+          <div class="section-card">
+            <div class="section-title">
+              <span class="sec-icon">⏱️</span>
+              <label>Duración de cada partido en cancha</label>
+            </div>
+            <select [(ngModel)]="duracionMinutos" class="custom-input">
+              <option [ngValue]="90">90 minutos (1 hora y media - Estándar Liga)</option>
+              <option [ngValue]="60">60 minutos (1 hora)</option>
+              <option [ngValue]="120">120 minutos (2 horas)</option>
+            </select>
+          </div>
+
+          <!-- Sección 6: Límite de Partidos por Pareja por Semana -->
           <div class="section-card">
             <div class="section-title">
               <span class="sec-icon">🎾</span>
@@ -612,11 +625,12 @@ export class ProgramarJornadaSemanalModalComponent implements OnInit {
     { nombre: 'Domingo', selected: true }
   ];
 
-  horarios: string[] = ['18:00', '19:30', '21:00'];
+  horarios: string[] = ['18:00', '19:00', '20:00', '21:00', '22:00'];
   nuevoHorario: string = '';
   canchasSeleccionadas: number[] = [];
   respetarRestricciones: boolean = true;
   maxPartidosPorPareja: number = 1;
+  duracionMinutos: number = 90;
 
   loading: boolean = false;
   errorMsj: string = '';
@@ -624,10 +638,20 @@ export class ProgramarJornadaSemanalModalComponent implements OnInit {
   constructor(private ligaService: LigaService) {}
 
   ngOnInit(): void {
-    const today = new Date();
-    this.fechaInicio = today.toISOString().split('T')[0];
     if (this.canchas && this.canchas.length > 0) {
       this.canchasSeleccionadas = this.canchas.map(c => c.id);
+    }
+    this.horarios = ['18:00', '19:00', '20:00', '21:00', '22:00'];
+
+    const numJ = parseInt(this.jornada?.numero_jornada || 1, 10);
+    if (this.jornada?.fecha_inicio) {
+      this.fechaInicio = this.jornada.fecha_inicio;
+    } else {
+      const today = new Date();
+      if (numJ > 1) {
+        today.setDate(today.getDate() + (numJ - 1) * 7);
+      }
+      this.fechaInicio = today.toISOString().split('T')[0];
     }
   }
 
@@ -692,21 +716,34 @@ export class ProgramarJornadaSemanalModalComponent implements OnInit {
       horarios: this.horarios,
       canchas_ids: this.canchasSeleccionadas,
       respetar_restricciones: this.respetarRestricciones,
-      max_partidos_por_pareja: this.maxPartidosPorPareja
+      max_partidos_por_pareja: this.maxPartidosPorPareja,
+      duracion_minutos: this.duracionMinutos
     };
 
     this.ligaService.programarJornadaSemanal(payload).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
-          Swal.fire({
-            title: '¡Jornada Programada!',
-            text: res.mensaje || 'Los partidos fueron agendados exitosamente.',
-            icon: 'success',
-            timer: 2500,
-            showConfirmButton: false
-          });
-          this.cerrar.emit(true);
+          if (res.sin_horario && res.sin_horario > 0) {
+            Swal.fire({
+              title: 'Programación Completada con Avisos',
+              html: `<p style="font-size: 15px; margin-bottom: 8px;">${res.mensaje}</p><p class="text-muted" style="font-size: 13px;">Los partidos sin cupo quedaron sin horario para garantizar que no existan partidos solapados en ninguna cancha.</p>`,
+              icon: 'info',
+              confirmButtonText: 'Entendido',
+              confirmButtonColor: '#0052cc'
+            }).then(() => {
+              this.cerrar.emit(true);
+            });
+          } else {
+            Swal.fire({
+              title: '¡Jornada Programada!',
+              text: res.mensaje || 'Los partidos fueron agendados exitosamente sin solapamientos.',
+              icon: 'success',
+              timer: 2500,
+              showConfirmButton: false
+            });
+            this.cerrar.emit(true);
+          }
         } else {
           this.errorMsj = res.error || 'Error al programar la jornada';
         }

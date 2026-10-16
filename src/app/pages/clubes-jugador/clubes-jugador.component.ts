@@ -514,6 +514,11 @@ export class ClubesJugadorComponent implements OnInit {
             hora_fin: horaFin,
             duracion: this.selectedDuration,
             precio: precioCalculado,
+            pagado: 0,
+            pago_p1: 0,
+            pago_p2: 0,
+            pago_p3: 0,
+            pago_p4: 0,
             estado: 'Confirmada'
         };
 
@@ -540,6 +545,9 @@ export class ClubesJugadorComponent implements OnInit {
             },
             error: (err: any) => {
                 Swal.close();
+                this.disponibilidadCache.clear();
+                this.loadDisponibilidad();
+                this.cdr.detectChanges();
                 Swal.fire('Error', err.error?.error || 'No se pudo completar la reserva', 'error');
             }
         });

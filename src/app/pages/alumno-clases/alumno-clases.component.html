@@ -26,51 +26,63 @@
 
             <!-- 💎 PREMIUM PROFILE HEADER -->
             <header class="student-profile-header">
-                <div class="p-left">
-                    <div class="avatar-box">
-                        <div class="avatar-shimmer" *ngIf="!alumnoNombre"></div>
-                        <img [src]="alumnoFoto || 'assets/images/placeholder_avatar.png'" class="avatar" alt="Alumno">
-                        <div class="level-badge-float" *ngIf="alumnoProfile?.categoria">
-                            {{ alumnoProfile.categoria }}
-                        </div>
-                    </div>
-                    
-                    <div class="info">
-                        <h1 class="fade-in" style="text-transform: capitalize;">{{ alumnoNombre || 'Cargando perfil...' }}</h1>
-                        <div class="user-meta" style="margin-top: -5px; margin-bottom: 5px;">
-                            <span class="user-handle" style="color: #666; font-weight: 500;">@{{ alumnoProfile?.usuario || alumnoProfile?.email?.split('@')[0] || 'usuario' }}</span>
-                        </div>
-                        
-                        <div class="level-edit">
-                            <span>Categoría Oficial Padel Academy</span>
-                            <select class="category-select" [value]="alumnoProfile?.categoria || ''" (change)="actualizarNivel($event)">
-                                <option value="">Seleccionar Nivel</option>
-                                <optgroup label="👨 HOMBRES">
-                                    <option value="6ª">6ª Categoría</option>
-                                    <option value="5ª">5ª Categoría</option>
-                                    <option value="4ª">4ª Categoría</option>
-                                    <option value="3ª">3ª Categoría</option>
-                                    <option value="2ª">2ª Categoría</option>
-                                    <option value="1ª">1ª Categoría (Pro)</option>
-                                </optgroup>
-                                <optgroup label="👩 MUJERES">
-                                    <option value="D">Categoría D</option>
-                                    <option value="C">Categoría C</option>
-                                    <option value="B">Categoría B</option>
-                                    <option value="A">Categoría A (Pro)</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                    </div>
+                <div class="header-back-row">
+                    <button class="btn-back-link" (click)="volverAlumnos()">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Volver a Alumnos</span>
+                    </button>
+                    <button class="btn-help" (click)="startTutorial()">💡 Tutorial Guiado</button>
                 </div>
 
-                <div class="p-right">
-                    <button class="btn-help" (click)="startTutorial()" style="margin-bottom: 15px;">💡 Ayuda</button>
-                    <div class="progress-circle-wrap" *ngIf="hasChartData">
-                        <span class="label">Rendimiento Técnico Global</span>
-                        <div class="p-text">{{ (storedLineData[storedLineData.length-1] || 0) | number:'1.1-1' }} / 10</div>
-                        <div class="p-bar-container">
-                            <div class="p-fill" [style.width.%]="(storedLineData[storedLineData.length-1] || 0) * 10"></div>
+                <div class="header-main-card">
+                    <div class="p-left">
+                        <div class="avatar-box">
+                            <div class="avatar-shimmer" *ngIf="!alumnoNombre"></div>
+                            <img [src]="alumnoFoto || 'assets/images/placeholder_avatar.png'" class="avatar" alt="Alumno">
+                            <div class="level-badge-float" *ngIf="alumnoProfile?.categoria">
+                                {{ alumnoProfile.categoria }}
+                            </div>
+                        </div>
+                        
+                        <div class="info">
+                            <div class="user-name-row">
+                                <h1 class="fade-in">{{ alumnoNombre || 'Cargando perfil...' }}</h1>
+                                <span class="user-handle">@{{ alumnoProfile?.usuario || alumnoProfile?.email?.split('@')[0] || 'usuario' }}</span>
+                            </div>
+                            
+                            <div class="level-edit">
+                                <span class="level-lbl"><i class="fas fa-medal"></i> Categoría Oficial:</span>
+                                <select class="category-select" [value]="alumnoProfile?.categoria || ''" (change)="actualizarNivel($event)">
+                                    <option value="">Seleccionar Nivel</option>
+                                    <optgroup label="👨 HOMBRES">
+                                        <option value="6ª">6ª Categoría</option>
+                                        <option value="5ª">5ª Categoría</option>
+                                        <option value="4ª">4ª Categoría</option>
+                                        <option value="3ª">3ª Categoría</option>
+                                        <option value="2ª">2ª Categoría</option>
+                                        <option value="1ª">1ª Categoría (Pro)</option>
+                                    </optgroup>
+                                    <optgroup label="👩 MUJERES">
+                                        <option value="D">Categoría D</option>
+                                        <option value="C">Categoría C</option>
+                                        <option value="B">Categoría B</option>
+                                        <option value="A">Categoría A (Pro)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-right">
+                        <div class="progress-circle-wrap" *ngIf="hasChartData">
+                            <span class="label">Rendimiento Técnico Global</span>
+                            <div class="p-text-row">
+                                <span class="p-score-num">{{ (storedLineData[storedLineData.length-1] || 0) | number:'1.1-1' }}</span>
+                                <span class="p-score-max">/ 10</span>
+                            </div>
+                            <div class="p-bar-container">
+                                <div class="p-fill" [style.width.%]="(storedLineData[storedLineData.length-1] || 0) * 10"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -105,9 +117,9 @@
                 <!-- 🧩 ROADMAP TABS: BY ALL STUDENT PACKS -->
                 <div class="sub-nav" *ngIf="roadmapPacks.length > 0">
                     <button class="sn-btn" *ngFor="let p of roadmapPacks" [class.active]="selectedPack?.id === p.id" (click)="seleccionarPackRoadmap(p)">
-                        📦 {{ p.nombre }}
+                        <span>📦 {{ p.nombre }}</span>
                     </button>
-                    <span class="history-label" style="margin-left: auto; color: #ccff00; font-size: 11px; font-weight: 700;">PLANES ACTIVOS</span>
+                    <span class="history-label" style="margin-left: auto; color: #10b981; font-size: 11px; font-weight: 800;">● PLANES ACTIVOS</span>
                 </div>
 
                 <div class="roadmap-grid" *ngIf="historialMalla.length > 0">
@@ -118,31 +130,40 @@
                         <div class="s-header">
                             <div class="sheet-id">S-{{ (i + 1) | number:'2.0' }}</div>
                             <div class="status-badge-mini" [ngClass]="sesion.estado_asistencia">
-                                {{ sesion.estado_asistencia === 'proxima' ? 'Agendada' : (sesion.estado_asistencia === 'completada' ? 'OK' : 'Pte') }}
+                                {{ sesion.estado_asistencia === 'proxima' ? '📅 Agendada' : (sesion.estado_asistencia === 'completada' ? '✅ OK' : '⏳ Pendiente') }}
                             </div>
                         </div>
 
                         <div class="s-content">
                             <div class="sheet-main-row">
                                 <h3 class="session-title">{{ sesion.titulo }}</h3>
-                                <span class="mesh-badge-mini">{{ selectedPack?.activeMesh?.malla_nombre || 'Plan' }}</span>
+                                <span class="mesh-badge-mini">{{ selectedPack?.activeMesh?.malla_nombre || 'Plan Activo' }}</span>
                             </div>
                             
                             <div class="objectives-list-compact" *ngIf="sesion.lista_objetivos?.length > 0">
                                 <div class="obj-item-mini" *ngFor="let obj of sesion.lista_objetivos | slice:0:2">
-                                    <span class="dot"></span> {{ obj }}
+                                    <span class="dot"></span>
+                                    <span>{{ obj }}</span>
                                 </div>
+                            </div>
+
+                            <div class="session-structure-tags">
+                                <span class="str-tag" *ngIf="sesion.calentamiento" title="Calentamiento">🔥 Calent.</span>
+                                <span class="str-tag" *ngIf="sesion.parte_tecnica" title="Técnica">🎾 Técnica</span>
+                                <span class="str-tag" *ngIf="sesion.drills" title="Drills">⚡ Drills</span>
+                                <span class="str-tag" *ngIf="sesion.juego" title="Puntos/Juego">🏆 Puntos</span>
                             </div>
                         </div>
 
                         <div class="s-footer-compact">
                             <div class="date-info-mini">
-                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'d/MM') : '??/??' }}</span>
+                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'dd/MM') : 'Por agendar' }}</span>
                                 <span class="v time-m" *ngIf="sesion.hora">@{{ sesion.hora | slice:0:5 }}</span>
                             </div>
                             
                             <button class="btn-sheet-mini" (click)="abrirPanelDetalle(sesion)">
-                                Ficha →
+                                <span>Ficha</span>
+                                <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
@@ -155,7 +176,7 @@
                     
                     <!-- 🛠 COACH ACTION: ASSIGN MALLA -->
                     <div class="coach-assign-box" *ngIf="userRole === 'entrenador' || userRole === 'admin'">
-                        <p class="small">Como Entrenador, puedes iniciar un plan ahora:</p>
+                        <p class="small">Como Entrenador, puedes iniciar una planificación ahora:</p>
                         <div class="assign-form">
                             <select class="category-select" #mallaSelector>
                                 <option value="">Seleccionar Plan de Entrenamiento</option>
@@ -246,7 +267,7 @@
                         </button>
                     </div>
 
-                    <div class="sub-nav" style="margin-bottom: 30px;">
+                    <div class="sub-nav" style="margin-bottom: 20px;">
                         <button class="sn-btn" *ngFor="let cat of availableVideoCategories" [class.active]="activeVideoCategory === cat" (click)="activeVideoCategory = cat">
                             {{ cat }}
                         </button>
@@ -331,8 +352,10 @@
 
                 <div class="eval-grid" *ngIf="activeEvalSubTab === 'tecnico'">
                     <div class="eval-header-card">
-                        <h2>Comité Técnico (Golpes)</h2>
-                        <p>Puntúa el desempeño del alumno en cada golpe (1-10).</p>
+                        <div class="eh-info">
+                            <h2>Comité Técnico (Golpes)</h2>
+                            <p>Puntúa el desempeño del alumno en cada golpe (1-10).</p>
+                        </div>
                         <div class="quick-actions">
                             <button type="button" (click)="setAllEvaluationScores(5, $event)">Set Todos a 5</button>
                             <button type="button" (click)="setAllEvaluationScores(7, $event)">Set Todos a 7</button>
@@ -389,8 +412,10 @@
                 <!-- 🧠 COMITÉ TÁCTICO -->
                 <div class="eval-grid" *ngIf="activeEvalSubTab === 'tactico'">
                     <div class="eval-header-card">
-                        <h2>Comité Táctico (Estrategia)</h2>
-                        <p>Evaluación de la toma de decisiones y posicionamiento estratégico.</p>
+                        <div class="eh-info">
+                            <h2>Comité Táctico (Estrategia)</h2>
+                            <p>Evaluación de la toma de decisiones y posicionamiento estratégico.</p>
+                        </div>
                     </div>
 
                     <div class="strokes-form tactical-grid">
@@ -419,8 +444,10 @@
                 <!-- 🏃‍♂️ COMITÉ FÍSICO -->
                 <div class="eval-grid" *ngIf="activeEvalSubTab === 'fisico'">
                     <div class="eval-header-card fisico">
-                        <h2>Comité Físico (Atleta)</h2>
-                        <p>Evaluación de las capacidades físicas y motrices del alumno.</p>
+                        <div class="eh-info">
+                            <h2>Comité Físico (Atleta)</h2>
+                            <p>Evaluación de las capacidades físicas y motrices del alumno.</p>
+                        </div>
                     </div>
 
                     <div class="strokes-form tactical-grid">
@@ -448,8 +475,10 @@
                 <!-- 🧘 COMITÉ MENTAL -->
                 <div class="eval-grid" *ngIf="activeEvalSubTab === 'mental'">
                     <div class="eval-header-card mental">
-                        <h2>Comité Mental (Psicología)</h2>
-                        <p>Evaluación de la fortaleza mental, actitud y gestión del estrés.</p>
+                        <div class="eh-info">
+                            <h2>Comité Mental (Psicología)</h2>
+                            <p>Evaluación de la fortaleza mental, actitud y gestión del estrés.</p>
+                        </div>
                     </div>
 
                     <div class="strokes-form tactical-grid">
@@ -475,64 +504,190 @@
                 </div>
 
                 <div class="save-bar fade-in">
-                        <div class="sb-info">
-                            <h3 class="sb-title">Conclusión de la Sesión</h3>
-                            <p>Añade un resumen general sobre el desempeño y objetivos para la próxima clase.</p>
-                        </div>
-                        <textarea [(ngModel)]="evaluacionComentarios" placeholder="Ej: Gran avance en la empuñadura, seguiremos trabajando la volea..."></textarea>
-                        
-                        <button class="btn-primary-neon" (click)="guardarEvaluacion()" [disabled]="isLoading">
-                            🚀 Publicar Evaluación Trazable
-                        </button>
+                    <div class="sb-info">
+                        <h3 class="sb-title">Conclusión de la Sesión</h3>
+                        <p>Añade un resumen general sobre el desempeño y objetivos para la próxima clase.</p>
                     </div>
+                    <textarea [(ngModel)]="evaluacionComentarios" placeholder="Ej: Gran avance en la empuñadura, seguiremos trabajando la volea..."></textarea>
+                    
+                    <button class="btn-primary-neon" (click)="guardarEvaluacion()" [disabled]="isLoading">
+                        🚀 Publicar Evaluación Trazable
+                    </button>
                 </div>
+            </div>
                 
                 <!-- 📜 VIEW 4: PASADO ACADÉMICO -->
             <div class="view-content fade-in" *ngIf="activeTab === 'historial'">
-                <div class="section-intro">
-                    <h2>Pasado Académico</h2>
-                    <p>Revisa tu historial de planificaciones y hojas de ruta completadas.</p>
-                </div>
-
-                <!-- 🧩 HISTORY TABS -->
-                <div class="sub-nav" *ngIf="historialPacks.length > 0">
-                    <button class="sn-btn" *ngFor="let p of historialPacks" [class.active]="selectedPack?.id === p.id" (click)="seleccionarPackRoadmap(p)">
-                        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
-                            <span style="font-weight: 700;">📦 {{ p.nombre }}</span>
-                            <span style="font-size: 10px; opacity: 0.7;">Comprado: {{ p.fecha_inicio | date:'dd/MM/yy' }}</span>
+                <!-- 🎓 ACADEMIC TRANSCRIPT HERO BANNER -->
+                <div class="academic-hero-card">
+                    <div class="hero-main">
+                        <div class="hero-badge">
+                            <span class="badge-icon">🎓</span>
+                            <span>EXPEDIENTE ACADÉMICO HISTÓRICO</span>
                         </div>
-                    </button>
-                    <span class="history-label" style="margin-left: auto; color: #94a3b8; font-size: 12px; font-weight: 700;">PLANES COMPLETADOS</span>
-                </div>
+                        <h2 class="hero-title">Historial de Formación y Certificaciones</h2>
+                        <p class="hero-subtitle">Registro cronológico de programas pedagógicos completados, objetivos técnicos consolidados y fichas archivadas.</p>
+                    </div>
 
-                <div class="roadmap-grid" *ngIf="historialMalla.length > 0">
-                    <div class="sesion-card professional-sheet fade-in completada" *ngFor="let sesion of historialMalla; let i = index">
-                        <div class="sheet-status-bar"></div>
-                        <div class="s-header">
-                            <div class="sheet-id">S-{{ (i + 1) | number:'2.0' }}</div>
-                            <div class="status-badge-mini completada">Finalizada</div>
-                        </div>
-                        <div class="s-content">
-                            <div class="sheet-main-row">
-                                <h3 class="session-title">{{ sesion.titulo }}</h3>
-                                <span class="mesh-badge-mini" style="background: #f1f5f9; color: #64748b;">{{ selectedPack?.activeMesh?.malla_nombre || 'Archivo' }}</span>
+                    <div class="hero-metrics-strip">
+                        <div class="metric-box">
+                            <div class="m-icon">🏆</div>
+                            <div class="m-data">
+                                <span class="m-val">{{ historialPacks.length }}</span>
+                                <span class="m-lbl">Planes Finalizados</span>
                             </div>
                         </div>
-                        <div class="s-footer-compact">
-                            <div class="date-info-mini">
-                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'d/MM/yy') : 'Hist' }}</span>
+
+                        <div class="metric-box">
+                            <div class="m-icon">🎾</div>
+                            <div class="m-data">
+                                <span class="m-val">{{ getTotalHistorialSesiones() }}</span>
+                                <span class="m-lbl">Clases Archivadas</span>
                             </div>
-                            <button class="btn-sheet-mini" (click)="abrirPanelDetalle(sesion)">
-                                Ver Ficha →
-                            </button>
+                        </div>
+
+                        <div class="metric-box status-box">
+                            <div class="m-icon">🎖️</div>
+                            <div class="m-data">
+                                <span class="m-status-pill">100% Completado</span>
+                                <span class="m-lbl">Estado Curricular</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="no-data-card" *ngIf="historialPacks.length === 0">
-                    <div class="icon">📚</div>
-                    <h3>Sin Historial Finalizado</h3>
-                    <p>Aún no tienes planificaciones pedagógicas completadas para archivar.</p>
+                <!-- 🧩 COMPLETED PROGRAMS / PACKS SELECTOR -->
+                <div class="academic-packs-section" *ngIf="historialPacks.length > 0">
+                    <div class="section-subhead">
+                        <div class="subhead-title">
+                            <span class="dot-indicator"></span>
+                            <h3>Programas Académicos Finalizados</h3>
+                        </div>
+                        <span class="programs-count-chip">{{ historialPacks.length }} {{ historialPacks.length === 1 ? 'programa' : 'programas' }}</span>
+                    </div>
+
+                    <div class="academic-packs-scroll">
+                        <div class="academic-pack-card" 
+                             *ngFor="let p of historialPacks" 
+                             [class.active]="selectedPack?.id === p.id" 
+                             (click)="seleccionarPackRoadmap(p)">
+                            <div class="pack-top">
+                                <span class="pack-icon">📦</span>
+                                <span class="pack-status-badge">
+                                    <i class="fas fa-check-circle"></i> Finalizado
+                                </span>
+                            </div>
+                            <div class="pack-body">
+                                <h4 class="pack-title">{{ p.nombre }}</h4>
+                                <div class="pack-mesh-tag">
+                                    <i class="fas fa-layer-group"></i> {{ p.activeMesh?.malla_nombre || 'Plan de Entrenamiento' }}
+                                </div>
+                            </div>
+                            <div class="pack-footer">
+                                <span class="pack-date" *ngIf="p.fecha_inicio">
+                                    <i class="far fa-calendar-alt"></i> {{ p.fecha_inicio | date:'dd/MM/yyyy' }}
+                                </span>
+                                <span class="pack-sessions-pill">
+                                    {{ p.sesiones_totales || p.sesiones_pasadas }} sesiones
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📋 SELECTED PROGRAM SESSIONS TIMELINE & CARDS -->
+                <div class="academic-sessions-section" *ngIf="historialPacks.length > 0 && selectedPack">
+                    <div class="program-active-bar">
+                        <div class="bar-left">
+                            <div class="bar-tag">PLAN SELECCIONADO</div>
+                            <h3 class="bar-title">{{ selectedPack.nombre }}</h3>
+                            <span class="bar-mesh">
+                                <strong>Malla:</strong> {{ selectedPack.activeMesh?.malla_nombre || 'Formación Técnica Personalizada' }}
+                            </span>
+                        </div>
+                        <div class="bar-right">
+                            <div class="sessions-counter">
+                                <span class="num">{{ historialMalla.length }}</span>
+                                <span class="txt">Fichas Pedagógicas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LOADING STATE -->
+                    <div class="academic-loading" *ngIf="isLoading">
+                        <div class="spinner"></div>
+                        <p>Cargando fichas técnicas del historial...</p>
+                    </div>
+
+                    <!-- SESSIONS GRID -->
+                    <div class="academic-sessions-grid" *ngIf="!isLoading && historialMalla.length > 0">
+                        <div class="academic-session-card fade-in" *ngFor="let sesion of historialMalla; let i = index">
+                            <div class="card-status-accent"></div>
+                            
+                            <div class="card-head">
+                                <div class="session-num-badge">S-{{ (i + 1) | number:'2.0' }}</div>
+                                <div class="session-completed-tag">
+                                    <span class="check-icon">✓</span> Completada
+                                </div>
+                            </div>
+
+                            <div class="card-content">
+                                <h4 class="session-title">{{ sesion.titulo }}</h4>
+                                <div class="session-mesh-badge">
+                                    {{ selectedPack?.activeMesh?.malla_nombre || 'Plan Académico' }}
+                                </div>
+
+                                <!-- OBJECTIVES LIST -->
+                                <div class="session-objectives" *ngIf="sesion.lista_objetivos?.length > 0">
+                                    <div class="obj-chip" *ngFor="let obj of sesion.lista_objetivos | slice:0:2">
+                                        <span class="obj-dot"></span>
+                                        <span class="obj-text">{{ obj }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- DRILLS / TECH PILLS -->
+                                <div class="session-structure-tags">
+                                    <span class="str-tag" *ngIf="sesion.calentamiento" title="Incluye Calentamiento">🔥 Calentamiento</span>
+                                    <span class="str-tag" *ngIf="sesion.parte_tecnica" title="Incluye Técnica">🎾 Técnica</span>
+                                    <span class="str-tag" *ngIf="sesion.drills" title="Incluye Drills">⚡ Drills</span>
+                                    <span class="str-tag" *ngIf="sesion.juego" title="Incluye Puntos/Juego">🏆 Puntos</span>
+                                </div>
+                            </div>
+
+                            <div class="card-footer">
+                                <div class="session-date-info">
+                                    <i class="far fa-calendar-check"></i>
+                                    <span class="date-val">{{ sesion.fecha ? (sesion.fecha | date:'dd/MM/yyyy') : 'Archivada' }}</span>
+                                    <span class="time-val" *ngIf="sesion.hora">{{ sesion.hora | slice:0:5 }}</span>
+                                </div>
+                                <button class="btn-view-sheet" (click)="abrirPanelDetalle(sesion)">
+                                    <span>Ver Ficha</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EMPTY SESSIONS IN SELECTED PACK -->
+                    <div class="academic-empty-sessions" *ngIf="!isLoading && historialMalla.length === 0">
+                        <div class="empty-icon">📋</div>
+                        <h4>Sin sesiones registradas en este plan</h4>
+                        <p>No se encontraron fichas pedagógicas detalladas para este programa archivado.</p>
+                    </div>
+                </div>
+
+                <!-- EMPTY STATE: NO COMPLETED PACKS AT ALL -->
+                <div class="academic-empty-state" *ngIf="historialPacks.length === 0 && !isLoading">
+                    <div class="empty-illustration">
+                        <div class="empty-icon-circle">🎓</div>
+                    </div>
+                    <h3>Expediente Académico en Proceso</h3>
+                    <p>Aún no posees planes de entrenamiento o mallas curriculares completadas para archivar en tu expediente.</p>
+                    <div class="empty-action">
+                        <button class="btn-primary-neon" (click)="setTab('roadmap')">
+                            📍 Ver Hoja de Ruta Activa
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -545,7 +700,7 @@
                 </div>
                 
                 <!-- SUB-TABS PAGOS -->
-                <div class="sub-nav" style="margin-bottom: 30px;" *ngIf="alumnoPacks.length > 0">
+                <div class="sub-nav" style="margin-bottom: 20px;" *ngIf="alumnoPacks.length > 0">
                     <button class="sn-btn" [class.active]="activePacksSubTab === 'individuales'" (click)="activePacksSubTab = 'individuales'">
                         👤 Individuales ({{ packsIndividuales.length }})
                     </button>
@@ -556,8 +711,8 @@
 
                 <div class="packs-container" *ngIf="alumnoPacks.length > 0">
                     <!-- DISPLAY GRUPALES -->
-                    <div class="packs-grid" *ngIf="activePacksSubTab === 'grupales'">
-                        <div class="no-data-card" *ngIf="packsGrupales.length === 0" style="width: 100%; grid-column: 1 / -1;">
+                    <div *ngIf="activePacksSubTab === 'grupales'">
+                        <div class="no-data-card" *ngIf="packsGrupales.length === 0">
                             <div class="icon">🎾</div>
                             <h3>Sin Clases Grupales</h3>
                             <p>No se han encontrado registros de packs grupales.</p>
@@ -574,34 +729,35 @@
                         </div>
 
                         <!-- RENDER FILTERED GRUPALES -->
-                        <div class="packs-grid" *ngIf="activePacksSubTab === 'grupales'">
+                        <div class="packs-grid" *ngIf="groupedPacksGrupales[activeGrupalPeriod]">
                             <div class="grupal-card fade-in" *ngFor="let p of groupedPacksGrupales[activeGrupalPeriod]">
                                 <div class="grupal-indicator"></div>
                                 <div class="grupal-content">
                                     <div class="grupal-header">
                                         <div class="day-label">
-                                            <h3 class="text-uppercase">{{ p.dia_semana != null ? getDayName(p.dia_semana) : (p.fecha_inicio | date:'EEEE':'':'es') }} {{ p.fecha_inicio | date:'dd MMM' }}</h3>
+                                            <h3>{{ p.dia_semana != null ? getDayName(p.dia_semana) : (p.fecha_inicio | date:'EEEE':'':'es') }} {{ p.fecha_inicio | date:'dd MMM' }}</h3>
                                         </div>
                                         <div class="status-badge" [class.active]="p.estado === 'activo' || p.estado_inscripcion === 'activo'">
                                             INSCRITO
                                         </div>
                                     </div>
                                     
-                                    <div class="grupal-details">
-                                        <div class="detail-item">
-                                            <i class="fas fa-clock"></i>
-                                            <span>{{ p.hora_inicio | slice:0:5 }} ({{ p.duracion_sesion_min || 120 }} MIN)</span>
+                                    <div class="grupal-details-compact">
+                                        <div class="chip-item">
+                                            <i class="far fa-clock"></i>
+                                            <span>{{ p.hora_inicio | slice:0:5 }} ({{ p.duracion_sesion_min || 120 }}m)</span>
                                         </div>
-                                        <div class="pack-tag">
-                                            {{ p.pack_nombre || p.nombre }} • {{ p.categoria || 'Nivel Único' }}
+                                        <div class="chip-item mesh">
+                                            {{ p.pack_nombre || p.nombre }}
+                                        </div>
+                                        <div class="chip-item level" *ngIf="p.categoria">
+                                            {{ p.categoria }}
                                         </div>
                                     </div>
 
-                                    <div class="inscritos-row">
-                                        <div class="participants-badge">
-                                            <i class="fas fa-users"></i>
-                                            <span>Sesión Grupal: {{ p.cupos_ocupados || 0 }} / {{ p.capacidad_maxima || 6 }} Jugadores</span>
-                                        </div>
+                                    <div class="inscritos-row-compact">
+                                        <i class="fas fa-users"></i>
+                                        <span>{{ p.cupos_ocupados || 0 }} / {{ p.capacidad_maxima || 6 }} Jugadores</span>
                                     </div>
                                 </div>
                             </div>
@@ -609,42 +765,54 @@
                     </div>
 
                     <!-- DISPLAY INDIVIDUALES -->
-                    <div class="packs-grid" *ngIf="activePacksSubTab === 'individuales'">
-                        <div class="no-data-card" *ngIf="packsIndividuales.length === 0" style="width: 100%; grid-column: 1 / -1;">
+                    <div *ngIf="activePacksSubTab === 'individuales'">
+                        <div class="no-data-card" *ngIf="packsIndividuales.length === 0">
                             <div class="icon">👤</div>
                             <h3>Sin Clases Individuales</h3>
                             <p>No se han encontrado registros de packs individuales o multijugador.</p>
                         </div>
-                        <div class="pack-card fade-in" *ngFor="let p of packsIndividuales">
-                            <div class="p-header">
-                                <div class="p-title-wrap">
-                                    <h3>{{ p.pack_nombre }}</h3>
-                                    <p class="p-date">{{ p.fecha_inicio | date:'dd/MM/yyyy' }}</p>
+                        
+                        <div class="packs-grid" *ngIf="packsIndividuales.length > 0">
+                            <div class="pack-card fade-in" *ngFor="let p of packsIndividuales">
+                                <div class="p-header">
+                                    <div class="p-title-wrap">
+                                        <h3 class="p-title">{{ p.pack_nombre }}</h3>
+                                        <span class="p-date" *ngIf="p.fecha_inicio">
+                                            <i class="far fa-calendar-alt"></i> {{ p.fecha_inicio | date:'dd/MM/yyyy' }}
+                                        </span>
+                                    </div>
+                                    <span class="p-pay-status" [ngClass]="p.estado_pago || 'pendiente'">
+                                        {{ (p.estado_pago === 'pagado') ? '✅ PAGADO' : '⏳ PENDIENTE' }}
+                                    </span>
                                 </div>
-                                <span class="p-pay-status" [ngClass]="p.estado_pago || 'pendiente'">
-                                    {{ (p.estado_pago === 'pagado') ? '✅ PAGADO' : '⏳ PENDIENTE' }}
-                                </span>
-                            </div>
-                            <div class="p-body">
-                                <div class="metric-row">
-                                    <span class="m-label">Clases Realizadas:</span>
-                                    <strong class="m-val">{{ p.sesiones_pasadas || 0 }} / {{ p.sesiones_totales }}</strong>
-                                </div>
-                                <div class="p-bar-bg"><div class="p-bar-fill" [style.width.%]="(p.sesiones_pasadas/p.sesiones_totales)*100"></div></div>
-                                <div class="metric-row secondary">
-                                    <span class="m-label">Reservadas:</span>
-                                    <strong>{{ p.sesiones_reservadas || 0 }} / {{ p.sesiones_totales }}</strong>
-                                </div>
-                                <div class="p-details-row">
-                                    <div class="p-detail">
-                                        <span class="l">Inversión:</span>
-                                        <span class="v">${{ (p.precio_pagado || 0) | number }}</span>
+
+                                <div class="p-body">
+                                    <div class="metric-row">
+                                        <span class="m-label">Clases Realizadas:</span>
+                                        <strong class="m-val">{{ p.sesiones_pasadas || 0 }} / {{ p.sesiones_totales }}</strong>
+                                    </div>
+                                    
+                                    <div class="p-bar-bg">
+                                        <div class="p-bar-fill" [style.width.%]="((p.sesiones_pasadas || 0) / (p.sesiones_totales || 1)) * 100"></div>
+                                    </div>
+
+                                    <div class="p-chips-row">
+                                        <span class="p-chip">
+                                            <i class="far fa-bookmark"></i> Res: <strong>{{ p.sesiones_reservadas || 0 }}/{{ p.sesiones_totales }}</strong>
+                                        </span>
+                                        <span class="p-chip" *ngIf="(p.sesiones_totales - (p.sesiones_pasadas || 0)) > 0">
+                                            Disp: <strong style="color: #10b981;">{{ p.sesiones_totales - (p.sesiones_pasadas || 0) }}</strong>
+                                        </span>
+                                        <span class="p-chip price">
+                                            ${{ (p.precio_pagado || 0) | number }}
+                                        </span>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="p-footer" *ngIf="p.estado_pago !== 'pagado' && userRole === 'entrenador'">
-                                <button class="btn-confirm-pay" (click)="marcarPagado(p)">✅ Marcar Pagado</button>
-                                <button class="btn-remind-pay" (click)="enviarRecordatorioPago(p)">🔔 Aviso</button>
+
+                                <div class="p-footer" *ngIf="p.estado_pago !== 'pagado' && userRole === 'entrenador'">
+                                    <button class="btn-confirm-pay" (click)="marcarPagado(p)">✅ Marcar Pagado</button>
+                                    <button class="btn-remind-pay" (click)="enviarRecordatorioPago(p)">🔔 Aviso</button>
+                                </div>
                             </div>
                         </div>
                     </div>

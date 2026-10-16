@@ -1,0 +1,61 @@
+<div class="resena-overlay" (click)="close.emit()">
+  <div class="resena-card animate-up" (click)="$event.stopPropagation()">
+    
+    <div class="resena-header">
+      <div class="rh-tag"><i class="fas fa-certificate"></i> RESEÑA VERIFICADA</div>
+      <h3>Califica a {{ entrenadorNombre }}</h3>
+      <p>Tu opinión ayuda a otros alumnos a encontrar al entrenador ideal.</p>
+      <button class="btn-close" (click)="close.emit()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="resena-body">
+      <!-- Star Rating Picker -->
+      <div class="stars-picker-wrap">
+        <span class="sp-label">Tu Calificación General</span>
+        <div class="stars-interactive">
+          <button type="button" *ngFor="let s of [1,2,3,4,5]" 
+                  (click)="setRating(s)" 
+                  (mouseenter)="hoverRating = s" 
+                  (mouseleave)="hoverRating = 0"
+                  class="star-btn"
+                  [class.active]="s <= (hoverRating || rating)">
+            <i class="fas fa-star"></i>
+          </button>
+        </div>
+        <span class="rating-text">
+          <ng-container [ngSwitch]="hoverRating || rating">
+            <span *ngSwitchCase="5">⭐ Excelente (100% Recomendado)</span>
+            <span *ngSwitchCase="4">⭐ Muy Bueno (Gran entrenador)</span>
+            <span *ngSwitchCase="3">⭐ Bueno (Cumplió expectativas)</span>
+            <span *ngSwitchCase="2">⭐ Regular</span>
+            <span *ngSwitchCase="1">⭐ Por mejorar</span>
+          </ng-container>
+        </span>
+      </div>
+
+      <!-- Textarea -->
+      <div class="form-group">
+        <label for="comentarioText">¿Qué destacarías de sus clases?</label>
+        <textarea id="comentarioText" [(ngModel)]="comentario" rows="4" 
+                  placeholder="Ej: Excelente pedagogía, paciencia para corregir la bandeja y dinámicas muy entretenidas..."
+                  maxlength="600"></textarea>
+        <span class="char-count">{{ comentario.length }}/600</span>
+      </div>
+
+      <div class="verified-note">
+        <i class="fas fa-shield-halved"></i>
+        <span>Esta reseña se publicará como <strong>Alumn@ Verificad@</strong> tras validar tu historial de clases en PadelBlox.</span>
+      </div>
+    </div>
+
+    <div class="resena-footer">
+      <button class="btn-cancel" (click)="close.emit()">Cancelar</button>
+      <button class="btn-submit" [disabled]="isSaving" (click)="submitResena()">
+        <i class="fas fa-spinner fa-spin" *ngIf="isSaving"></i>
+        <i class="fas fa-paper-plane" *ngIf="!isSaving"></i>
+        <span>{{ isSaving ? 'Guardando...' : 'Publicar Reseña' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>

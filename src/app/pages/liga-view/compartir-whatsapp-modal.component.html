@@ -1,0 +1,63 @@
+<div class="modal-backdrop animate-in" (click)="cerrarModal()">
+  <div class="modal-card animate-scale" (click)="$event.stopPropagation()" style="max-width: 650px; width: 90%;">
+    <div class="modal-header">
+      <div class="header-title-box">
+        <h3>💬 Enviar Partidos a Grupos de WhatsApp</h3>
+        <p class="subtitle">Selecciona la categoría o grupo para enviar los partidos de la semana a WhatsApp.</p>
+      </div>
+      <button class="btn-close" (click)="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Filtro por Categoría / Grupo -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="font-weight: 800; font-size: 0.9rem; color: #0f172a; display: block; margin-bottom: 6px;">
+          👥 Seleccionar Grupo / Categoría a Enviar
+        </label>
+        <select [ngModel]="selectedCategoriaId" (ngModelChange)="onCategoriaChange($event)" class="custom-input" style="width: 100%; padding: 12px 14px; font-weight: 800; font-size: 0.95rem; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #0f172a;">
+          <option value="ALL">⭐ Todas las Categorías (Mensaje Completo de la Jornada)</option>
+          <option *ngFor="let cat of categorias || []" [value]="cat.id || cat.nombre">
+            🏷️ Categoría: {{ cat.nombre }} ({{ cat.genero }})
+          </option>
+        </select>
+        <small style="color: #64748b; font-weight: 600; margin-top: 4px; display: block;">
+          Selecciona una categoría si tienes un grupo de WhatsApp independiente para cada nivel.
+        </small>
+      </div>
+
+      <!-- Preview del Mensaje WhatsApp -->
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label style="font-weight: 800; font-size: 0.9rem; color: #0f172a; margin: 0;">
+            📝 Mensaje Formateado para WhatsApp
+          </label>
+          <span *ngIf="copiadoExitoso" style="color: #16a34a; font-weight: 800; font-size: 0.8rem; background: #dcfce7; padding: 2px 8px; border-radius: 6px;">
+            ✓ Copiado al portapapeles
+          </span>
+        </div>
+        <textarea 
+          [(ngModel)]="mensajeGenerado" 
+          rows="12" 
+          class="custom-textarea" 
+          style="width: 100%; font-family: monospace, monospace; font-size: 0.88rem; line-height: 1.5; padding: 14px; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #0f172a; color: #f8fafc; resize: vertical;"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid #f1f5f9; background: #f8fafc; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+      <button class="btn-secondary" (click)="cerrarModal()" style="padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer;">
+        Cancelar
+      </button>
+
+      <div style="display: flex; gap: 10px;">
+        <button (click)="copiarAlPortapapeles()" style="background: #3b82f6; color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+          📋 Copiar Texto
+        </button>
+
+        <button (click)="abrirWhatsApp()" style="background: #25D366; color: #ffffff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);">
+          📱 Abrir WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

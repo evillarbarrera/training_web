@@ -293,9 +293,18 @@ export class ClubInventarioComponent implements OnInit {
             return;
         }
 
-        if (this.editingProd.precio_venta < 0 || this.editingProd.precio_costo < 0 || this.editingProd.stock_actual < 0) {
-            Swal.fire('Atención', 'Los precios y el stock no pueden ser valores negativos', 'warning');
-            return;
+        if (this.editingProd.tipo === 'servicio') {
+            this.editingProd.stock_actual = 0;
+            this.editingProd.stock_minimo = 0;
+            if (this.editingProd.precio_venta < 0 || this.editingProd.precio_costo < 0) {
+                Swal.fire('Atención', 'Los precios no pueden ser valores negativos', 'warning');
+                return;
+            }
+        } else {
+            if (this.editingProd.precio_venta < 0 || this.editingProd.precio_costo < 0 || this.editingProd.stock_actual < 0) {
+                Swal.fire('Atención', 'Los precios y el stock no pueden ser valores negativos', 'warning');
+                return;
+            }
         }
 
         this.isLoading = true;

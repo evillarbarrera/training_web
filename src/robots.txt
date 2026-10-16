@@ -1,0 +1,63 @@
+# robots.txt para PadelBlox
+User-agent: *
+Allow: /
+Allow: /gestion-club-padel
+Allow: /software-club-padel
+Allow: /software-gestion-padel
+Allow: /administracion-club-padel
+Allow: /gestion-entrenamientos
+Allow: /gestion-entrenamientos-padel
+Allow: /software-entrenadores-padel
+Allow: /entrenadores-padel
+Allow: /app-entrenadores-padel
+Allow: /smartwatch-padel
+Allow: /reloj-padel
+Allow: /smartwatch
+Allow: /reloj
+Allow: /precios
+Allow: /planes
+Allow: /precios-planes
+Allow: /c/
+Allow: /entrenador/
+Allow: /soporte
+Allow: /login
+Allow: /register
+
+
+# Excluir paneles privados de administración y usuario
+Disallow: /admin-dashboard
+Disallow: /entrenador-home
+Disallow: /entrenador-agenda
+Disallow: /entrenador-packs
+Disallow: /entrenador-cupones
+Disallow: /disponibilidad-entrenador
+Disallow: /alumnos
+Disallow: /planificacion-mallas
+Disallow: /club-home
+Disallow: /admin-club
+Disallow: /club-inventario
+Disallow: /club-categorias
+Disallow: /club-ventas
+Disallow: /club-reportes
+Disallow: /club-whatsapp-difusion
+Disallow: /crear-americano
+Disallow: /torneos
+Disallow: /ligas
+Disallow: /liga-config
+Disallow: /pizarra-tactica
+Disallow: /jugador-home
+Disallow: /jugador-reservas
+Disallow: /jugador-calendario
+Disallow: /jugador-packs
+Disallow: /clubes-reservar
+Disallow: /club-reservas
+Disallow: /mis-habilidades
+Disallow: /mis-torneos
+Disallow: /mis-partidos
+Disallow: /perfil
+Disallow: /clases/
+Disallow: /progreso/
+Disallow: /evaluar/
+Disallow: /api/
+
+Sitemap: https://padelblox.cl/sitemap.xml

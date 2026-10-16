@@ -1,0 +1,184 @@
+<div class="guide-modal-backdrop animate-in" *ngIf="isOpen" (click)="closeModal()">
+  <div class="guide-modal-container" (click)="$event.stopPropagation()">
+    
+    <!-- HEADER -->
+    <header class="guide-modal-header">
+      <div class="header-left">
+        <div class="header-icon-circle">
+          <span>🎾</span>
+        </div>
+        <div class="header-titles">
+          <div class="badge-row">
+            <span class="guide-badge-volt">AYUDANTÍA PARA CLUBES</span>
+            <span class="guide-badge-version">Guía Oficial Padelblox</span>
+          </div>
+          <h2>Centro de Ayuda & Guía de Menús</h2>
+          <p>Domina cada función y sácale el máximo provecho a la gestión digital de tu club.</p>
+        </div>
+      </div>
+      <button class="btn-close-modal" (click)="closeModal()" title="Cerrar Guía">✕</button>
+    </header>
+
+    <!-- TABS -->
+    <nav class="guide-nav-tabs">
+      <button class="guide-tab-btn" [class.active]="activeTab === 'pasos'" (click)="activeTab = 'pasos'">
+        <span class="tab-icon">🚀</span> Primeros Pasos
+        <span class="tab-pill">{{ completedStepsCount }}/{{ onboardingSteps.length }}</span>
+      </button>
+      <button class="guide-tab-btn" [class.active]="activeTab === 'menus'" (click)="activeTab = 'menus'">
+        <span class="tab-icon">📋</span> Explorador de Menús
+        <span class="tab-pill">{{ menuItems.length }} Módulos</span>
+      </button>
+      <button class="guide-tab-btn" [class.active]="activeTab === 'faq'" (click)="activeTab = 'faq'">
+        <span class="tab-icon">💡</span> Preguntas & Reglas Clave
+      </button>
+    </nav>
+
+    <!-- TAB CONTENT: PASOS (ONBOARDING INICIAL) -->
+    <div class="guide-tab-body" *ngIf="activeTab === 'pasos'">
+      <div class="steps-intro-banner">
+        <div class="banner-content">
+          <h3>¡Bienvenido a Padelblox Clubes! 🎉</h3>
+          <p>Sigue estos 4 pasos esenciales para dejar tu club 100% operativo y listo para recibir reservas y torneos.</p>
+        </div>
+        <div class="progress-box">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" [style.width.%]="(completedStepsCount / onboardingSteps.length) * 100"></div>
+          </div>
+          <span class="progress-label">{{ (completedStepsCount / onboardingSteps.length) * 100 | number:'1.0-0' }}% Completado</span>
+        </div>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card" *ngFor="let s of onboardingSteps" [class.is-done]="stepStatus[s.doneKey]">
+          <div class="step-header">
+            <div class="step-icon-wrap">{{ s.icon }}</div>
+            <div class="step-title-col">
+              <h4>{{ s.title }}</h4>
+              <p>{{ s.subtitle }}</p>
+            </div>
+          </div>
+          <div class="step-actions">
+            <button class="btn-action-route" (click)="goToMenu(s.route)">
+              {{ s.actionText }} ➔
+            </button>
+            <button class="btn-check-toggle" (click)="toggleStep(s.doneKey, $event)">
+              <span class="check-box" [class.checked]="stepStatus[s.doneKey]">
+                <i class="fas fa-check" *ngIf="stepStatus[s.doneKey]">✓</i>
+              </span>
+              <span>{{ stepStatus[s.doneKey] ? 'Completado' : 'Marcar listo' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT: MENUS (DIRECTORIO COMPLETO) -->
+    <div class="guide-tab-body" *ngIf="activeTab === 'menus'">
+      <!-- FILTROS Y BÚSQUEDA -->
+      <div class="search-filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" 
+                 [(ngModel)]="searchTerm" 
+                 placeholder="Buscar módulo o función (ej: reservas, precios, TV, cobrar, canchas, fixture)..." />
+          <button *ngIf="searchTerm" class="clear-search" (click)="searchTerm = ''">✕</button>
+        </div>
+
+        <div class="category-pills">
+          <button class="cat-pill" [class.active]="selectedCategory === 'all'" (click)="selectedCategory = 'all'">Todos</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Principal'" (click)="selectedCategory = 'Principal'">Principal</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Gestión Club'" (click)="selectedCategory = 'Gestión Club'">Gestión</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Caja y Finanzas'" (click)="selectedCategory = 'Caja y Finanzas'">Caja & POS</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Competición'" (click)="selectedCategory = 'Competición'">Competición</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Configuración'" (click)="selectedCategory = 'Configuración'">Configuración</button>
+          <button class="cat-pill" [class.active]="selectedCategory === 'Pantallas'" (click)="selectedCategory = 'Pantallas'">TV</button>
+        </div>
+      </div>
+
+      <!-- LISTA DE TARJETAS DE MENÚ -->
+      <div class="menus-grid" *ngIf="filteredMenus.length > 0">
+        <div class="menu-detail-card" *ngFor="let m of filteredMenus">
+          <div class="card-top-row">
+            <div class="menu-identity">
+              <span class="menu-icon-box">{{ m.icon }}</span>
+              <div>
+                <div class="menu-title-row">
+                  <h4>{{ m.title }}</h4>
+                  <span class="card-badge" *ngIf="m.badge">{{ m.badge }}</span>
+                </div>
+                <span class="menu-category-tag">{{ m.category }}</span>
+              </div>
+            </div>
+            <button class="btn-goto-menu" (click)="goToMenu(m.route)" title="Abrir esta pantalla">
+              Abrir Módulo ➔
+            </button>
+          </div>
+
+          <div class="menu-card-body">
+            <p class="menu-summary"><strong>Resumen:</strong> {{ m.summary }}</p>
+            <p class="menu-desc">{{ m.description }}</p>
+
+            <div class="menu-tips" *ngIf="m.tips && m.tips.length > 0">
+              <div class="tip-item" *ngFor="let tip of m.tips">
+                <span class="tip-icon">💡</span>
+                <span class="tip-text">{{ tip }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-search-state" *ngIf="filteredMenus.length === 0">
+        <span class="empty-icon">🔍</span>
+        <h4>No encontramos ningún módulo con "{{ searchTerm }}"</h4>
+        <p>Prueba con términos como "reserva", "pistas", "precios", "tv", "torneo" o borra el buscador.</p>
+        <button class="btn-reset-search" (click)="searchTerm = ''; selectedCategory = 'all'">Restablecer Filtros</button>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT: FAQ (PREGUNTAS CLAVE) -->
+    <div class="guide-tab-body" *ngIf="activeTab === 'faq'">
+      <div class="faq-banner">
+        <h3>💡 Preguntas Frecuentes y Reglas Operativas</h3>
+        <p>Aclaraciones clave sobre cobros, visualización en Smart TV y gestión de ligas.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-card" *ngFor="let f of faqs">
+          <div class="faq-q">
+            <span class="q-icon">❓</span>
+            <h4>{{ f.q }}</h4>
+          </div>
+          <div class="faq-a">
+            <p>{{ f.a }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="support-contact-box">
+        <div class="support-text">
+          <h4>¿Necesitas orientación personalizada para tu club?</h4>
+          <p>El equipo de soporte e ingeniería de Padelblox está disponible por WhatsApp para ayudarte a configurar tu club.</p>
+        </div>
+        <a href="https://wa.me/56969083124?text=Hola%20Soporte%20PadelBlox,%20necesito%20ayuda%20para%20configurar%20mi%20club" 
+           target="_blank" rel="noopener noreferrer" class="btn-whatsapp-support">
+          <span>💬</span> Chatear con Soporte WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="guide-modal-footer">
+      <div class="footer-left">
+        <span>💡 Puedes abrir esta guía cuando quieras desde el botón <strong>"Guía del Club"</strong> en el menú lateral.</span>
+      </div>
+      <div class="footer-right">
+        <button class="btn-dismiss" (click)="markAllAsSeen()">
+          Entendido, cerrar guía
+        </button>
+      </div>
+    </footer>
+
+  </div>
+</div>

@@ -14,7 +14,7 @@
       <div class="page-header-flex">
         <div>
           <h1 class="section-title">Suscripción</h1>
-          <p class="section-subtitle">Gestión centralizada de tu academia <b>PadelBlox</b></p>
+          <p class="section-subtitle">Gestión centralizada de tu {{ userRole.includes('club') ? 'club' : 'academia' }} <b>PadelBlox</b></p>
         </div>
       </div>
 
@@ -28,8 +28,9 @@
         <div class="empty-state card-pm plan-selection-header mb-5">
           <div class="icon-box">💎</div>
           <div class="txt">
-            <h3>Activa tu Periodo de Prueba</h3>
-            <p>Selecciona tu plan para empezar tus <b>3 meses de regalo ($0 CLP)</b>.</p>
+            <h3>{{ sub?.days_remaining === 0 ? 'Activa tu Plan Mensual' : 'Activa tu Periodo de Prueba' }}</h3>
+            <p *ngIf="sub?.days_remaining === 0">Tu periodo de prueba de 90 días ha finalizado. Activa tu suscripción para continuar usando todos los servicios.</p>
+            <p *ngIf="!sub || sub?.days_remaining > 0">Selecciona tu plan para empezar tus <b>3 meses de regalo ($0 CLP)</b>.</p>
           </div>
         </div>
         
@@ -48,7 +49,9 @@
                 <div class="feat" *ngIf="p.type === 'commission'">3.5% comisión por venta (Consolidada)</div>
                 <div class="feat" *ngIf="p.type !== 'commission'">0% comisión por recaudación</div>
             </div>
-            <button class="btn-save btn-glow mt-4" (click)="cambiarPlan(p.id)">{{ isInternational ? 'Empieza Gratis en USD' : 'Empieza Gratis ahora' }}</button>
+            <button class="btn-save btn-glow mt-4" (click)="cambiarPlan(p.id)">
+                {{ sub?.days_remaining === 0 ? 'Activar Plan y Pagar' : (isInternational ? 'Empieza Gratis en USD' : 'Empieza Gratis ahora') }}
+            </button>
           </div>
         </div>
       </section>

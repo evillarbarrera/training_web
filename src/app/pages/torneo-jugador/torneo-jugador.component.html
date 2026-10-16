@@ -3,337 +3,616 @@
         [role]="userRole"></app-sidebar>
 
     <main class="main-content">
+        <!-- HEADER SECTION -->
         <header class="content-header">
-            <h1>Mis Competencias</h1>
-            <p>Seguimiento de torneos y resultados en vivo</p>
+            <div>
+                <h1>Torneos y Ligas</h1>
+                <p>Sigue tus partidos agendados, tablas de posiciones y explora nuevas competencias</p>
+            </div>
         </header>
 
-        <!-- TABS NAVIGATION -->
-        <div class="main-tabs-nav"
-            style="margin-bottom: 20px; display: flex; gap: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
-            <button class="tab-btn" [class.active]="activeTab === 'mis-torneos'" (click)="activeTab = 'mis-torneos'"
-                style="background: none; border: none; font-size: 16px; font-weight: 600; color: #64748b; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.2s;"
-                [style.color]="activeTab === 'mis-torneos' ? '#1e293b' : '#64748b'"
-                [style.background]="activeTab === 'mis-torneos' ? '#f1f5f9' : 'transparent'">
-                🏆 Mis Torneos
+        <!-- MAIN NAVIGATION SEGMENTED TABS -->
+        <!-- MAIN NAVIGATION SEGMENTED TABS -->
+        <div class="main-tabs-nav">
+            <button class="tab-btn" [class.active]="activeTab === 'mis-torneos'" (click)="activeTab = 'mis-torneos'">
+                🏆 Competencias Activas
+                <span class="tab-counter-pill" *ngIf="misTorneosActivos.length > 0">{{ misTorneosActivos.length }}</span>
             </button>
-            <button class="tab-btn" [class.active]="activeTab === 'disponibles'" (click)="activeTab = 'disponibles'"
-                style="background: none; border: none; font-size: 16px; font-weight: 600; color: #64748b; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.2s;"
-                [style.color]="activeTab === 'disponibles' ? '#1e293b' : '#64748b'"
-                [style.background]="activeTab === 'disponibles' ? '#f1f5f9' : 'transparent'">
-                🎾 Inscripciones Abiertas
+            <button class="tab-btn" [class.active]="activeTab === 'historial'" (click)="activeTab = 'historial'">
+                📜 Historial
+                <span class="tab-counter-pill history-pill" *ngIf="misTorneosHistorial.length > 0">{{ misTorneosHistorial.length }}</span>
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'disponibles'" (click)="activeTab = 'disponibles'">
+                🎾 Explorar Competencias Abiertas
             </button>
         </div>
 
-        <!-- TAB 1: MIS TORNEOS -->
+        <!-- TAB 1: MIS TORNEOS ACTIVOS -->
         <div *ngIf="activeTab === 'mis-torneos'" class="tab-content animate-in">
-            <!-- LISTA DE TORNEOS INSCRITOS -->
-            <div class="my-tournaments-list" *ngIf="myTournaments.length > 0; else noMyTournaments">
-                <div *ngFor="let t of myTournaments" class="tournament-card wide"
-                    style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
-                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.05)'"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-
-                    <div (click)="viewTournamentDetails(t)" style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                            <span class="badge"
-                                style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;">INSCRITO</span>
-                            <h3 style="margin: 0; font-size: 16px; color: #1e293b;">{{ t.nombre }}</h3>
+            <!-- GLOBAL UPCOMING MATCH HERO BANNER -->
+            <section class="upcoming-global-section" *ngIf="globalUpcomingMatch as item">
+                <div class="global-hero-card">
+                    <div class="hero-top-bar">
+                        <div class="hero-badge">
+                            <span class="pulse-dot"></span>
+                            <span>TU PRÓXIMO PARTIDO PROGRAMADO</span>
                         </div>
-                        <p style="margin: 0; font-size: 13px; color: #64748b;">
-                            📅 {{ t.fecha | date:'dd/MM' }} | ⏰ {{ t.hora_inicio }} | 📍 {{ t.club_nombre }}
+                        <span class="comp-tag-pill">
+                            {{ item.torneo.nombre }} • {{ item.torneo.categoria_nombre || 'General' }}
+                        </span>
+                    </div>
+
+                    <div class="hero-details-row">
+                        <div class="meta-card">
+                            <span class="meta-label">📅 FECHA</span>
+                            <span class="meta-val">{{ getMatchFechaDisplay(item.match) }}</span>
+                        </div>
+                        <div class="meta-card highlight-blue">
+                            <span class="meta-label">⏰ HORA DE INICIO</span>
+                            <span class="meta-val time-text">{{ getMatchHoraDisplay(item.match) }}</span>
+                        </div>
+                        <div class="meta-card highlight-green">
+                            <span class="meta-label">📍 CANCHA ASIGNADA</span>
+                            <span class="meta-val court-text">{{ getMatchCanchaDisplay(item.match) }}</span>
+                        </div>
+                        <div class="meta-card" *ngIf="item.match.jornada_nombre || item.match.ronda_nombre || item.match.grupo_nombre">
+                            <span class="meta-label">🏆 FASE</span>
+                            <span class="meta-val">{{ item.match.jornada_nombre || item.match.ronda_nombre || item.match.grupo_nombre }}</span>
+                        </div>
+                    </div>
+
+                    <div class="hero-versus-row">
+                        <div class="team-side team-1">
+                            <span class="team-label">TU PAREJA</span>
+                            <span class="team-name">{{ getMatchTeamNames(item.match, item.torneo).team1 }}</span>
+                        </div>
+
+                        <div class="vs-badge-circle">VS</div>
+
+                        <div class="team-side team-2">
+                            <span class="team-label">RIVAL</span>
+                            <span class="team-name">{{ getMatchTeamNames(item.match, item.torneo).team2 }}</span>
+                        </div>
+                    </div>
+
+                    <div class="hero-footer-action">
+                        <button class="btn-hero-action" (click)="openCompeticionDetail(item.torneo)">
+                            📋 Ver Fixture & Posiciones Completas →
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SPINNER -->
+            <div *ngIf="isLoadingMyTournaments" class="loading-spinner-box">
+                <span class="spinner"></span>
+                <p>Cargando tus competencias inscritas...</p>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div *ngIf="!isLoadingMyTournaments && misTorneosActivos.length === 0" class="empty-state-card">
+                <div class="empty-icon">🎾</div>
+                <h3>No estás inscrito en ninguna competencia activa actualmente</h3>
+                <p>Explora la pestaña de competencias disponibles para unirte a torneos o ligas con tu compañero.</p>
+                <button class="btn-primary-action" (click)="activeTab = 'disponibles'">Explorar Torneos Abiertos →</button>
+            </div>
+
+            <!-- MY ACTIVE TOURNAMENTS LIST -->
+            <div *ngIf="!isLoadingMyTournaments && misTorneosActivos.length > 0" class="my-tournaments-list">
+                <h3 class="section-subtitle">Competencias En Juego</h3>
+
+                <div *ngFor="let t of misTorneosActivos" class="tournament-card-v2">
+                    <div class="card-main-info">
+                        <div class="badges-group">
+                            <span class="badge-status enrolled">✓ EN JUEGO</span>
+                            <span class="badge-type">{{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}</span>
+                            <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Categoría: {{ t.categoria_nombre }}</span>
+                            <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                        </div>
+                        <h2 class="t-name">{{ t.nombre }}</h2>
+                        <p class="t-location">
+                            📍 {{ t.club_nombre }}
+                            <span *ngIf="t.nombre_pareja" class="partner-text">• 👥 {{ t.nombre_pareja }}</span>
                         </p>
                     </div>
 
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn-text" (click)="viewTournamentBracket(t)"
-                            style="font-size: 12px; color: #fff; background: #2563eb; padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600;">
+                    <!-- UPCOMING MATCH HIGHLIGHT PREVIEW FOR THIS COMPETITION -->
+                    <div class="card-match-preview" *ngIf="getUpcomingMatch(t) as match">
+                        <div class="preview-header">
+                            <span class="preview-tag">⚡ PRÓXIMO PARTIDO PROGRAMADO</span>
+                            <span class="preview-phase" *ngIf="match.jornada_nombre || match.ronda_nombre || match.grupo_nombre">
+                                {{ match.jornada_nombre || match.ronda_nombre || match.grupo_nombre }}
+                            </span>
+                        </div>
+                        <div class="preview-teams-row">
+                            <span class="p-t1">{{ getMatchTeamNames(match, t).team1 }}</span>
+                            <span class="p-vs">VS</span>
+                            <span class="p-t2">{{ getMatchTeamNames(match, t).team2 }}</span>
+                        </div>
+                        <div class="preview-meta-row">
+                            <span>📅 {{ getMatchFechaDisplay(match) }}</span>
+                            <span>⏰ {{ getMatchHoraDisplay(match) }}</span>
+                            <span>📍 {{ getMatchCanchaDisplay(match) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- MATCHES ACCORDION LIST -->
+                    <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
+                        <details class="matches-accordion">
+                            <summary class="matches-summary">
+                                🎾 Ver mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }} en esta competencia
+                            </summary>
+                            <div class="mini-matches-grid">
+                                <div *ngFor="let m of t.partidos" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
+                                    <div class="mm-top">
+                                        <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
+                                        <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
+                                            {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Pendiente') }}
+                                        </span>
+                                    </div>
+                                    <div class="mm-teams">
+                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
+                                        <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
+                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
+                                    </div>
+                                    <div class="mm-meta">
+                                        📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="card-actions-group">
+                        <button class="btn-action-primary" (click)="openCompeticionDetail(t)">
+                            📋 Ver Detalle & Posiciones
+                        </button>
+                        <button class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
                             🌳 Ver Cuadro
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- BRACKET MODAL OVERLAY -->
-            <div class="bracket-overlay" *ngIf="showBracketModal"
-                style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+        <!-- TAB 2: HISTORIAL DE COMPETENCIAS -->
+        <div *ngIf="activeTab === 'historial'" class="tab-content animate-in">
+            <!-- SPINNER -->
+            <div *ngIf="isLoadingMyTournaments" class="loading-spinner-box">
+                <span class="spinner"></span>
+                <p>Cargando historial de competencias...</p>
+            </div>
 
-                <div class="overlay-header"
-                    style="display: flex; justify-content: space-between; color: white; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">Cuadro: {{ selectedTournamentBracket?.nombre }}</h2>
-                    <button (click)="closeBracket()"
-                        style="background: white; color: black; border: none; padding: 5px 15px; border-radius: 20px; font-weight: 900; cursor: pointer;">CERRAR
-                        ✕</button>
+            <!-- EMPTY STATE HISTORIAL -->
+            <div *ngIf="!isLoadingMyTournaments && misTorneosHistorial.length === 0" class="empty-state-card">
+                <div class="empty-icon">📜</div>
+                <h3>Sin competencias en el historial</h3>
+                <p>Aquí aparecerán tus torneos y ligas finalizados o cerrados.</p>
+            </div>
+
+            <!-- HISTORIAL LIST -->
+            <div *ngIf="!isLoadingMyTournaments && misTorneosHistorial.length > 0" class="my-tournaments-list">
+                <h3 class="section-subtitle">Competencias Finalizadas / Cerradas</h3>
+
+                <div *ngFor="let t of paginatedHistoryTournaments" class="tournament-card-v2 history-card">
+                    <div class="card-main-info">
+                        <div class="badges-group">
+                            <span class="badge-status closed">🏁 FINALIZADO</span>
+                            <span class="badge-type">{{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}</span>
+                            <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Categoría: {{ t.categoria_nombre }}</span>
+                            <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                        </div>
+                        <h2 class="t-name">{{ t.nombre }}</h2>
+                        <p class="t-location">
+                            📍 {{ t.club_nombre }}
+                            <span *ngIf="t.nombre_pareja" class="partner-text">• 👥 {{ t.nombre_pareja }}</span>
+                        </p>
+                    </div>
+
+                    <!-- MATCHES ACCORDION LIST -->
+                    <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
+                        <details class="matches-accordion">
+                            <summary class="matches-summary">
+                                📜 Ver historial de mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}
+                            </summary>
+                            <div class="mini-matches-grid">
+                                <div *ngFor="let m of t.partidos" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
+                                    <div class="mm-top">
+                                        <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
+                                        <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
+                                            {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Finalizado') }}
+                                        </span>
+                                    </div>
+                                    <div class="mm-teams">
+                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
+                                        <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
+                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
+                                    </div>
+                                    <div class="mm-meta">
+                                        📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="card-actions-group">
+                        <button class="btn-action-primary" (click)="openCompeticionDetail(t)">
+                            📋 Ver Resultados & Tabla Final
+                        </button>
+                        <button class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
+                            🌳 Ver Cuadro Final
+                        </button>
+                    </div>
                 </div>
 
-                <div class="bracket-container"
-                    style="display: flex; gap: 40px; overflow-x: auto; padding-bottom: 40px; align-items: flex-start; flex: 1;">
-
-                    <!-- OCTAVOS -->
-                    <div class="round-column" *ngIf="bracketRounds.octavos.length > 0" style="min-width: 260px;">
-                        <h3
-                            style="text-align: center; text-transform: uppercase; font-size: 14px; color: #aaa; margin-bottom: 20px;">
-                            Octavos</h3>
-                        <div *ngFor="let m of bracketRounds.octavos"
-                            style="background: #1e293b; color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
-                            <div
-                                style="font-size: 13px; margin-bottom: 5px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja1_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja1_id ? '#60a5fa' : '#ccc'">{{
-                                    m.pareja1_nombre }}</span>
-                                <span *ngIf="m.resultado" style="font-weight: 900; color: #60a5fa;">{{ m.resultado
-                                    }}</span>
-                            </div>
-                            <div style="font-size: 13px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja2_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja2_id ? '#60a5fa' : '#ccc'">{{
-                                    m.pareja2_nombre }}</span>
-                            </div>
-                        </div>
+                <!-- PAGINATION CONTROLS FOR HISTORIAL -->
+                <div class="pagination-footer-bar" *ngIf="totalHistoryPages > 1" style="margin-top: 16px;">
+                    <span class="page-info">Página {{ historyPage }} de {{ totalHistoryPages }} ({{ misTorneosHistorial.length }} competencias)</span>
+                    <div class="page-buttons">
+                        <button class="btn-page-nav" [disabled]="historyPage === 1" (click)="changeHistoryPage(historyPage - 1)">
+                            ◄ Anterior
+                        </button>
+                        <button class="btn-page-nav" [disabled]="historyPage === totalHistoryPages" (click)="changeHistoryPage(historyPage + 1)">
+                            Siguiente ►
+                        </button>
                     </div>
-
-                    <!-- CUARTOS -->
-                    <div class="round-column" *ngIf="bracketRounds.cuartos.length > 0" style="min-width: 260px;">
-                        <h3
-                            style="text-align: center; text-transform: uppercase; font-size: 14px; color: #aaa; margin-bottom: 20px;">
-                            Cuartos</h3>
-                        <div *ngFor="let m of bracketRounds.cuartos"
-                            style="background: #1e293b; color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #8b5cf6;">
-                            <div
-                                style="font-size: 13px; margin-bottom: 5px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja1_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja1_id ? '#a78bfa' : '#ccc'">{{
-                                    m.pareja1_nombre }}</span>
-                                <span *ngIf="m.resultado" style="font-weight: 900; color: #a78bfa;">{{ m.resultado
-                                    }}</span>
-                            </div>
-                            <div style="font-size: 13px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja2_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja2_id ? '#a78bfa' : '#ccc'">{{
-                                    m.pareja2_nombre }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SEMI -->
-                    <div class="round-column" *ngIf="bracketRounds.semi.length > 0" style="min-width: 260px;">
-                        <h3
-                            style="text-align: center; text-transform: uppercase; font-size: 14px; color: #aaa; margin-bottom: 20px;">
-                            Semifinal</h3>
-                        <div *ngFor="let m of bracketRounds.semi"
-                            style="background: #1e293b; color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
-                            <div
-                                style="font-size: 13px; margin-bottom: 5px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja1_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja1_id ? '#f87171' : '#ccc'">{{
-                                    m.pareja1_nombre }}</span>
-                                <span *ngIf="m.resultado" style="font-weight: 900; color: #f87171;">{{ m.resultado
-                                    }}</span>
-                            </div>
-                            <div style="font-size: 13px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja2_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja2_id ? '#f87171' : '#ccc'">{{
-                                    m.pareja2_nombre }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- FINAL -->
-                    <div class="round-column" *ngIf="bracketRounds.final.length > 0" style="min-width: 260px;">
-                        <h3
-                            style="text-align: center; text-transform: uppercase; font-size: 14px; color: #fbbf24; margin-bottom: 20px;">
-                            🏆 Final</h3>
-                        <div *ngFor="let m of bracketRounds.final"
-                            style="background: #1e293b; color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);">
-                            <div style="font-size: 15px; margin-bottom: 10px; text-align: center; font-weight: 900; color: #fbbf24;"
-                                *ngIf="m.estado === 'Finalizado'">GANADOR</div>
-                            <div
-                                style="font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja1_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja1_id ? '#fbbf24' : '#ccc'">{{
-                                    m.pareja1_nombre }}</span>
-                            </div>
-                            <div style="text-align: center; color: #666; font-size: 10px; margin: 5px 0;">VS</div>
-                            <div style="font-size: 14px; display: flex; justify-content: space-between;">
-                                <span [style.font-weight]="m.ganador_id == m.pareja2_id ? '900' : '400'"
-                                    [style.color]="m.ganador_id == m.pareja2_id ? '#fbbf24' : '#ccc'">{{
-                                    m.pareja2_nombre }}</span>
-                            </div>
-                            <div *ngIf="m.resultado"
-                                style="margin-top: 15px; text-align: center; font-weight: 900; color: #fbbf24;">{{
-                                m.resultado }}</div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
-            <ng-template #noMyTournaments>
-                <div class="empty-state-mini"
-                    style="text-align: center; padding: 30px; background: #f8fafc; border-radius: 12px; color: #94a3b8; border: 1px dashed #e2e8f0;">
-                    <p style="margin-bottom: 10px;">No estás inscrito en ningún torneo activo.</p>
-                    <button class="btn-text" (click)="activeTab = 'disponibles'"
-                        style="color: #2563eb; font-weight: 600; cursor: pointer; border: none; background: none;">
-                        Ver torneos disponibles →
-                    </button>
-                </div>
-            </ng-template>
-
-            <!-- PRÓXIMO PARTIDO (LEGACY VIEW) -->
-            <section class="next-match-section" *ngIf="misPartidos.length > 0" style="margin-top: 30px;">
-                <span class="section-badge">Tu Próximo Partido (En curso)</span>
-                <div class="match-hero-card">
-                    <div class="match-info">
-                        <span class="date">{{ misPartidos[0].fecha | date:'dd MMMM' }}</span>
-                        <span class="time">{{ misPartidos[0].hora }}</span>
-                        <span class="court">{{ misPartidos[0].cancha_nombre }}</span>
-                    </div>
-                    <div class="match-teams">
-                        <div class="team">
-                            <div class="pair-names">{{ misPartidos[0].pareja1_nombre }}</div>
-                        </div>
-                        <div class="vs">VS</div>
-                        <div class="team">
-                            <div class="pair-names">{{ misPartidos[0].pareja2_nombre }}</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- RANKING EN VIVO (GRUPO) -->
-            <section class="ranking-section" *ngIf="miGrupo" style="margin-top: 30px;">
-                <h2 class="section-title">Posiciones: {{ miGrupo.nombre }}</h2>
-                <div class="ranking-table-container">
-                    <table class="premium-table">
-                        <thead>
-                            <tr>
-                                <th width="80">Pos</th>
-                                <th>Pareja</th>
-                                <th width="80">PJ</th>
-                                <th width="80">PG</th>
-                                <th width="80">PP</th>
-                                <th width="80">PTS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let r of rankingGrupo; let i = index" [class.is-user]="r.is_user">
-                                <td class="pos">{{ i + 1 }}</td>
-                                <td class="team-name">{{ r.nombre_pareja }}</td>
-                                <td>{{ r.pj }}</td>
-                                <td class="win">{{ r.pg }}</td>
-                                <td class="loss">{{ r.pp }}</td>
-                                <td class="pts">{{ r.puntos }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
         </div>
 
-        <!-- TAB 2: TORNEOS DISPONIBLES -->
+        <!-- TAB 2: EXPLORAR COMPETENCIAS DISPONIBLES -->
         <div *ngIf="activeTab === 'disponibles'" class="tab-content animate-in">
-            <!-- TORNEOS DISPONIBLES EN TU REGIÓN -->
-            <section class="available-tournaments-section" style="margin-top: 20px;">
-                <div class="section-header"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div>
-                        <h2 class="section-title" style="margin: 0;">Próximos Torneos Disponibles</h2>
-                        <p style="color: #64748b; font-size: 14px; margin: 4px 0 0 0;">{{ userRegion ? 'En la región de
-                            ' +
-                            userRegion : 'Explora todos los torneos' }}</p>
+            
+            <!-- CLUBES CON COMPETENCIAS ACTIVAS -->
+            <div class="clubs-discovery-section" *ngIf="clubesConCompetencias && clubesConCompetencias.length > 0">
+                <div class="section-header-row">
+                    <h3>🏛️ Clubes con Competencias Activas</h3>
+                    <span class="clubs-count-badge">{{ clubesConCompetencias.length }} clubes disponiendo competencias</span>
+                </div>
+                <div class="clubs-cards-grid">
+                    <div *ngFor="let club of clubesConCompetencias" 
+                         class="club-card-v2" 
+                         [class.selected]="selectedClubId === club.id"
+                         (click)="filterByClub(club.id)">
+                        <div class="club-header">
+                            <div class="club-logo-circle">
+                                <img [src]="club.logoUrl || club.logo || 'assets/fondo-cancha.png'" [alt]="club.nombre" (error)="$any($event.target).src = 'assets/fondo-cancha.png'">
+                            </div>
+                            <div class="club-info">
+                                <h4>{{ club.nombre }}</h4>
+                                <p class="club-loc">📍 {{ club.comuna || club.region || 'Club de Pádel' }}</p>
+                            </div>
+                        </div>
+                        <div class="club-badges-row">
+                            <span class="c-badge torneos" *ngIf="club.numTorneos > 0">🏆 {{ club.numTorneos }} {{ club.numTorneos === 1 ? 'Torneo' : 'Torneos' }}</span>
+                            <span class="c-badge ligas" *ngIf="club.numLigas > 0">🛡️ {{ club.numLigas }} {{ club.numLigas === 1 ? 'Liga' : 'Ligas' }}</span>
+                            <span class="c-badge americanos" *ngIf="club.numAmericanos > 0">⚡ {{ club.numAmericanos }} {{ club.numAmericanos === 1 ? 'Americano' : 'Americanos' }}</span>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="tournaments-grid"
-                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-                    <div *ngFor="let t of availableTournaments" class="tournament-card animate-up"
-                        style="background: white; border-radius: 16px; padding: 20px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s;"
-                        onmouseover="this.style.transform='translateY(-4px)'"
-                        onmouseout="this.style.transform='translateY(0)'">
+            <!-- FILTERS BAR -->
+            <div class="filters-bar-v2">
+                <div class="segmented-type-filters">
+                    <button [class.active]="selectedCompetitionFilter === 'todos'" (click)="selectedCompetitionFilter = 'todos'">Todos</button>
+                    <button [class.active]="selectedCompetitionFilter === 'torneo'" (click)="selectedCompetitionFilter = 'torneo'">🏆 Torneos</button>
+                    <button [class.active]="selectedCompetitionFilter === 'liga'" (click)="selectedCompetitionFilter = 'liga'">🛡️ Ligas</button>
+                    <button [class.active]="selectedCompetitionFilter === 'americano'" (click)="selectedCompetitionFilter = 'americano'">⚡ Americanos</button>
+                </div>
 
-                        <div class="t-badge"
-                            style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;">
-                            Americano
+                <div class="search-box-v2">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar por torneo, liga o club..." class="search-input-v2">
+                    <button class="clear-search-btn" *ngIf="searchTerm" (click)="searchTerm = ''">✕</button>
+                </div>
+            </div>
+
+            <!-- ACTIVE CLUB FILTER BANNER -->
+            <div class="active-filter-banner" *ngIf="selectedClubId">
+                <span>📍 Filtrando por club: <strong>{{ getSelectedClubName() }}</strong></span>
+                <button class="btn-clear-filter" (click)="filterByClub(null)">Mostrar Todos los Clubes ✕</button>
+            </div>
+
+            <!-- SPINNER -->
+            <div *ngIf="isLoading" class="loading-spinner-box">
+                <span class="spinner"></span>
+                <p>Cargando competencias disponibles...</p>
+            </div>
+
+            <!-- EMPTY STATE SEARCH -->
+            <div *ngIf="!isLoading && filteredAvailableTournaments.length === 0" class="empty-state-card">
+                <p>No se encontraron competencias abiertas con los filtros seleccionados.</p>
+            </div>
+
+            <!-- COMPETITIONS GRID -->
+            <div *ngIf="!isLoading && filteredAvailableTournaments.length > 0" class="competitions-grid-v2">
+                <div *ngFor="let t of filteredAvailableTournaments" class="comp-card-v2">
+                    <div class="comp-card-top">
+                        <span class="type-pill-v2" [ngClass]="(t.table_source || t.tipo || '').toLowerCase()">
+                            {{ (t.table_source || t.tipo || 'Competición') | uppercase }}
+                        </span>
+                        <span class="enrolled-pill" *ngIf="isEnrolled(t)">
+                            ✓ INSCRITO
+                        </span>
+                    </div>
+
+                    <h3 class="comp-card-title">{{ t.nombre }}</h3>
+                    <p class="comp-card-club">📍 <strong>{{ t.club_nombre || 'Club de Pádel' }}</strong></p>
+
+                    <div class="comp-card-meta-list">
+                        <div class="meta-row" *ngIf="t.fecha_inicio || t.fecha">
+                            <span>📅 Fecha de Inicio:</span>
+                            <strong>{{ (t.fecha_inicio || t.fecha) | date:'dd/MM/yyyy' }}</strong>
                         </div>
-
-                        <h3 style="margin: 0; font-size: 18px; color: #1e293b; font-weight: 700; margin-bottom: 8px;">{{
-                            t.nombre }}</h3>
-
-                        <div class="t-meta" style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                                <img [src]="t.admin_foto ? 'https://training-padel.cl/api_training/uploads/perfiles/' + t.admin_foto : 'assets/images/placeholder_avatar.png'"
-                                    style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;">
-                                <span style="font-weight: 600; color: #1e293b;">{{ t.club_nombre }}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                                <span>📅</span> {{ t.fecha | date:'fullDate' }} | ⏰ {{ t.hora_inicio }}
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <span>📍</span> {{ t.club_comuna || 'Ubicación no disponible' }}
-                            </div>
+                        <div class="meta-row" *ngIf="formatPrecio(t.precio)">
+                            <span>💰 Precio:</span>
+                            <strong class="price-text">{{ formatPrecio(t.precio) }}</strong>
                         </div>
+                    </div>
 
-                        <div class="t-details"
-                            style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-                            <span
-                                style="background: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #475569;">{{
-                                t.genero }}</span>
-                            <span
-                                style="background: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #475569;">{{
-                                t.categoria }}</span>
-                            <span *ngIf="t.precio > 0"
-                                style="background: #ecfdf5; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 800; color: #059669;">
-                                ${{ t.precio | number:'1.0-0' }}
-                            </span>
-                            <span *ngIf="!t.precio || t.precio == 0"
-                                style="background: #f8fafc; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #475569;">
-                                Gratis
-                            </span>
-                            <span *ngIf="t.max_parejas > t.inscritos"
-                                style="margin-left: auto; background: #f0fdf4; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #15803d; border: 1px solid #bcf0da;">
-                                {{ t.max_parejas - t.inscritos }} CUPOS LIBRES
-                            </span>
-                            <span *ngIf="t.max_parejas <= t.inscritos"
-                                style="margin-left: auto; background: #fee2e2; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #991b1b; border: 1px solid #fecaca;">
-                                🚫 SIN CUPOS
-                            </span>
-                        </div>
-
-                        <button class="btn-primary" (click)="inscribirse(t.id)"
-                            [disabled]="isLoading || t.max_parejas <= t.inscritos"
-                            [style.background]="t.max_parejas <= t.inscritos ? '#cbd5e1' : '#1e293b'"
-                            [style.cursor]="t.max_parejas <= t.inscritos ? 'not-allowed' : 'pointer'"
-                            style="width: 100%; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; transition: background 0.2s;">
-                            <span *ngIf="!isLoading && t.max_parejas > t.inscritos">Inscribirse</span>
-                            <span *ngIf="!isLoading && t.max_parejas <= t.inscritos">AGOTADO</span>
-                            <span *ngIf="isLoading" class="spinner"></span>
+                    <div class="comp-card-actions">
+                        <button class="btn-card-info" (click)="openCompeticionDetail(t)">
+                            ℹ️ Ver Detalles
+                        </button>
+                        <button class="btn-card-join" (click)="inscribirse(t)" [disabled]="isEnrolled(t)">
+                            {{ isEnrolled(t) ? '✓ Inscrito' : '📝 Inscribirse' }}
                         </button>
                     </div>
                 </div>
-
-                <div *ngIf="availableTournaments.length === 0 && !isLoading" class="empty-available"
-                    style="text-align: center; padding: 40px; background: #f8fafc; border-radius: 16px; border: 2px dashed #e2e8f0; color: #94a3b8;">
-                    <p>No se encontraron torneos con inscripciones abiertas.</p>
-                    <div
-                        style="display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 15px;">
-                        <button class="btn-text" (click)="userRegion = ''; loadAvailableTournaments()"
-                            style="color: #2563eb; font-weight: 600; border: none; background: none; cursor: pointer;">
-                            🌐 Ver torneos en otras regiones
-                        </button>
-                        <button class="btn-text" (click)="loadAvailableTournaments(true)"
-                            style="color: #64748b; font-size: 13px; border: none; background: none; cursor: pointer;">
-                            🔍 Ver torneos pasados o finalizados (Depuración)
-                        </button>
-                    </div>
-                </div>
-            </section>
+            </div>
         </div>
 
-        <!-- EMPTY STATE (ONLY IF NO PARTICIPATION AND NO AVAILABLE) -->
-        <div class="empty-state"
-            *ngIf="misPartidos.length === 0 && !miGrupo && availableTournaments.length === 0 && !isLoading">
-            <div class="empty-icon">🎾</div>
-            <p>No tienes torneos activos ni hay torneos disponibles cerca de ti.</p>
-            <button class="btn-outline" (click)="navigate('/perfil')">Actualizar mi ubicación</button>
+        <!-- COMPETITION DETAIL MODAL OVERLAY -->
+        <div class="modal-overlay" *ngIf="showDetailModal">
+            <div class="modal-card wide-modal">
+                <div class="modal-header-v2">
+                    <div>
+                        <div class="modal-badge-group">
+                            <span class="modal-type-tag">{{ (selectedCompeticionDetail?.tipo || 'COMPETENCIA') | uppercase }}</span>
+                            <span class="modal-enrolled-tag" *ngIf="isEnrolled(selectedCompeticionDetail)">
+                                ✓ Inscrito • {{ getEnrolledCategoryName(selectedCompeticionDetail) }}
+                            </span>
+                        </div>
+                        <h2>{{ selectedCompeticionDetail?.nombre }}</h2>
+                        <p class="modal-club-name">📍 {{ selectedCompeticionDetail?.club_nombre }}</p>
+                    </div>
+                    <button class="btn-close-modal" (click)="closeDetailModal()">✕</button>
+                </div>
+
+                <div class="modal-body-v2" *ngIf="loadingCompDetail">
+                    <div class="loading-spinner-box">
+                        <span class="spinner"></span>
+                        <p>Cargando información de la competencia...</p>
+                    </div>
+                </div>
+
+                <div class="modal-body-v2" *ngIf="!loadingCompDetail && selectedCompeticionDetail">
+                    <!-- NON-ENROLLED VIEW: GENERAL INFO ONLY -->
+                    <div *ngIf="!isEnrolled(selectedCompeticionDetail)" class="general-info-container-v2">
+                        <div class="info-alert-banner-v2">
+                            <div class="alert-icon">ℹ️</div>
+                            <div class="alert-content">
+                                <strong>Información General de la Competencia</strong>
+                                <p>Inscríbete en esta competencia para acceder a la programación de partidos (fixture), horarios, canchas asignadas y la tabla de posiciones en tiempo real.</p>
+                            </div>
+                        </div>
+
+                        <div class="info-details-grid-v2">
+                            <div class="info-card-v2">
+                                <span class="label">📅 Fecha de Inicio</span>
+                                <span class="val">{{ selectedCompeticionDetail.fecha_inicio | date:'dd/MM/yyyy' }}</span>
+                            </div>
+                            <div class="info-card-v2">
+                                <span class="label">📍 Club Organizador</span>
+                                <span class="val">{{ selectedCompeticionDetail.club_nombre }}</span>
+                            </div>
+                            <div class="info-card-v2" *ngIf="formatPrecio(selectedCompeticionDetail.precio)">
+                                <span class="label">💰 Precio de Inscripción</span>
+                                <span class="val price-highlight">{{ formatPrecio(selectedCompeticionDetail.precio) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-categories-section-v2" *ngIf="selectedCompeticionDetail.categorias && selectedCompeticionDetail.categorias.length > 0">
+                            <h4>Categorías Abiertas</h4>
+                            <div class="categories-pills-v2">
+                                <span *ngFor="let cat of selectedCompeticionDetail.categorias" class="cat-pill-v2">
+                                    {{ cat.nombre }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions-v2">
+                            <button class="btn-primary-join" (click)="inscribirse(selectedCompeticionDetail)">
+                                📝 Inscribirse en esta Competencia
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ENROLLED VIEW: FULL DETAILS (INSCRITOS, FIXTURE, POSICIONES) -->
+                    <div *ngIf="isEnrolled(selectedCompeticionDetail)" class="enrolled-detail-container-v2">
+                        <!-- CATEGORY SELECTOR (IF MULTIPLE) -->
+                        <div class="category-tabs-selector-v2" *ngIf="displayCategorias && displayCategorias.length > 1">
+                            <span class="selector-label">Categoría:</span>
+                            <div class="cat-buttons-v2">
+                                <button *ngFor="let cat of displayCategorias; let i = index"
+                                    [class.active]="selectedCategoryIdx === i"
+                                    (click)="selectedCategoryIdx = i; selectedJornadaIdx = 0; paginaActualInscritosDetail = 1;">
+                                    {{ cat.nombre }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="category-single-badge-v2" *ngIf="displayCategorias && displayCategorias.length === 1 && isEnrolled(selectedCompeticionDetail)" style="margin-bottom: 14px; font-weight: 800; font-size: 0.85rem; color: #475569; background: #f1f5f9; padding: 6px 14px; border-radius: 8px; display: inline-block;">
+                            🏷️ Categoría: <strong style="color: #0f172a;">{{ currentDetailCategory?.nombre }}</strong>
+                        </div>
+
+                        <!-- SUB-TABS (INSCRITOS, FIXTURE, POSICIONES) -->
+                        <div class="sub-tabs-header-v2">
+                            <button [class.active]="compDetailTab === 'inscritos'" (click)="compDetailTab = 'inscritos'">
+                                👥 Parejas Inscritas
+                            </button>
+                            <button [class.active]="compDetailTab === 'fixture'" (click)="compDetailTab = 'fixture'">
+                                🗓️ Fixture de Partidos
+                            </button>
+                            <button [class.active]="compDetailTab === 'posiciones'" (click)="compDetailTab = 'posiciones'">
+                                🏆 Tabla de Posiciones
+                            </button>
+                        </div>
+
+                        <!-- SUB-TAB 1: PAREJAS INSCRITAS (Paginada) -->
+                        <div *ngIf="compDetailTab === 'inscritos'" class="subtab-content-v2">
+                            <div *ngIf="parejasPaginadasDetail.length === 0" class="empty-subtab">
+                                <p>No hay parejas registradas aún en esta categoría.</p>
+                            </div>
+                            <div *ngIf="parejasPaginadasDetail.length > 0" class="couples-grid-v2">
+                                <div *ngFor="let p of parejasPaginadasDetail; let idx = index" class="couple-card-v2">
+                                    <span class="num-badge">#{{ (paginaActualInscritosDetail - 1) * itemsPorPaginaInscritosDetail + idx + 1 }}</span>
+                                    <span class="couple-name">{{ p.nombre_pareja }}</span>
+                                </div>
+                            </div>
+
+                            <div class="pagination-footer-bar" *ngIf="totalPaginasInscritosDetail > 1">
+                                <span class="page-info">Página {{ paginaActualInscritosDetail }} de {{ totalPaginasInscritosDetail }}</span>
+                                <div class="page-buttons">
+                                    <button class="btn-page-nav" [disabled]="paginaActualInscritosDetail === 1" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail - 1)">
+                                        ◄ Anterior
+                                    </button>
+                                    <button class="btn-page-nav" [disabled]="paginaActualInscritosDetail === totalPaginasInscritosDetail" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail + 1)">
+                                        Siguiente ►
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SUB-TAB 2: FIXTURE DE PARTIDOS -->
+                        <div *ngIf="compDetailTab === 'fixture'" class="subtab-content-v2">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                <div class="jornada-selector-row-v2" *ngIf="currentDetailJornadas && currentDetailJornadas.length > 0" style="margin-bottom: 0;">
+                                    <button *ngFor="let j of currentDetailJornadas; let jIdx = index"
+                                        [class.active]="selectedJornadaIdx === jIdx"
+                                        (click)="selectedJornadaIdx = jIdx">
+                                        {{ j.nombre || ('Jornada ' + (jIdx + 1)) }}
+                                    </button>
+                                </div>
+
+                                <!-- FILTER TOGGLE -->
+                                <div class="fixture-filter-group" style="display: flex; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 10px;">
+                                    <button type="button" (click)="soloMisPartidosFixture = true" style="padding: 5px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: none; cursor: pointer;" [style.background]="soloMisPartidosFixture ? '#0f172a' : 'transparent'" [style.color]="soloMisPartidosFixture ? '#ccff00' : '#475569'">
+                                        Solo mis partidos
+                                    </button>
+                                    <button type="button" (click)="soloMisPartidosFixture = false" style="padding: 5px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: none; cursor: pointer;" [style.background]="!soloMisPartidosFixture ? '#0f172a' : 'transparent'" [style.color]="!soloMisPartidosFixture ? '#ccff00' : '#475569'">
+                                        Ver todos
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div *ngIf="filteredDetailJornadaPartidos.length === 0" class="empty-subtab">
+                                <p *ngIf="soloMisPartidosFixture && currentDetailJornada?.partidos?.length > 0">No tienes partidos programados en esta jornada.</p>
+                                <p *ngIf="!soloMisPartidosFixture || !currentDetailJornada?.partidos || currentDetailJornada.partidos.length === 0">No hay partidos programados para esta jornada aún.</p>
+                                <button *ngIf="soloMisPartidosFixture && currentDetailJornada?.partidos?.length > 0" (click)="soloMisPartidosFixture = false" class="btn-secondary-sm" style="margin-top: 10px; font-size: 0.8rem; background: #0f172a; color: #fff; padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;">
+                                    👁️ Ver todos los partidos de la jornada
+                                </button>
+                            </div>
+
+                            <div *ngIf="filteredDetailJornadaPartidos.length > 0" class="matches-list-v2">
+                                <div *ngFor="let m of filteredDetailJornadaPartidos" class="match-item-card-v2">
+                                    <div class="match-time-badge-v2">
+                                        <span class="m-date">📅 {{ getMatchFechaDisplay(m) }}</span>
+                                        <span class="m-time">⏰ {{ getMatchHoraDisplay(m) }}</span>
+                                        <span class="m-court">📍 {{ getMatchCanchaDisplay(m) }}</span>
+                                    </div>
+
+                                    <div class="match-teams-display-v2">
+                                        <span class="t1">{{ getMatchTeamNames(m, selectedCompeticionDetail).team1 }}</span>
+                                        <span class="vs-pill">VS</span>
+                                        <span class="t2">{{ getMatchTeamNames(m, selectedCompeticionDetail).team2 }}</span>
+                                    </div>
+
+                                    <div class="match-score-badge-v2">
+                                        {{ getMatchScore(m, selectedCompeticionDetail) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SUB-TAB 3: TABLA DE POSICIONES -->
+                        <div *ngIf="compDetailTab === 'posiciones'" class="subtab-content-v2">
+                            <app-tabla-posiciones 
+                                [posiciones]="currentDetailPosiciones"
+                                [cuposPlayoff]="currentDetailCategory?.parejas_clasifican_playoff || 2">
+                            </app-tabla-posiciones>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BRACKET OVERLAY MODAL -->
+        <div class="bracket-overlay" *ngIf="showBracketModal">
+            <div class="overlay-header">
+                <h2>Cuadro de Playoff: {{ selectedTournamentBracket?.nombre }}</h2>
+                <button (click)="closeBracket()" class="btn-close-bracket">CERRAR ✕</button>
+            </div>
+
+            <div class="bracket-container">
+                <!-- OCTAVOS -->
+                <div class="round-column" *ngIf="bracketRounds.octavos.length > 0">
+                    <h3>Octavos</h3>
+                    <div *ngFor="let m of bracketRounds.octavos" class="bracket-match-card octavos">
+                        <div class="b-team">
+                            <span>{{ m.pareja1_nombre }}</span>
+                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                        </div>
+                        <div class="b-team">
+                            <span>{{ m.pareja2_nombre }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CUARTOS -->
+                <div class="round-column" *ngIf="bracketRounds.cuartos.length > 0">
+                    <h3>Cuartos</h3>
+                    <div *ngFor="let m of bracketRounds.cuartos" class="bracket-match-card cuartos">
+                        <div class="b-team">
+                            <span>{{ m.pareja1_nombre }}</span>
+                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                        </div>
+                        <div class="b-team">
+                            <span>{{ m.pareja2_nombre }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEMI -->
+                <div class="round-column" *ngIf="bracketRounds.semi.length > 0">
+                    <h3>Semifinal</h3>
+                    <div *ngFor="let m of bracketRounds.semi" class="bracket-match-card semi">
+                        <div class="b-team">
+                            <span>{{ m.pareja1_nombre }}</span>
+                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                        </div>
+                        <div class="b-team">
+                            <span>{{ m.pareja2_nombre }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FINAL -->
+                <div class="round-column" *ngIf="bracketRounds.final.length > 0">
+                    <h3>🏆 Final</h3>
+                    <div *ngFor="let m of bracketRounds.final" class="bracket-match-card final">
+                        <div class="b-team">
+                            <span>{{ m.pareja1_nombre }}</span>
+                        </div>
+                        <div class="b-vs">VS</div>
+                        <div class="b-team">
+                            <span>{{ m.pareja2_nombre }}</span>
+                        </div>
+                        <div *ngIf="m.resultado" class="b-score-final">{{ m.resultado }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 </div>

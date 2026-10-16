@@ -2,8 +2,21 @@
   RewriteEngine On
   RewriteBase /
   RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
+
+  # Si el archivo o directorio existe físicamente, servirlo directamente
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Si es un archivo estático (js, css, imágenes, etc.) que no existe, responder 404 en vez de devolver index.html
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|woff2?|eot|ttf|otf|json|map|webp)$ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  # Rutas SEO SSR para Perfiles Públicos de Entrenadores
+  RewriteRule ^entrenador/([a-zA-Z0-9_-]+)/?$ entrenador.php?slug=$1 [L,QSA]
+  RewriteRule ^sitemap-entrenadores\.xml$ sitemap.php [L]
+
+  # Reescribir todas las demás rutas SPA hacia index.html
   RewriteRule . /index.html [L]
 </IfModule>
 

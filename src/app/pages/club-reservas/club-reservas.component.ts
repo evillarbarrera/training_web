@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ClubesService } from '../../services/clubes.service';
 import { ApiService } from '../../services/api.service';
 import Swal from 'sweetalert2';
@@ -50,10 +50,10 @@ export class ClubReservasComponent implements OnInit {
         hora_inicio: '',
         hora_fin: '',
         precio: 0,
-        pagado: 1,
+        pagado: 0,
         estado: 'Confirmada',
         metodo_pago: 'total', // 'total' o 'proporcional'
-        pagos: { p1: true, p2: false, p3: false, p4: false }, // Estado de pago por jugador
+        pagos: { p1: false, p2: false, p3: false, p4: false }, // Estado de pago por jugador
         tipo_bloqueo: 'dia_completo', // 'dia_completo' o 'rango'
         hora_fin_bloqueo: '23:59'
     };
@@ -167,7 +167,8 @@ export class ClubReservasComponent implements OnInit {
         private clubesService: ClubesService,
         private apiService: ApiService,
         private inventarioService: InventarioService,
-        private router: Router
+        private router: Router,
+        private route: ActivatedRoute
     ) { }
 
     ngOnInit(): void {
@@ -202,17 +203,19 @@ export class ClubReservasComponent implements OnInit {
             }
         });
 
-        this.selectedFecha = this.getLocalISODate();
+        const queryFecha = this.route.snapshot.queryParams['fecha'];
+        this.selectedFecha = (queryFecha && /^\d{4}-\d{2}-\d{2}$/.test(queryFecha)) ? queryFecha : this.getLocalISODate();
         this.newReserva.fecha = this.selectedFecha;
         this.generateTimeSlots();
         this.generateCurrentWeek();
 
         if (this.userId) {
             this.clubesService.getClubes(this.userId).subscribe(res => {
-                this.clubes = res;
+                this.clubes = res || [];
                 if (this.clubes.length > 0) {
-                    const currentClubId = currentUser?.club_id;
-                    const matchedClub = this.clubes.find(c => Number(c.id) === Number(currentClubId));
+                    const savedClubId = localStorage.getItem('selectedClubId');
+                    const targetClubId = savedClubId || currentUser?.club_id;
+                    const matchedClub = targetClubId ? this.clubes.find(c => Number(c.id) === Number(targetClubId)) : null;
                     this.selectClub(matchedClub || this.clubes[0]);
                 }
             });
@@ -326,6 +329,9 @@ export class ClubReservasComponent implements OnInit {
 
     selectClub(club: any) {
         this.selectedClub = club;
+        if (club && club.id) {
+            localStorage.setItem('selectedClubId', String(club.id));
+        }
         this.loadingCanchas = true;
         this.loadingReservas = true;
         this.startLoadingTextRotation();
@@ -422,6 +428,11 @@ export class ClubReservasComponent implements OnInit {
     }
 
     getPaymentStatus(res: any): 'total' | 'parcial' | 'pendiente' {
+        // En los partidos de liga, se paga la liga completa (inscripción) y no el partido individual
+        if (res.liga_partido_id && Number(res.liga_partido_id) > 0) {
+            return 'total';
+        }
+
         const metodo = res.metodo_pago || 'total';
         
         if (metodo === 'total') {
@@ -740,6 +751,9 @@ export class ClubReservasComponent implements OnInit {
     }
 
     getPaymentStatusText(res: any): string {
+        if (res.liga_partido_id && Number(res.liga_partido_id) > 0) {
+            return 'Pagado (Liga)';
+        }
         const st = this.getPaymentStatus(res);
         if (st === 'total') return 'Pagado Total';
         if (st === 'parcial') return 'Pago Parcial';
@@ -803,6 +817,8 @@ export class ClubReservasComponent implements OnInit {
             metodo = 'total';
         }
 
+        const isLiga = !!(res.liga_partido_id && Number(res.liga_partido_id) > 0);
+
         this.newReserva = { 
             ...res,
             precio: Math.round(Number(res.precio || 0)),
@@ -815,13 +831,30 @@ export class ClubReservasComponent implements OnInit {
             nombre_externo3: res.nombre_externo3 || res.jugador3_nombre || '',
             nombre_externo4: res.nombre_externo4 || res.jugador4_nombre || '',
             metodo_pago: metodo,
+            pagado: isLiga ? 1 : Number(res.pagado || 0),
             pagos: {
-                p1: Number(res.pago_p1) === 1,
-                p2: Number(res.pago_p2) === 1,
-                p3: Number(res.pago_p3) === 1,
-                p4: Number(res.pago_p4) === 1
+                p1: isLiga ? true : Number(res.pago_p1) === 1,
+                p2: isLiga ? true : Number(res.pago_p2) === 1,
+                p3: isLiga ? true : Number(res.pago_p3) === 1,
+                p4: isLiga ? true : Number(res.pago_p4) === 1
             }
         };
+
+        // Normalizar formato de fecha a YYYY-MM-DD si viene con timestamp o barras
+        if (this.newReserva.fecha) {
+            if (this.newReserva.fecha.includes('T')) {
+                this.newReserva.fecha = this.newReserva.fecha.split('T')[0];
+            } else if (this.newReserva.fecha.includes('/')) {
+                const parts = this.newReserva.fecha.split('/');
+                if (parts.length === 3) {
+                    if (parts[2].length === 4) {
+                        this.newReserva.fecha = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    } else if (parts[0].length === 4) {
+                        this.newReserva.fecha = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    }
+                }
+            }
+        }
 
         // Si es proporcional, rellenamos con nombres ficticios los espacios vacíos para dividir por 4
         if (this.newReserva.metodo_pago === 'proporcional') {
@@ -1076,9 +1109,12 @@ export class ClubReservasComponent implements OnInit {
             if (!this.newReserva.nombre_externo4 && !this.newReserva.jugador4_id) this.newReserva.nombre_externo4 = 'Jugador 4';
         }
 
+        // Si es partido de liga, la reserva siempre es considerada pagada (se paga por liga)
+        const isLiga = !!(this.newReserva.liga_partido_id && Number(this.newReserva.liga_partido_id) > 0);
+
         // Recalcular el estado 'pagado' global de forma estricta
-        let isFullyPaid = Number(this.newReserva.pagado) === 1;
-        if (this.newReserva.metodo_pago === 'proporcional') {
+        let isFullyPaid = isLiga ? true : (Number(this.newReserva.pagado) === 1);
+        if (!isLiga && this.newReserva.metodo_pago === 'proporcional') {
             let activos = 0;
             let pagadosCount = 0;
             
@@ -1109,16 +1145,34 @@ export class ClubReservasComponent implements OnInit {
 
         this.newReserva.hora_fin = calculatedHoraFin;
 
+        let safeFecha = this.newReserva.fecha || this.selectedFecha;
+        if (safeFecha) {
+            if (safeFecha.includes('T')) {
+                safeFecha = safeFecha.split('T')[0];
+            } else if (safeFecha.includes('/')) {
+                const parts = safeFecha.split('/');
+                if (parts.length === 3) {
+                    if (parts[2].length === 4) {
+                        safeFecha = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    } else if (parts[0].length === 4) {
+                        safeFecha = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                    }
+                }
+            }
+        }
+        this.newReserva.fecha = safeFecha;
+
         const reservaData = {
             ...this.newReserva,
+            fecha: safeFecha,
             hora_fin: calculatedHoraFin,
             vendedor_id: Number(loggedInUserId),
             usuario_vendedor_id: Number(loggedInUserId),
             pagado: isFullyPaid ? 1 : 0,
-            pago_p1: this.newReserva.pagos.p1 ? 1 : 0,
-            pago_p2: this.newReserva.pagos.p2 ? 1 : 0,
-            pago_p3: this.newReserva.pagos.p3 ? 1 : 0,
-            pago_p4: this.newReserva.pagos.p4 ? 1 : 0
+            pago_p1: (isLiga || this.newReserva.pagos.p1) ? 1 : 0,
+            pago_p2: (isLiga || this.newReserva.pagos.p2) ? 1 : 0,
+            pago_p3: (isLiga || this.newReserva.pagos.p3) ? 1 : 0,
+            pago_p4: (isLiga || this.newReserva.pagos.p4) ? 1 : 0
         };
 
         const action = this.newReserva.id ? this.clubesService.updateReserva(reservaData) : this.clubesService.addReserva(reservaData);

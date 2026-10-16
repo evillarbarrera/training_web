@@ -31,63 +31,54 @@
           <img [src]="liga.imagen_url" alt="Póster Promocional de Liga" />
         </div>
 
-        <div class="hero-main">
+        <div class="hero-main" style="margin-bottom: 0;">
           <div>
             <div class="badges-row">
               <span class="status-badge" [class]="liga.estado.toLowerCase()">{{ liga.estado }}</span>
-              <span class="app-badge" *ngIf="liga.visible_app">📱 Visible en App Móvil</span>
+              <span class="app-badge" *ngIf="liga.visible_app">📱 Visible en App</span>
               <span class="price-badge" *ngIf="liga.precio">${{ (liga.precio || 0) | number:'1.0-0' }} inscripción</span>
             </div>
             <h1>{{ liga.nombre }}</h1>
-            <p class="dates">📅 {{ liga.fecha_inicio | date:'dd/MM/yyyy' }} - {{ liga.fecha_fin | date:'dd/MM/yyyy' }}</p>
+            <p class="dates" style="margin-bottom: 0;">📅 {{ liga.fecha_inicio | date:'dd/MM/yyyy' }} - {{ liga.fecha_fin | date:'dd/MM/yyyy' }}</p>
           </div>
-          <div class="hero-actions">
-            <button class="btn-secondary-action" (click)="editarLiga()">
-              ✏️ Editar Liga
-            </button>
-            <button class="btn-secondary-action" (click)="abrirModalInscribir()">
+
+          <!-- REORGANIZACIÓN DE ACCIONES POR JERARQUÍA UX -->
+          <div class="hero-actions-container">
+            <!-- Primary Action CTAs -->
+            <button class="btn-primary-action" (click)="abrirModalInscribir()">
               ➕ Inscribir Pareja
             </button>
+
             <button class="btn-fixture-gen" (click)="generarFixtureCategoria()" *ngIf="categoriaActual && (!categoriaActual.jornadas || categoriaActual.jornadas.length === 0)">
-              ⚡ Generar Fixture Round-Robin
+              ⚡ Generar Fixture
             </button>
-            <button class="btn-danger-action" (click)="eliminarLiga()" title="Eliminar esta liga">
-              🗑️ Eliminar Liga
-            </button>
-          </div>
-        </div>
 
-        <!-- DASHBOARD DE METRICAS OPERATIVAS -->
-        <div class="league-stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-data">
-              <label>Parejas Inscritas</label>
-              <span class="value">{{ liga.stats?.total_parejas || 0 }} parejas</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">🎾</div>
-            <div class="stat-data">
-              <label>Partidos Jugados</label>
-              <span class="value">{{ liga.stats?.partidos_jugados || 0 }} / {{ liga.stats?.total_partidos || 0 }}</span>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">⌛</div>
-            <div class="stat-data">
-              <label>Pendientes</label>
-              <span class="value">{{ liga.stats?.partidos_pendientes || 0 }} partidos</span>
-            </div>
-          </div>
-
-          <div class="stat-card highlight">
-            <div class="stat-icon">📊</div>
-            <div class="stat-data">
-              <label>Progreso de Liga</label>
-              <span class="value">{{ liga.stats?.porcentaje_progreso || 0 }}% Avance</span>
+            <!-- Dropdown Menu de Configuración & Acciones Secundarias (Solo Admin Club) -->
+            <div class="dropdown-options-wrapper" *ngIf="esAdminClub">
+              <button class="btn-secondary-action dropdown-trigger" (click)="toggleMenuOpciones($event)">
+                ⚙️ Opciones de Liga <span class="arrow">▾</span>
+              </button>
+              <div class="dropdown-menu-card animate-in" *ngIf="mostrarMenuOpciones" (click)="$event.stopPropagation()">
+                <button class="menu-item" (click)="editarLiga(); cerrarMenuOpciones();">
+                  ✏️ Editar Configuración
+                </button>
+                <button class="menu-item" (click)="limpiarDemos(); cerrarMenuOpciones();" title="Eliminar parejas y partidos demo">
+                  🧹 Limpiar Parejas Demo
+                </button>
+                <button class="menu-item danger" (click)="confirmarBorrarFixture(categoriaActual?.id); cerrarMenuOpciones();" title="Borrar fixture y reservas solo de la categoría seleccionada" *ngIf="categoriaActual">
+                  🗑️ Borrar Fixture ({{ categoriaActual?.nombre }})
+                </button>
+                <button class="menu-item danger" (click)="confirmarBorrarFixture(); cerrarMenuOpciones();" title="Borrar el fixture y las reservas de todas las categorías de forma silenciosa">
+                  🗑️ Borrar Fixture General (Todas)
+                </button>
+                <div class="menu-divider"></div>
+                <button class="menu-item danger" (click)="eliminarCategoriaActual(); cerrarMenuOpciones();" title="Eliminar la categoría actualmente seleccionada y sus inscritos" *ngIf="categoriaActual">
+                  🗑️ Eliminar Categoría ({{ categoriaActual?.nombre }})
+                </button>
+                <button class="menu-item danger" (click)="eliminarLiga(); cerrarMenuOpciones();" title="Eliminar esta liga completa">
+                  🗑️ Eliminar Liga Completa
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -95,49 +86,163 @@
 
       <!-- LEVEL 1: Main Module Navigation Tabs -->
       <div class="nav-tabs-wrapper">
-        <button class="tab-item" [class.active]="activeTab === 'inscritos'" (click)="activeTab = 'inscritos'">
+        <button class="tab-item" [class.active]="activeTab === 'dashboard'" (click)="cambiarTab('dashboard')">
+          📊 Dashboard General
+        </button>
+        <button class="tab-item" [class.active]="activeTab === 'semana'" (click)="cambiarTab('semana')">
+          🗓️ Partidos de la Semana
+        </button>
+        <button class="tab-item" [class.active]="activeTab === 'pendientes'" (click)="cambiarTab('pendientes')">
+          ⏳ Partidos Pendientes
+          <span class="tab-counter-badge" *ngIf="totalPartidosPendientesGlobal > 0">{{ totalPartidosPendientesGlobal }}</span>
+        </button>
+        <button class="tab-item" [class.active]="activeTab === 'inscritos'" (click)="cambiarTab('inscritos')">
           👥 Inscritos por Categoría
         </button>
-        <button class="tab-item" [class.active]="activeTab === 'posiciones'" (click)="activeTab = 'posiciones'">
-          📊 Tabla de Posiciones
+        <button class="tab-item" [class.active]="activeTab === 'posiciones'" (click)="cambiarTab('posiciones')">
+          📈 Tabla de Posiciones
         </button>
-        <button class="tab-item" [class.active]="activeTab === 'fixture'" (click)="activeTab = 'fixture'">
-          📅 Fixture Semanal / Jornadas
+        <button class="tab-item" [class.active]="activeTab === 'fixture'" (click)="cambiarTab('fixture')">
+          📅 Fixture / Jornadas
         </button>
-        <button class="tab-item" [class.active]="activeTab === 'playoffs'" (click)="activeTab = 'playoffs'">
+        <button class="tab-item" [class.active]="activeTab === 'playoffs'" (click)="cambiarTab('playoffs')">
           🏆 Fase Final / Playoffs
         </button>
       </div>
 
-      <!-- LEVEL 2: Sub-navigation Strip by Category (Oculto en Fixture para vista global) -->
-      <div class="categories-strip-container" *ngIf="activeTab !== 'fixture' && liga.categorias && liga.categorias.length > 0">
+      <!-- LEVEL 2: Sub-navigation Strip by Category (visible en pestañas operativas excepto Fixture Global, Semana y Pendientes) -->
+      <div class="categories-strip-container" *ngIf="activeTab !== 'dashboard' && activeTab !== 'fixture' && activeTab !== 'semana' && activeTab !== 'pendientes' && liga.categorias && liga.categorias.length > 0" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
         <div class="categories-strip">
           <button *ngFor="let cat of liga.categorias; let i = index" 
                   class="cat-tab-btn" 
                   [class.active]="i === categoriaSeleccionadaIndex"
                   (click)="seleccionarCategoria(i)">
-            <span class="cat-title">{{ cat.nombre }} ({{ cat.genero }})</span>
-            <span class="cat-badge-counter" *ngIf="activeTab === 'inscritos'" [class.full]="(cat.parejas_count || 0) >= (cat.max_parejas || 16)">
+            <span class="cat-title">{{ cat.nombre }} ({{ cat.genero }}) <small *ngIf="cat.dias_juego && cat.dias_juego.length > 0" style="color: #0284c7; font-weight: 700; font-size: 0.75rem; margin-left: 4px;">📅 {{ cat.dias_juego.join(', ') }}</small></span>
+            <span class="cat-badge-counter" [class.full]="(cat.parejas_count || 0) >= (cat.max_parejas || 16)">
               👥 {{ cat.parejas_count || 0 }} / {{ cat.max_parejas || 16 }} esperadas
             </span>
           </button>
         </div>
+        <button class="btn-delete-cat-strip" (click)="eliminarCategoriaActual()" title="Eliminar la categoría activa y sus inscritos" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; transition: all 0.2s ease;" *ngIf="categoriaActual">
+          🗑️ Eliminar Categoría
+        </button>
       </div>
 
-      <!-- TAB 1: Tabla de Posiciones -->
+      <!-- TAB 0: Dashboard General -->
+      <div *ngIf="activeTab === 'dashboard'" class="tab-content animate-in">
+        <!-- DASHBOARD DE METRICAS OPERATIVAS CON INDICADORES DE PROGRESO -->
+        <div class="league-stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-icon">👥</span>
+              <div class="stat-info">
+                <label>Parejas Inscritas</label>
+                <span class="value">{{ liga.stats?.total_parejas || 0 }} <small>/ {{ totalCapacidadParejas }} esperadas</small></span>
+              </div>
+            </div>
+            <div class="stat-progress-bar">
+              <div class="progress-fill fill-blue" [style.width.%]="porcentajeCapacidadParejas"></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-icon">🎾</span>
+              <div class="stat-info">
+                <label>Partidos Jugados</label>
+                <span class="value">{{ liga.stats?.partidos_jugados || 0 }} <small>/ {{ liga.stats?.total_partidos || 0 }}</small></span>
+              </div>
+            </div>
+            <div class="stat-progress-bar">
+              <div class="progress-fill fill-green" [style.width.%]="porcentajePartidosJugados"></div>
+            </div>
+          </div>
+
+          <div class="stat-card" [class.warning-state]="(liga.stats?.partidos_pendientes || 0) > 0">
+            <div class="stat-header">
+              <span class="stat-icon">{{ (liga.stats?.partidos_pendientes || 0) > 0 ? '⚠️' : '⌛' }}</span>
+              <div class="stat-info">
+                <label>Partidos Pendientes</label>
+                <span class="value">{{ liga.stats?.partidos_pendientes || 0 }} partidos</span>
+              </div>
+            </div>
+            <div class="stat-subtext" *ngIf="(liga.stats?.partidos_pendientes || 0) > 0">
+              Requieren asignación de cancha/horario
+            </div>
+          </div>
+
+          <div class="stat-card highlight">
+            <div class="stat-header">
+              <span class="stat-icon">📊</span>
+              <div class="stat-info">
+                <label>Progreso de Liga</label>
+                <span class="value">{{ liga.stats?.porcentaje_progreso || 0 }}% <small>Avance Total</small></span>
+              </div>
+            </div>
+            <div class="stat-progress-bar highlight-bar">
+              <div class="progress-fill fill-neon" [style.width.%]="liga.stats?.porcentaje_progreso || 0"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETAS SECUNDARIAS DEL DASHBOARD -->
+        <div class="dashboard-overview-sections" style="margin-bottom: 24px;">
+          <!-- Resumen por Categorías -->
+          <div class="overview-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.02);">
+            <div class="card-title-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h4 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">🏷️ Categorías de la Liga ({{ liga.categorias?.length || 0 }})</h4>
+              <button (click)="activeTab = 'inscritos'" style="background: none; border: none; color: #2563eb; font-weight: 700; font-size: 0.85rem; cursor: pointer;">Ver todos los inscritos ➔</button>
+            </div>
+            <div class="cat-overview-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+              <div *ngFor="let cat of liga.categorias; let i = index" 
+                   (click)="seleccionarCategoria(i); activeTab = 'inscritos'"
+                   style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 14px 18px; border-radius: 14px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease;">
+                <div>
+                  <strong style="font-size: 0.95rem; color: #0f172a;">{{ cat.nombre }}</strong>
+                  <span style="font-size: 0.78rem; color: #64748b; margin-left: 6px;">({{ cat.genero }})</span>
+                </div>
+                <span class="cat-badge-counter" [class.full]="(cat.parejas_count || 0) >= (cat.max_parejas || 16)" style="font-size: 0.78rem; font-weight: 800; background: #e2e8f0; color: #334155; padding: 4px 10px; border-radius: 10px;">
+                  👥 {{ cat.parejas_count || 0 }} / {{ cat.max_parejas || 16 }} parejas
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 1: Tabla de Posiciones (Total General / Por Grupo) -->
       <div *ngIf="activeTab === 'posiciones'" class="tab-content animate-in">
-        <div class="groups-selector" *ngIf="categoriaActual?.grupos?.length > 1">
-          <label>Filtro por Grupo:</label>
-          <button class="group-btn" 
-                  [class.active]="grupoSeleccionadoId === null" 
-                  (click)="seleccionarGrupo(null)">
-            Todos (General)
+        <div class="tab-header-actions" style="margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">📊 Tabla de Posiciones — {{ categoriaActual?.nombre || 'Categoría' }} ({{ categoriaActual?.genero || '' }})</h3>
+            <p style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin: 4px 0 0 0;">
+              {{ grupoSeleccionadoId ? 'Clasificación de grupo.' : 'Clasificación acumulada de todas las parejas inscritas en esta categoría.' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- FILTRO DE GRUPOS (si la categoría tiene más de 1 grupo) -->
+        <div class="grupos-filter-strip" *ngIf="categoriaActual?.grupos && categoriaActual.grupos.length > 1" style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            class="group-filter-btn" 
+            [class.active]="grupoSeleccionadoId === null" 
+            (click)="seleccionarGrupo(null)"
+            style="padding: 7px 16px; border-radius: 10px; font-weight: 700; font-size: 0.83rem; border: 1px solid #cbd5e1; cursor: pointer; transition: all 0.2s ease;"
+            [style.background]="grupoSeleccionadoId === null ? '#0f172a' : '#ffffff'"
+            [style.color]="grupoSeleccionadoId === null ? '#ffffff' : '#334155'">
+            🌐 General (Todos los Grupos)
           </button>
-          <button *ngFor="let g of categoriaActual.grupos" 
-                  class="group-btn" 
-                  [class.active]="g.id === grupoSeleccionadoId" 
-                  (click)="seleccionarGrupo(g.id)">
-            {{ g.nombre }}
+          <button 
+            type="button" 
+            *ngFor="let g of categoriaActual.grupos" 
+            class="group-filter-btn" 
+            [class.active]="grupoSeleccionadoId === g.id" 
+            (click)="seleccionarGrupo(g.id)"
+            style="padding: 7px 16px; border-radius: 10px; font-weight: 700; font-size: 0.83rem; border: 1px solid #cbd5e1; cursor: pointer; transition: all 0.2s ease;"
+            [style.background]="grupoSeleccionadoId === g.id ? '#0f172a' : '#ffffff'"
+            [style.color]="grupoSeleccionadoId === g.id ? '#ffffff' : '#334155'">
+            🏷️ {{ g.nombre }}
           </button>
         </div>
 
@@ -148,231 +253,1018 @@
         </app-tabla-posiciones>
       </div>
 
-      <!-- TAB 2: Fixture Semanal / Jornadas (Global para TODAS las categorías) -->
-      <div *ngIf="activeTab === 'fixture'" class="tab-content animate-in">
+      <!-- TAB: Partidos de la Semana (Vista Calendario Semanal 7 Columnas) -->
+      <div *ngIf="activeTab === 'semana'" class="tab-content animate-in">
         
-        <div class="fixture-top-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <!-- Pestañas de Navegación por Jornada -->
-          <div class="jornadas-tabs-strip" *ngIf="todasLasJornadas.length > 0" style="margin-bottom: 0;">
-            <button 
-              *ngFor="let jTab of todasLasJornadas" 
-              class="jornada-tab-btn" 
-              [class.active]="selectedJornadaNumero === jTab.numero_jornada" 
-              (click)="selectedJornadaNumero = jTab.numero_jornada">
-              🏆 Jornada #{{ jTab.numero_jornada }}
-            </button>
+        <!-- CALENDAR TOOLBAR -->
+        <div class="calendar-toolbar-card">
+          <!-- Top Row: Navigation & Actions -->
+          <div class="cal-top-row">
+            <div class="cal-nav-controls">
+              <button class="cal-nav-btn" (click)="cambiarSemanaOffset(-1)" title="Semana anterior">
+                ‹ Semana Anterior
+              </button>
+              <button class="cal-today-btn" [class.is-current]="semanaOffset === 0" (click)="irSemanaActual()">
+                Hoy
+              </button>
+              <button class="cal-nav-btn" (click)="cambiarSemanaOffset(1)" title="Semana siguiente">
+                Semana Siguiente ›
+              </button>
+              <span class="cal-date-label">📅 {{ textoRangoSemana }}</span>
+            </div>
+
+            <div class="cal-actions-right">
+              <button class="btn-cal-whatsapp" (click)="abrirModalWhatsAppSemana()" title="Compartir esta semana por WhatsApp">
+                💬 WhatsApp
+              </button>
+            </div>
           </div>
 
-          <button class="btn-programar-jornada" (click)="mostrarConfigFixture = !mostrarConfigFixture" style="background: #0f172a; color: #a8ff00; border: none; padding: 8px 16px; font-weight: 800;">
-            ⚙️ {{ mostrarConfigFixture ? 'Ocultar Panel de Configuración' : '⚡ Generar Fixture General (Todas las Categorías)' }}
+          <!-- Bottom Row: Category & Status Filters -->
+          <div class="cal-filter-row">
+            <!-- Category Chips -->
+            <div class="cal-cat-chips" *ngIf="liga.categorias && liga.categorias.length > 0">
+              <button 
+                type="button" 
+                class="cal-chip" 
+                [class.active]="filtroCategoriaSemanaId === null"
+                (click)="setFiltroCategoriaSemana(null)">
+                Todas ({{ statsSemana.total }})
+              </button>
+              <button 
+                type="button" 
+                *ngFor="let cat of liga.categorias" 
+                class="cal-chip" 
+                [class.active]="filtroCategoriaSemanaId === cat.id"
+                (click)="setFiltroCategoriaSemana(cat.id)">
+                {{ cat.nombre }}
+              </button>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="cal-status-tabs">
+              <button 
+                class="cal-tab" 
+                [class.active]="filtroEstadoSemana === 'todos'"
+                (click)="setFiltroEstadoSemana('todos')">
+                Todos
+              </button>
+              <button 
+                class="cal-tab" 
+                [class.active]="filtroEstadoSemana === 'pendientes'"
+                (click)="setFiltroEstadoSemana('pendientes')">
+                ⏳ Pendientes ({{ statsSemana.programados }})
+              </button>
+              <button 
+                class="cal-tab" 
+                [class.active]="filtroEstadoSemana === 'jugados'"
+                (click)="setFiltroEstadoSemana('jugados')">
+                ✓ Jugados ({{ statsSemana.jugados }})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CALENDAR BOARD (DÍAS CON PARTIDOS) -->
+        <div class="calendar-board-container" *ngIf="diasSemanaVista.length > 0">
+          <div class="calendar-week-grid">
+            <div *ngFor="let dia of diasSemanaVista; trackBy: trackByDia" 
+                 class="cal-day-column" 
+                 [class.is-today]="dia.isToday">
+              
+              <!-- Column Header -->
+              <div class="cal-col-header">
+                <div class="cal-col-header-left">
+                  <span class="col-day-name">{{ dia.dayName || 'DÍA' }}</span>
+                  <span class="col-day-num">{{ dia.dayNum || dia.label }}</span>
+                </div>
+                <span class="col-match-badge">{{ dia.partidos.length }} {{ dia.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+              </div>
+
+              <!-- Column Match Cards Body -->
+              <div class="cal-col-body">
+                <div *ngFor="let m of dia.partidos; trackBy: trackByPartido" 
+                     class="cal-compact-card"
+                     [class.is-played]="m.estado === 'Jugado' || m.estado === 'Walkover'">
+                  
+                  <!-- Card Header: Time & Court & Category & Jornada -->
+                  <div class="cal-card-head">
+                    <div class="cal-badges-left">
+                      <span class="cal-time-badge" *ngIf="m.fecha_hora && !m.fecha_hora.startsWith('0000')">
+                        ⏰ {{ m.fecha_hora | date:'HH:mm' }}
+                      </span>
+                      <span class="cal-court-badge" *ngIf="m.cancha_nombre" [title]="m.cancha_nombre">
+                        📍 {{ m.cancha_nombre }}
+                      </span>
+                    </div>
+                    <div class="cal-badges-right">
+                      <span class="cal-jornada-badge" *ngIf="m.jornada_numero || m.jornada_nombre" [title]="m.jornada_nombre || ('Jornada ' + m.jornada_numero)">
+                        {{ m.jornada_numero ? ('J#' + m.jornada_numero) : m.jornada_nombre }}
+                      </span>
+                      <span class="cal-cat-tag" [title]="m.categoria_nombre">
+                        {{ m.categoria_nombre }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Match Body: Team 1 vs Team 2 -->
+                  <div class="cal-match-teams">
+                    <!-- Teams Row 1 -->
+                    <div class="cal-team-row" [class.winner]="m.pareja_ganadora_id === m.pareja1_id">
+                      <div class="cal-team-avatars">
+                        <img [src]="getPlayerPhotoUrl(m.p1_u1_foto, m.p1_u1_nom || m.p1_ext1 || 'J1')" 
+                             class="t-av p1" 
+                             [title]="m.p1_u1_nom || m.p1_ext1 || 'J1'"
+                             (error)="onImgFallback($event, m.p1_u1_nom || m.p1_ext1 || 'J1')" />
+                        <img [src]="getPlayerPhotoUrl(m.p1_u2_foto, m.p1_u2_nom || m.p1_ext2 || 'J2')" 
+                             class="t-av p2" 
+                             [title]="m.p1_u2_nom || m.p1_ext2 || 'J2'"
+                             (error)="onImgFallback($event, m.p1_u2_nom || m.p1_ext2 || 'J2')" />
+                      </div>
+                      <span class="cal-name" [title]="m.pareja1_nombre">{{ m.pareja1_nombre }}</span>
+                      <span class="cal-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                    </div>
+
+                    <div class="cal-vs-divider">
+                      <span class="vs-text">vs</span>
+                    </div>
+
+                    <!-- Teams Row 2 -->
+                    <div class="cal-team-row" [class.winner]="m.pareja_ganadora_id === m.pareja2_id">
+                      <div class="cal-team-avatars">
+                        <img [src]="getPlayerPhotoUrl(m.p2_u1_foto, m.p2_u1_nom || m.p2_ext1 || 'J1')" 
+                             class="t-av p1" 
+                             [title]="m.p2_u1_nom || m.p2_ext1 || 'J1'"
+                             (error)="onImgFallback($event, m.p2_u1_nom || m.p2_ext1 || 'J1')" />
+                        <img [src]="getPlayerPhotoUrl(m.p2_u2_foto, m.p2_u2_nom || m.p2_ext2 || 'J2')" 
+                             class="t-av p2" 
+                             [title]="m.p2_u2_nom || m.p2_ext2 || 'J2'"
+                             (error)="onImgFallback($event, m.p2_u2_nom || m.p2_ext2 || 'J2')" />
+                      </div>
+                      <span class="cal-name" [title]="m.pareja2_nombre">{{ m.pareja2_nombre }}</span>
+                      <span class="cal-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Full Score Summary if played -->
+                  <div class="cal-full-score-bar" *ngIf="m.estado === 'Jugado'">
+                    🏆 {{ m.set1_p1 }}-{{ m.set1_p2 }} | {{ m.set2_p1 }}-{{ m.set2_p2 }} {{ m.set3_p1 > 0 ? '| ' + m.set3_p1 + '-' + m.set3_p2 : '' }}
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="cal-card-actions">
+                    <button class="btn-cal-act schedule" (click)="abrirModalProgramar(m)" title="Reagendar horario o cancha">
+                      📍 {{ (m.cancha_nombre && m.fecha_hora) ? 'Hora' : 'Agendar' }}
+                    </button>
+                    <button class="btn-cal-act result" (click)="abrirModalResultado(m)" title="Cargar o editar marcador">
+                      ✏️ {{ m.estado === 'Jugado' ? 'Score' : 'Marcador' }}
+                    </button>
+                    <button *ngIf="m.cancha_id || (m.fecha_hora && !m.fecha_hora.startsWith('0000'))" class="btn-cal-act unassign" (click)="desprogramarPartido(m, $event)" title="Quitar fecha y cancha para dejar pendiente">
+                      🚫
+                    </button>
+                    <button class="btn-cal-act del" (click)="eliminarPartidoIndividual(m, $event)" title="Eliminar partido">
+                      🗑️
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty Week State -->
+        <div class="calendar-empty-week" *ngIf="diasSemanaVista.length === 0">
+          <div class="cal-empty-icon">📅</div>
+          <h3>No hay partidos programados para esta semana</h3>
+          <p>Navega a otras semanas con los controles de arriba o programa nuevos partidos desde la pestaña de <strong>Fixture</strong>.</p>
+        </div>
+
+      </div>
+
+      <!-- TAB: Partidos Pendientes de Jornadas Anteriores -->
+      <div *ngIf="activeTab === 'pendientes'" class="tab-content animate-in">
+        
+        <!-- COMPACT HEADER STRIP -->
+        <div class="pendientes-header-strip">
+          <div class="pheader-left">
+            <span class="pheader-icon">⏳</span>
+            <div>
+              <div class="pheader-title-row">
+                <h3 class="pheader-title">Auditoría y Coordinación de Pendientes</h3>
+                <span class="pheader-total-badge">{{ statsPendientes.total }} pendientes</span>
+              </div>
+              <p class="pheader-desc">
+                Revisa partidos sin horario o sin marcador por jornada y coordina fácilmente con los jugadores vía WhatsApp.
+              </p>
+            </div>
+          </div>
+
+          <!-- MINI KPIS INLINE & QUICK WHATSAPP -->
+          <div class="pheader-right">
+            <div class="pkpis-inline">
+              <span class="pkpi-pill warning" title="Partidos sin cancha ni horario asignado">
+                ⚠️ <strong>{{ statsPendientes.sinHorario }}</strong> sin cancha
+              </span>
+              <span class="pkpi-pill alert" title="Partidos programados pero sin marcador oficial">
+                ⏰ <strong>{{ statsPendientes.sinResultado }}</strong> sin marcador
+              </span>
+            </div>
+
+            <div class="pheader-actions">
+              <button 
+                type="button"
+                class="btn-wa-header" 
+                (click)="compartirWhatsAppPendientes()" 
+                *ngIf="partidosPendientesFiltrados.length > 0"
+                title="Compartir lista filtrada por WhatsApp">
+                <span>💬</span> WhatsApp Lista
+              </button>
+              <button 
+                type="button"
+                class="btn-copy-header" 
+                (click)="copiarWhatsAppPendientes($event)" 
+                *ngIf="partidosPendientesFiltrados.length > 0"
+                title="Copiar texto resumen al portapapeles">
+                <span>📋</span> Copiar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TWO-COLUMN COMPACT LAYOUT -->
+        <div class="pendientes-split-layout">
+
+          <!-- COLUMNA IZQUIERDA: JORNADAS -->
+          <aside class="pendientes-sidebar-col">
+            <div class="psidebar-card">
+              
+              <!-- Sidebar Header -->
+              <div class="psidebar-header">
+                <div class="psidebar-title-box">
+                  <span class="psidebar-icon">📅</span>
+                  <h4>Jornadas</h4>
+                  <span class="psidebar-count">{{ jornadasDisponiblesPendientes.length }}</span>
+                </div>
+                
+                <div class="psidebar-quick-actions">
+                  <button 
+                    type="button" 
+                    class="btn-pside-quick" 
+                    [class.active]="jornadasSeleccionadasPendientes.length === 0 && soloJornadasAnteriores"
+                    (click)="seleccionarTodasAnteriores()"
+                    title="Ver todas las jornadas anteriores">
+                    Anteriores
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn-pside-quick" 
+                    [class.active]="jornadasSeleccionadasPendientes.length === 0 && !soloJornadasAnteriores"
+                    (click)="seleccionarTodasJornadas()"
+                    title="Ver todas las jornadas">
+                    Todas
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn-pside-quick clear" 
+                    *ngIf="jornadasSeleccionadasPendientes.length > 0"
+                    (click)="limpiarFiltroJornadas()"
+                    title="Quitar selección manual">
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <!-- Subtítulo de selección activa -->
+              <div class="psidebar-status-bar" *ngIf="jornadasSeleccionadasPendientes.length > 0">
+                <span>Filtrando: <strong>{{ textoJornadasSeleccionadas }}</strong></span>
+              </div>
+
+              <!-- Lista Vertical de Jornadas -->
+              <div class="pjornada-list-stack">
+                <div 
+                  *ngFor="let j of jornadasDisponiblesPendientes" 
+                  class="pjornada-item"
+                  [class.active]="isJornadaSeleccionada(j.numero)"
+                  [class.zero-pendientes]="getPendientesCountPorJornada(j.numero) === 0"
+                  (click)="toggleJornadaSeleccionada(j.numero)">
+                  
+                  <div class="pjornada-item-top">
+                    <div class="pjornada-name-box">
+                      <span class="pcheck-bullet" *ngIf="isJornadaSeleccionada(j.numero)">✓</span>
+                      <strong class="pjornada-num">Jornada #{{ j.numero }}</strong>
+                      <span class="ptag-prev" *ngIf="j.esAnterior">Anterior</span>
+                    </div>
+                    <span class="pcount-badge" [class.has-pending]="getPendientesCountPorJornada(j.numero) > 0">
+                      {{ getPendientesCountPorJornada(j.numero) }}
+                    </span>
+                  </div>
+
+                  <!-- Detalle de pendientes por jornada -->
+                  <div class="pjornada-item-meta" *ngIf="getPendientesCountPorJornada(j.numero) > 0">
+                    <span class="pmeta-chip warn" *ngIf="getPendientesSinHorarioCountPorJornada(j.numero) > 0">
+                      ⚠️ {{ getPendientesSinHorarioCountPorJornada(j.numero) }} sin cancha
+                    </span>
+                    <span class="pmeta-chip alert" *ngIf="getPendientesSinResultadoCountPorJornada(j.numero) > 0">
+                      ⏰ {{ getPendientesSinResultadoCountPorJornada(j.numero) }} sin score
+                    </span>
+                  </div>
+
+                  <!-- Micro-acciones de la jornada -->
+                  <div class="pjornada-item-actions" (click)="$event.stopPropagation()">
+                    <button 
+                      type="button" 
+                      class="btn-jornada-micro only" 
+                      (click)="seleccionarSoloJornada(j.numero, $event)"
+                      title="Ver solo esta jornada">
+                      Solo
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn-jornada-micro wa" 
+                      *ngIf="getPendientesCountPorJornada(j.numero) > 0"
+                      (click)="compartirWhatsAppPorJornada(j.numero, $event)"
+                      title="Enviar pendientes de la Jornada #{{ j.numero }} por WhatsApp">
+                      💬 WhatsApp
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Sidebar Footer -->
+              <div class="psidebar-footer" *ngIf="partidosPendientesFiltrados.length > 0">
+                <button 
+                  type="button" 
+                  class="btn-pside-wa-all" 
+                  (click)="compartirWhatsAppPendientes()">
+                  <span>💬</span> Enviar Selección a WhatsApp
+                </button>
+              </div>
+
+            </div>
+          </aside>
+
+          <!-- COLUMNA DERECHA: PARTIDOS Y COORDINACIÓN -->
+          <main class="pendientes-main-col">
+
+            <!-- BARRA SUPERIOR DE FILTROS COMPACTA -->
+            <div class="pmain-toolbar-card">
+              
+              <!-- Fila 1: Filtro de Categoría y Tabs de Estado -->
+              <div class="pmain-filter-row">
+                <!-- Chips de Categoría -->
+                <div class="pcat-chips-scroll" *ngIf="liga.categorias && liga.categorias.length > 0">
+                  <button 
+                    type="button" 
+                    class="pcat-pill" 
+                    [class.active]="filtroCategoriaPendientesId === null"
+                    (click)="filtroCategoriaPendientesId = null">
+                    🌐 Todas
+                  </button>
+                  <button 
+                    type="button" 
+                    *ngFor="let cat of liga.categorias" 
+                    class="pcat-pill" 
+                    [class.active]="filtroCategoriaPendientesId === cat.id"
+                    (click)="filtroCategoriaPendientesId = cat.id || null">
+                    🏷️ {{ cat.nombre }}
+                  </button>
+                </div>
+
+                <!-- Tabs de Tipo -->
+                <div class="ptype-segmented">
+                  <button 
+                    type="button"
+                    class="ptype-btn" 
+                    [class.active]="filtroTipoPendiente === 'todos'"
+                    (click)="filtroTipoPendiente = 'todos'">
+                    Todos ({{ partidosPendientesList.length }})
+                  </button>
+                  <button 
+                    type="button"
+                    class="ptype-btn warn" 
+                    [class.active]="filtroTipoPendiente === 'sin_horario'"
+                    (click)="filtroTipoPendiente = 'sin_horario'">
+                    ⚠️ Sin Cancha ({{ statsPendientes.sinHorario }})
+                  </button>
+                  <button 
+                    type="button"
+                    class="ptype-btn alert" 
+                    [class.active]="filtroTipoPendiente === 'sin_resultado'"
+                    (click)="filtroTipoPendiente = 'sin_resultado'">
+                    ⏰ Sin Marcador ({{ statsPendientes.sinResultado }})
+                  </button>
+                </div>
+              </div>
+
+              <!-- Fila 2: Buscador y Contexto -->
+              <div class="pmain-search-row">
+                <div class="psearch-box">
+                  <span class="psearch-icon">🔍</span>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="busquedaPendientes" 
+                    placeholder="Buscar pareja, categoría o jornada..." 
+                    class="psearch-input" />
+                  <button *ngIf="busquedaPendientes" (click)="busquedaPendientes = ''" class="btn-psearch-clear">✕</button>
+                </div>
+
+                <div class="presults-count">
+                  <span>{{ partidosPendientesFiltrados.length }} {{ partidosPendientesFiltrados.length === 1 ? 'partido' : 'partidos' }}</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- LISTADO DE PARTIDOS EN CUADRÍCULA (CARDS CUADRADAS) -->
+            <div class="pmatches-list" *ngIf="partidosPendientesFiltrados.length > 0">
+              <div *ngFor="let m of partidosPendientesFiltrados; trackBy: trackByPartido" class="pcompact-match-card">
+                
+                <!-- Match Top: Jornada, Categoría y Estado -->
+                <div class="pcm-header">
+                  <div class="pcm-tags-left">
+                    <span class="pjornada-tag">J#{{ m.numero_jornada }}</span>
+                    <span class="pcat-tag" [title]="m.categoria_nombre">🏷️ {{ m.categoria_nombre }}</span>
+                  </div>
+
+                  <div class="pcm-status-badge" [class.sin-horario]="m.tipo_pendiente === 'sin_horario'" [class.sin-resultado]="m.tipo_pendiente === 'sin_resultado'">
+                    {{ m.tipo_pendiente === 'sin_horario' ? '⚠️ Sin Cancha' : '⏰ Sin Score' }}
+                  </div>
+                </div>
+
+                <!-- Match Center: Enfrentamiento en Bloque Vertical -->
+                <div class="pcm-matchup square-matchup">
+                  <div class="pcm-team-box team-1">
+                    <div class="pcm-team-icon">🎾</div>
+                    <div class="pcm-team-details">
+                      <span class="pcm-team-sub">Pareja 1</span>
+                      <strong class="pcm-team-name" [title]="m.pareja1_nombre">{{ m.pareja1_nombre }}</strong>
+                    </div>
+                  </div>
+
+                  <div class="pcm-vs-divider">
+                    <span class="pcm-divider-line"></span>
+                    <span class="pcm-vs-badge">VS</span>
+                    <span class="pcm-divider-line"></span>
+                  </div>
+
+                  <div class="pcm-team-box team-2">
+                    <div class="pcm-team-icon">🎾</div>
+                    <div class="pcm-team-details">
+                      <span class="pcm-team-sub">Pareja 2</span>
+                      <strong class="pcm-team-name" [title]="m.pareja2_nombre">{{ m.pareja2_nombre }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Match Meta: Cancha / Horario -->
+                <div class="pcm-meta">
+                  <span class="pmeta-loc" *ngIf="m.cancha_nombre">
+                    📍 {{ m.cancha_nombre }}
+                  </span>
+                  <span class="pmeta-time" *ngIf="m.fecha_hora && !m.fecha_hora.startsWith('0000')">
+                    📅 {{ m.fecha_hora | date:'dd/MM HH:mm' }} hrs
+                  </span>
+                  <span class="pmeta-pending" *ngIf="!m.cancha_nombre || !m.fecha_hora || m.fecha_hora.startsWith('0000')">
+                    ⚠️ Sin horario fijado
+                  </span>
+                </div>
+
+                <!-- Match Footer: Acciones de Coordinación y Programación en 2 Filas -->
+                <div class="pcm-actions square-actions">
+                  <!-- Fila 1: Coordinación WhatsApp y Copiar -->
+                  <div class="pcm-actions-row row-primary">
+                    <button 
+                      type="button" 
+                      class="btn-pcm-wa" 
+                      (click)="compartirWhatsAppPartidoIndividual(m, $event)"
+                      title="Enviar mensaje de coordinación de este partido a WhatsApp">
+                      <span>💬</span> WhatsApp
+                    </button>
+
+                    <button 
+                      type="button" 
+                      class="btn-pcm-copy" 
+                      (click)="copiarTextoCoordinacionPartido(m, $event)"
+                      title="Copiar texto de coordinación al portapapeles">
+                      <span>📋</span> Copiar
+                    </button>
+                  </div>
+
+                  <!-- Fila 2: Gestión de Partido -->
+                  <div class="pcm-actions-row row-secondary">
+                    <button 
+                      type="button" 
+                      class="btn-pcm-schedule" 
+                      (click)="abrirModalProgramar(m)"
+                      title="Asignar horario y cancha en el club">
+                      <span>📍</span> {{ m.cancha_id ? 'Reagendar' : 'Programar' }}
+                    </button>
+
+                    <button 
+                      type="button" 
+                      class="btn-pcm-result" 
+                      (click)="abrirModalResultado(m)"
+                      title="Cargar resultado de este partido">
+                      <span>✏️</span> Marcador
+                    </button>
+
+                    <button 
+                      type="button" 
+                      *ngIf="m.cancha_id || (m.fecha_hora && !m.fecha_hora.startsWith('0000'))" 
+                      class="btn-pcm-unassign" 
+                      (click)="desprogramarPartido(m, $event)"
+                      title="Quitar fecha y cancha asignada">
+                      <span>🚫</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ESTADO VACÍO -->
+            <div class="pendientes-empty-card animate-in" *ngIf="partidosPendientesFiltrados.length === 0">
+              <div class="empty-icon">🎉</div>
+              <h3>¡Todo al día en las jornadas seleccionadas!</h3>
+              <p *ngIf="partidosPendientesList.length === 0">
+                No existen partidos atrasados ni pendientes de jornadas anteriores. Todos los partidos previos tienen sus canchas asignadas o sus resultados debidamente registrados.
+              </p>
+              <p *ngIf="partidosPendientesList.length > 0">
+                No hay partidos pendientes que coincidan con los filtros seleccionados. Prueba seleccionando otra jornada o quitando los filtros.
+              </p>
+            </div>
+
+          </main>
+
+        </div>
+
+      </div>
+
+      <!-- TAB 2: Fixture / Jornadas -->
+      <div *ngIf="activeTab === 'fixture'" class="tab-content animate-in">
+        
+        <!-- BARRA DE FILTRO POR CATEGORÍA EN EL FIXTURE -->
+        <div class="fixture-category-filter-strip" *ngIf="liga.categorias && liga.categorias.length > 0">
+          <button 
+            type="button"
+            class="cat-filter-btn" 
+            [class.active]="filtroCategoriaFixtureId === null" 
+            (click)="seleccionarCategoriaFixture(null)">
+            <span class="cat-filter-name">🌐 Todas las Categorías</span>
+            <span class="cat-filter-badge">{{ liga.categorias.length }} categorías</span>
+          </button>
+          <button 
+            type="button"
+            *ngFor="let cat of liga.categorias" 
+            class="cat-filter-btn" 
+            [class.active]="filtroCategoriaFixtureId === cat.id" 
+            (click)="seleccionarCategoriaFixture(cat.id)">
+            <span class="cat-filter-name">🏷️ {{ cat.nombre }} ({{ cat.genero }})</span>
+            <span class="cat-filter-badge" *ngIf="cat.jornadas && cat.jornadas.length > 0">{{ cat.jornadas.length }} jor.</span>
+            <span class="cat-filter-badge empty" *ngIf="!cat.jornadas || cat.jornadas.length === 0">Sin fixture</span>
           </button>
         </div>
 
-        <!-- INLINE CONTROL PANEL: Cuando el Fixture NO se ha generado aún O cuando el usuario lo solicita -->
-        <div *ngIf="!hasAnyFixture || mostrarConfigFixture" class="fixture-config-card animate-in">
-          <div class="card-title-bar">
-            <div>
-              <h3>⚡ Configuración e Inicialización General de la Liga (Todas las Categorías)</h3>
-              <p class="subtitle">Configura los grupos, parejas demo y la programación de partidos semanales para <strong>todas las categorías de la liga</strong>.</p>
-            </div>
-          </div>
-
-          <div class="config-grid-form">
-            <!-- Columna 1: Formato de Competición & Grupos -->
-            <div class="config-section">
-              <h4>🏆 1. Formato de Competición & Grupos</h4>
-              
-              <div class="form-group">
-                <label>Distribución en Grupos (Todos contra todos)</label>
-                <select [(ngModel)]="genNumGrupos" class="custom-input">
-                  <option [ngValue]="1">1 Grupo Único (Todos contra todos)</option>
-                  <option [ngValue]="2">2 Grupos (Distribución Víbora / Snake)</option>
-                  <option [ngValue]="3">3 Grupos</option>
-                  <option [ngValue]="4">4 Grupos</option>
-                </select>
-                <small class="hint-text">Al concluir las jornadas todos contra todos, los mejores de cada grupo clasificarán a los Playoffs (Eliminación directa: Octavos/Cuartos/Semis/Final).</small>
-              </div>
-
-              <div class="form-group">
-                <label>Cantidad de parejas que clasifican a la Fase Final (Playoffs)</label>
-                <select [(ngModel)]="genClasificanModo" class="custom-input">
-                  <option value="todas">Todas las parejas inscritas</option>
-                  <option value="4">Primeras 4 parejas (Semifinales)</option>
-                  <option value="8">Primeras 8 parejas (Cuartos de final)</option>
-                  <option value="12">Primeras 12 parejas (Octavos con Bye)</option>
-                  <option value="16">Primeras 16 parejas (Octavos de final)</option>
-                  <option value="custom">Ingresar otra cantidad personalizada...</option>
-                </select>
-
-                <div *ngIf="genClasificanModo === 'custom'" style="margin-top: 10px;">
-                  <input 
-                    type="number" 
-                    min="2" 
-                    [(ngModel)]="genClasificanCant" 
-                    class="custom-input" 
-                    placeholder="Ej. Escribe 6, 10, 20..." 
-                  />
-                </div>
-                <small class="hint-text">Especifica cuántas parejas avanzarán a las llaves eliminatorias finales.</small>
-              </div>
+        <div class="fixture-sidebar-layout">
+          
+          <!-- COLUMNA IZQUIERDA: Menú de Jornadas y Acciones de Liga -->
+          <div class="fixture-left-sidebar">
+            <div class="sidebar-header-box">
+              <span class="sidebar-title">🏆 {{ filtroCategoriaFixtureId ? (categoriaActualFixture?.nombre || 'Jornadas') : 'Jornadas de Liga' }}</span>
+              <span class="sidebar-count" *ngIf="todasLasJornadas.length > 0">{{ todasLasJornadas.length }} Semanas</span>
             </div>
 
-            <!-- Columna 2: Programación de la 1ª Jornada Semanal -->
-            <div class="config-section">
-              <h4>🗓️ 2. Programación de la 1ª Jornada Semanal</h4>
+            <!-- Context badge when filtering by category -->
+            <div *ngIf="categoriaActualFixture as cFilt" class="sidebar-category-context-badge">
+              <div class="ctx-title">🏷️ {{ cFilt.nombre }} ({{ cFilt.genero }})</div>
+              <small *ngIf="cFilt.jornadas && cFilt.jornadas.length > 0" style="color: #16a34a; font-weight: 700;">{{ cFilt.jornadas.length }} jornadas activas</small>
+              <small *ngIf="!cFilt.jornadas || cFilt.jornadas.length === 0" style="color: #dc2626; font-weight: 700;">⚠️ Sin fixture generado</small>
+            </div>
 
-              <div class="form-group">
-                <label>Primer día de la Primera Semana *</label>
-                <input type="date" [(ngModel)]="genFechaInicio" class="custom-input" />
-              </div>
-
-              <div class="form-group">
-                <label>Días habilitados para partidos</label>
-                <div class="days-chips">
-                  <button type="button" *ngFor="let d of genDiasSemanaList" class="chip-btn" [class.active]="d.selected" (click)="d.selected = !d.selected">
-                    <span class="chip-check" *ngIf="d.selected">✓</span>
-                    {{ d.nombre }}
-                  </button>
-                </div>
-              </div>
-
-              <div class="form-group" *ngIf="(liga?.mis_clubes?.length || 0) > 0">
-                <label>Sede / Club Asignado para Canchas</label>
-                <select [ngModel]="selectedClubId" (ngModelChange)="onClubChange($event)" class="custom-input">
-                  <option *ngFor="let cl of liga?.mis_clubes || []" [ngValue]="cl.id">
-                    📍 {{ cl.nombre }}
-                  </option>
-                </select>
-                <small class="hint-text">Selecciona el club de donde se obtendrán las canchas disponibles.</small>
-              </div>
-
-              <div class="form-group">
-                <label>Canchas disponibles del club</label>
-                <div class="canchas-chips" *ngIf="(liga?.canchas?.length || 0) > 0">
-                  <button type="button" *ngFor="let c of liga?.canchas || []" class="chip-btn court-chip" [class.active]="isGenCanchaSelected(c.id)" (click)="toggleGenCancha(c.id)">
-                    📍 {{ c.nombre }}
-                    <span class="chip-check" *ngIf="isGenCanchaSelected(c.id)">✓</span>
-                  </button>
-                </div>
-                <div *ngIf="(liga?.canchas?.length || 0) === 0" style="font-size: 0.8rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 8px 12px; border-radius: 10px;">
-                  ⚠️ No se registraron canchas para este club. Selecciona otra sede o registra canchas en el módulo de Clubes.
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Horarios de preferencia para partidos</label>
-                <div class="time-chips-container">
-                  <span *ngFor="let h of genHorarios; let i = index" class="time-tag">
-                    {{ h }}
-                    <button type="button" (click)="eliminarGenHorario(i)" class="btn-remove-tag">✕</button>
+            <!-- Lista Vertical de Jornadas con Contador de Jugados vs Total -->
+            <div class="jornadas-vertical-list" *ngIf="todasLasJornadas.length > 0">
+              <button 
+                *ngFor="let jTab of todasLasJornadas; trackBy: trackByJornada" 
+                class="jornada-vertical-btn" 
+                [class.active]="selectedJornadaNumero === jTab.numero_jornada" 
+                (click)="selectedJornadaNumero = jTab.numero_jornada">
+                <div class="jornada-btn-content">
+                  <span class="jornada-btn-title">Jornada #{{ jTab.numero_jornada }}</span>
+                  <span class="jornada-btn-sub">
+                    <strong>{{ jTab.partidos_jugados }}/{{ jTab.partidos_total }}</strong> jugados
+                    <span *ngIf="jTab.fecha_limite"> • {{ jTab.fecha_limite | date:'dd/MM' }}</span>
                   </span>
                 </div>
-                <div class="add-time-row">
-                  <input type="time" [(ngModel)]="genNuevoHorario" class="custom-input time-input-short" />
-                  <button type="button" class="btn-add-time" (click)="agregarGenHorario()">+ Agregar Hora</button>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label>Máximo de partidos por pareja por semana</label>
-                <select [(ngModel)]="genMaxPartidosPareja" class="custom-input">
-                  <option [ngValue]="1">1 partido por semana por pareja (Recomendado)</option>
-                  <option [ngValue]="2">2 partidos por semana por pareja</option>
-                  <option [ngValue]="3">3 partidos por semana por pareja</option>
-                  <option [ngValue]="0">Sin límite (Agendar todos los partidos disponibles)</option>
-                </select>
-              </div>
-
-              <div class="form-group checkbox-row">
-                <label class="toggle-label">
-                  <input type="checkbox" [(ngModel)]="genRespetarRestricciones" />
-                  <span>🛡️ Respetar restricciones horarias declaradas por cada pareja/jugador</span>
-                </label>
-              </div>
+                <span 
+                  class="jornada-btn-badge"
+                  [class.is-complete]="jTab.partidos_jugados === jTab.partidos_total && jTab.partidos_total > 0"
+                  [class.is-pending]="jTab.partidos_total - jTab.partidos_jugados > 0">
+                  {{ jTab.partidos_jugados }}/{{ jTab.partidos_total }}
+                </span>
+              </button>
             </div>
-          </div>
 
-          <div class="card-footer-actions">
-            <button class="btn-primary-neon-hero" (click)="generarFixtureConParametros()" [disabled]="genLoading" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-              {{ genLoading ? 'Reservando Canchas y Agendando...' : '💾 Guardar y Aplicar Programación (Reservar Canchas & Notificar)' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Contenido de la Jornada Seleccionada -->
-        <div *ngIf="jornadaSeleccionadaActual as j" class="jornada-card">
-          <div class="jornada-header">
-            <div>
-              <h4>JORNADA #{{ j.numero_jornada }} — {{ j.nombre }} (General)</h4>
-              <span class="jornada-meta" *ngIf="j.fecha_limite" style="font-size: 0.8rem; color: #64748b; font-weight: 700;">📅 Fecha Límite: {{ j.fecha_limite | date:'dd/MM/yyyy' }}</span>
+            <div *ngIf="todasLasJornadas.length === 0" style="padding: 16px 12px; background: #fffdf5; border: 1.5px solid #fde68a; border-radius: 12px; font-size: 0.8rem; font-weight: 700; color: #b45309; margin-bottom: 16px; text-align: center;">
+              ⚠️ No hay jornadas creadas para este filtro.
             </div>
-            <button class="btn-programar-jornada" (click)="abrirModalProgramarJornada(j)" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
-              <span>💾</span> Guardar y Aplicar Programación (Reservar Canchas)
-            </button>
-          </div>
 
-          <!-- Pestañas por Día de la Semana dentro de la Jornada -->
-          <div class="day-tabs-row" *ngIf="j.dias_grupos && j.dias_grupos.length > 0">
-            <button 
-              type="button"
-              class="day-tab-btn" 
-              [class.active]="getDiaSeleccionado(j.id) === 'ALL'" 
-              (click)="setDiaSeleccionado(j.id, 'ALL')">
-              🗓️ Todos los Días ({{ j.partidos.length }})
-            </button>
-            <button 
-              type="button"
-              *ngFor="let d of j.dias_grupos" 
-              class="day-tab-btn" 
-              [class.active]="getDiaSeleccionado(j.id) === d.fechaKey" 
-              (click)="setDiaSeleccionado(j.id, d.fechaKey)">
-              {{ d.label }} ({{ d.partidos.length }})
-            </button>
-          </div>
+            <!-- Acciones Globales o por Categoría en el Menú Izquierdo -->
+            <div class="sidebar-actions-box">
+              <button *ngIf="jornadaSeleccionadaActual as jCurr" class="btn-sidebar-action whatsapp" (click)="abrirModalCompartirWhatsApp(jCurr)" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; font-weight: 800; border: none; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+                💬 Enviar Jornada #{{ jCurr.numero_jornada }} a WhatsApp
+              </button>
 
-          <!-- Días Filtrados de la Jornada -->
-          <div class="jornada-dias-container">
-            <div *ngFor="let d of getDiasFiltrados(j)" class="dia-block">
-              <div class="dia-block-header">
-                <div class="dia-title-group">
-                  <span class="dia-label">{{ d.label }}</span>
-                </div>
-                <span class="count-badge">{{ d.partidos.length }} partido{{ d.partidos.length > 1 ? 's' : '' }}</span>
-              </div>
+              <!-- Botones cuando se filtra por categoría específica -->
+              <ng-container *ngIf="categoriaActualFixture as cFilt">
+                <button *ngIf="cFilt.jornadas && cFilt.jornadas.length > 0" class="btn-sidebar-action auto" (click)="autoCompletarJornadas()" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 800; border: none; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                  ⚡ Completar Faltantes ({{ cFilt.nombre }})
+                </button>
+                <button *ngIf="!cFilt.jornadas || cFilt.jornadas.length === 0" class="btn-sidebar-action primary" (click)="generarFixtureCategoria(cFilt)">
+                  ⚡ Generar Fixture ({{ cFilt.nombre }})
+                </button>
 
-              <div class="matches-grid">
-                <div *ngFor="let m of d.partidos" class="match-card">
-                  <div class="match-meta">
-                    <span class="cancha-tag cat-badge" *ngIf="m.categoria_nombre">🏷️ {{ m.categoria_nombre }} ({{ m.categoria_genero }})</span>
-                    <span class="cancha-tag cancha-badge" *ngIf="m.cancha_nombre">📍 {{ m.cancha_nombre }}</span>
-                    <span class="fecha-tag time-badge" *ngIf="m.fecha_hora">⏰ {{ m.fecha_hora | date:'HH:mm' }} hrs</span>
-                    <span class="pending-tag" *ngIf="!m.cancha_nombre && !m.fecha_hora">⚠️ Sin Horario</span>
-                  </div>
-
-                  <div class="match-body">
-                    <div class="team-row" [class.winner]="m.pareja_ganadora_id === m.pareja1_id">
-                      <span class="name">{{ m.pareja1_nombre }}</span>
-                      <span class="score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }} | {{ m.set2_p1 }}-{{ m.set2_p2 }} {{ m.set3_p1 > 0 ? '| ' + m.set3_p1 + '-' + m.set3_p2 : '' }}</span>
-                    </div>
-                    <div class="team-row" [class.winner]="m.pareja_ganadora_id === m.pareja2_id">
-                      <span class="name">{{ m.pareja2_nombre }}</span>
-                      <span class="pts-badge" *ngIf="m.estado === 'Jugado'">+{{ m.puntos_p2 }} pts</span>
-                    </div>
-                  </div>
-
-                  <div class="match-footer">
-                    <button class="btn-schedule" (click)="abrirModalProgramar(m)" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 800; font-size: 0.82rem; padding: 8px 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                      <span>📍</span> Modificar Cancha y Hora
+                <!-- Acciones avanzadas de mantenimiento: SOLO ADMINISTRADOR DEL CLUB -->
+                <div class="expert-danger-actions" *ngIf="esAdminClub && cFilt.jornadas && cFilt.jornadas.length > 0">
+                  <span class="expert-section-title">⚙️ Mantenimiento Experto</span>
+                  <div class="expert-buttons-row">
+                    <button type="button" class="btn-expert-action" (click)="generarFixtureCategoria(cFilt)" title="Re-generar el fixture completo de esta categoría">
+                      🔄 Re-generar Fixture
                     </button>
-                    <button class="btn-edit-result" (click)="abrirModalResultado(m)">
-                      ✏️ {{ m.estado === 'Jugado' ? 'Editar Score' : 'Cargar Marcador' }}
+                    <button type="button" class="btn-expert-action btn-clean" (click)="confirmarLimpiarSinHorario()" title="Limpiar partidos sin horario ni cancha de {{ cFilt.nombre }}">
+                      🧹 Limpiar Vacíos
+                    </button>
+                    <button type="button" class="btn-expert-action btn-danger" (click)="confirmarBorrarFixture(cFilt.id)" title="Borrar fixture completo de {{ cFilt.nombre }}">
+                      🗑️ Borrar Fixture
                     </button>
                   </div>
                 </div>
-              </div>
+              </ng-container>
+
+              <!-- Botones cuando se visualizan todas las categorías -->
+              <ng-container *ngIf="!categoriaActualFixture">
+                <button *ngIf="hasAnyFixture" class="btn-sidebar-action auto" (click)="autoCompletarJornadas()" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: #ffffff; font-weight: 800; border: none; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);">
+                  ⚡ Completar Faltantes (Toda la Liga)
+                </button>
+                <button class="btn-sidebar-action primary" (click)="mostrarConfigFixture = !mostrarConfigFixture">
+                  ⚙️ {{ mostrarConfigFixture ? 'Ocultar Panel' : '⚡ Generar Fixture General' }}
+                </button>
+
+                <!-- Acciones avanzadas de mantenimiento: SOLO ADMINISTRADOR DEL CLUB -->
+                <div class="expert-danger-actions" *ngIf="esAdminClub && hasAnyFixture">
+                  <span class="expert-section-title">⚙️ Mantenimiento Experto</span>
+                  <div class="expert-buttons-row">
+                    <button type="button" class="btn-expert-action btn-clean" (click)="confirmarLimpiarSinHorario()" title="Limpiar partidos sin horario ni cancha de toda la liga">
+                      🧹 Limpiar Vacíos
+                    </button>
+                    <button type="button" class="btn-expert-action btn-danger" (click)="confirmarBorrarFixture()" title="Borrar fixture general de toda la liga">
+                      🗑️ Borrar Fixture
+                    </button>
+                  </div>
+                </div>
+              </ng-container>
             </div>
           </div>
+
+          <!-- COLUMNA DERECHA: Información y Partidos de la Jornada Seleccionada -->
+          <div class="fixture-right-content">
+
+            <!-- Estado vacío cuando la categoría filtrada no tiene fixture -->
+            <div *ngIf="filtroCategoriaFixtureId && categoriaActualFixture as cEmpty" class="animate-in" style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 20px; padding: 40px 24px; text-align: center; margin-bottom: 20px;" [hidden]="cEmpty.jornadas && cEmpty.jornadas.length > 0">
+              <div style="font-size: 3rem; margin-bottom: 12px;">🎾</div>
+              <h3 style="margin: 0 0 8px 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">No hay fixture generado para {{ cEmpty.nombre }}</h3>
+              <p style="color: #64748b; font-size: 0.9rem; max-width: 500px; margin: 0 auto 20px auto; font-weight: 600;">
+                Esta categoría cuenta con <strong>{{ cEmpty.parejas?.length || cEmpty.parejas_count || 0 }} pareja(s) inscritas</strong>. Genera el fixture Round-Robin y asigna automáticamente las canchas y horarios de juego.
+              </p>
+              <button class="btn-primary-neon-hero" (click)="generarFixtureCategoria(cEmpty)" style="max-width: 340px; margin: 0 auto;">
+                ⚡ Generar Fixture para {{ cEmpty.nombre }}
+              </button>
+            </div>
+
+            <!-- INLINE CONTROL PANEL: Cuando el Fixture NO se ha generado aún O cuando el usuario lo solicita -->
+            <div *ngIf="(!hasAnyFixture && !filtroCategoriaFixtureId) || mostrarConfigFixture" class="fixture-config-card animate-in" style="margin-bottom: 20px;">
+              <div class="card-title-bar">
+                <div>
+                  <h3>⚡ Configuración e Inicialización General de la Liga (Todas las Categorías)</h3>
+                  <p class="subtitle">Configura la fase regular (Todos contra Todos) y la clasificación a la Fase Final (Playoffs) para <strong>todas las categorías de la liga</strong>.</p>
+                </div>
+              </div>
+
+              <div class="config-grid-form">
+                <!-- Columna 1: Formato de Competición Regular -->
+                <div class="config-section">
+                  <h4>🏆 1. Formato de Competición Regular (Primera Etapa)</h4>
+                  
+                  <div class="form-group">
+                    <label>Modalidad de Fase Regular</label>
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-left: 4px solid #2563eb; padding: 12px 16px; border-radius: 12px; font-weight: 800; font-size: 0.85rem; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 1.2rem;">🔄</span>
+                      <div>
+                        <div>Todos contra Todos (Grupo Único por Categoría)</div>
+                        <small style="font-weight: 600; color: #64748b; font-size: 0.75rem; display: block; margin-top: 2px;">Cada pareja enfrenta a todas las demás de su categoría en jornadas semanales acumulando puntos en la tabla general.</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Cantidad de parejas que clasifican a la Fase Final (Playoffs)</label>
+                    <select [(ngModel)]="genClasificanModo" class="custom-input">
+                      <option value="todas">Todas las parejas inscritas</option>
+                      <option value="4">Primeras 4 parejas (Semifinales)</option>
+                      <option value="8">Primeras 8 parejas (Cuartos de final)</option>
+                      <option value="12">Primeras 12 parejas (Octavos con Bye)</option>
+                      <option value="16">Primeras 16 parejas (Octavos de final)</option>
+                      <option value="custom">Ingresar otra cantidad personalizada...</option>
+                    </select>
+
+                    <div *ngIf="genClasificanModo === 'custom'" style="margin-top: 10px;">
+                      <input 
+                        type="number" 
+                        min="2" 
+                        [(ngModel)]="genClasificanCant" 
+                        class="custom-input" 
+                        placeholder="Ej. Escribe 6, 10, 20..." 
+                      />
+                    </div>
+                    <small class="hint-text">Especifica cuántas parejas avanzarán a las llaves eliminatorias finales.</small>
+                  </div>
+
+                  <!-- Días de juego asignados por categoría -->
+                  <div class="form-group" style="margin-top: 20px;" *ngIf="liga?.categorias && (liga?.categorias?.length || 0) > 0">
+                    <label style="font-size: 0.88rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 4px;">
+                      📅 Días de Juego Asignados por Categoría <small style="font-weight: 500; color: #64748b;">(Opcional — Ej: 5ª Lunes y Miércoles, 4ª Viernes)</small>
+                    </label>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                      <div *ngFor="let cat of liga?.categorias" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                          <strong style="font-size: 0.85rem; color: #0f172a;">🏷️ {{ cat.nombre }} ({{ cat.genero }})</strong>
+                          <span style="color: #0284c7; font-weight: 800; font-size: 0.75rem;" *ngIf="cat.dias_juego && cat.dias_juego.length > 0">
+                            {{ cat.dias_juego.join(', ') }}
+                          </span>
+                          <span style="color: #94a3b8; font-weight: 600; font-size: 0.75rem;" *ngIf="!cat.dias_juego || cat.dias_juego.length === 0">
+                            Cualquier día libre
+                          </span>
+                        </div>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                          <button type="button" 
+                                  *ngFor="let dia of diasSemanaList" 
+                                  (click)="toggleDiaCat(cat, dia)"
+                                  [style.background]="isDiaCatSeleccionado(cat, dia) ? '#0f172a' : '#ffffff'"
+                                  [style.color]="isDiaCatSeleccionado(cat, dia) ? '#38bdf8' : '#475569'"
+                                  [style.border-color]="isDiaCatSeleccionado(cat, dia) ? '#0f172a' : '#cbd5e1'"
+                                  style="padding: 4px 10px; border-radius: 14px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border-width: 1px; border-style: solid; transition: all 0.2s ease;">
+                            {{ isDiaCatSeleccionado(cat, dia) ? '✓ ' : '' }}{{ dia }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columna 2: Programación de la 1ª Jornada Semanal -->
+                <div class="config-section">
+                  <h4>🗓️ 2. Programación de la 1ª Jornada Semanal</h4>
+
+                  <div class="form-group">
+                    <label>Primer día de la Primera Semana *</label>
+                    <input type="date" [(ngModel)]="genFechaInicio" class="custom-input" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Días habilitados para partidos</label>
+                    <div class="days-chips">
+                      <button type="button" *ngFor="let d of genDiasSemanaList" class="chip-btn" [class.active]="d.selected" (click)="d.selected = !d.selected">
+                        <span class="chip-check" *ngIf="d.selected">✓</span>
+                        {{ d.nombre }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-group" *ngIf="(liga?.mis_clubes?.length || 0) > 0">
+                    <label>Sede / Club Asignado para Canchas</label>
+                    <select [ngModel]="selectedClubId" (ngModelChange)="onClubChange($event)" class="custom-input">
+                      <option *ngFor="let cl of liga?.mis_clubes || []" [ngValue]="cl.id">
+                        📍 {{ cl.nombre }}
+                      </option>
+                    </select>
+                    <small class="hint-text">Selecciona el club de donde se obtendrán las canchas disponibles.</small>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Canchas disponibles del club</label>
+                    <div class="canchas-chips" *ngIf="(liga?.canchas?.length || 0) > 0">
+                      <button type="button" *ngFor="let c of liga?.canchas || []" class="chip-btn court-chip" [class.active]="isGenCanchaSelected(c.id)" (click)="toggleGenCancha(c.id)">
+                        📍 {{ c.nombre }}
+                        <span class="chip-check" *ngIf="isGenCanchaSelected(c.id)">✓</span>
+                      </button>
+                    </div>
+                    <div *ngIf="(liga?.canchas?.length || 0) === 0" style="font-size: 0.8rem; font-weight: 700; color: #b45309; background: #fef3c7; padding: 8px 12px; border-radius: 10px;">
+                      ⚠️ No se registraron canchas para este club. Selecciona otra sede o registra canchas en el módulo de Clubes.
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Horarios de preferencia para partidos</label>
+                    <div class="time-chips-container">
+                      <span *ngFor="let h of genHorarios; let i = index" class="time-tag">
+                        {{ h }}
+                        <button type="button" (click)="eliminarGenHorario(i)" class="btn-remove-tag">✕</button>
+                      </span>
+                    </div>
+                    <div class="add-time-row">
+                      <input type="time" [(ngModel)]="genNuevoHorario" class="custom-input time-input-short" />
+                      <button type="button" class="btn-add-time" (click)="agregarGenHorario()">+ Agregar Hora</button>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Máximo de partidos por pareja por semana</label>
+                    <select [(ngModel)]="genMaxPartidosPareja" class="custom-input">
+                      <option [ngValue]="1">1 partido por semana por pareja (Recomendado)</option>
+                      <option [ngValue]="2">2 partidos por semana por pareja</option>
+                      <option [ngValue]="3">3 partidos por semana por pareja</option>
+                      <option [ngValue]="0">Sin límite (Agendar todos los partidos disponibles)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group checkbox-row">
+                    <label class="toggle-label">
+                      <input type="checkbox" [(ngModel)]="genRespetarRestricciones" />
+                      <span>🛡️ Respetar restricciones horarias declaradas por cada pareja/jugador</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-footer-actions">
+                <button class="btn-primary-neon-hero" (click)="generarFixtureConParametros()" [disabled]="genLoading" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                  {{ genLoading ? 'Reservando Canchas y Agendando...' : '💾 Guardar y Aplicar Programación (Reservar Canchas & Notificar)' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenido de la Jornada Seleccionada -->
+            <div *ngIf="jornadaSeleccionadaActual as j" class="jornada-card">
+              <div class="jornada-header-modern">
+                <!-- Fila 1: Título y Acciones Principales -->
+                <div class="jornada-top-bar">
+                  <div class="jornada-title-box">
+                    <h4 class="jornada-main-title">JORNADA #{{ j.numero_jornada }} — {{ j.nombre }}</h4>
+                  </div>
+                  <div class="jornada-main-actions">
+                    <button class="btn-whatsapp-jornada" (click)="abrirModalCompartirWhatsApp(j)">
+                      <span>💬</span> Enviar a WhatsApp
+                    </button>
+                    <button class="btn-programar-jornada-hero" (click)="abrirModalProgramarJornada(j)">
+                      <span>⚡</span> Programar Jornada #{{ j.numero_jornada }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Fila 2: Metadatos/Badges y Utilidades de Partidos -->
+                <div class="jornada-sub-bar">
+                  <div class="jornada-badges-group">
+                    <span class="jornada-meta-pill" *ngIf="j.fecha_limite">📅 Límite: {{ j.fecha_limite | date:'dd/MM/yyyy' }}</span>
+                    
+                    <span class="jornada-status-pill info">
+                      ⚽ {{ j.partidos_jugados || 0 }}/{{ j.partidos_total || j.partidos.length }} Disputados
+                    </span>
+
+                    <span *ngIf="(j.partidos_sin_cancha || 0) > 0" class="jornada-status-pill warning">
+                      ⚠️ {{ j.partidos_sin_cancha }} Sin Cancha / Hora
+                    </span>
+
+                    <span *ngIf="(j.partidos_sin_cancha || 0) === 0 && (j.partidos_total || j.partidos.length) > 0" class="jornada-status-pill success">
+                      ✅ Todos con Cancha
+                    </span>
+                  </div>
+
+                  <div class="jornada-tools-group">
+                    <button class="btn-tool-pill auto" (click)="autoCompletarJornadas(j)" title="Completar los partidos faltantes para las parejas libres en esta jornada">
+                      <span>⚡</span> Completar Faltantes
+                    </button>
+                    <button *ngIf="esAdminClub && (j.partidos_sin_cancha || 0) > 0" class="btn-tool-pill danger btn-compact-tool" (click)="confirmarLimpiarSinHorario(j)" title="Eliminar partidos sin horario ni fecha de esta jornada" style="background: rgba(239, 68, 68, 0.08); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); font-size: 0.72rem; padding: 4px 8px;">
+                      <span>🧹</span> Limpiar Sin Horario
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pestañas por Día de la Semana dentro de la Jornada -->
+              <div class="day-tabs-row" *ngIf="j.dias_grupos && j.dias_grupos.length > 0">
+                <button 
+                  type="button"
+                  class="day-tab-btn" 
+                  [class.active]="getDiaSeleccionado(j.id) === 'ALL'" 
+                  (click)="setDiaSeleccionado(j.id, 'ALL')">
+                  🗓️ Todos ({{ j.partidos.length }})
+                </button>
+                <button 
+                  type="button"
+                  *ngFor="let d of j.dias_grupos" 
+                  class="day-tab-btn" 
+                  [class.pending-tab]="d.fechaKey === '0000-00-00'"
+                  [class.active]="getDiaSeleccionado(j.id) === d.fechaKey" 
+                  (click)="setDiaSeleccionado(j.id, d.fechaKey)">
+                  {{ d.label }} ({{ d.partidos.length }})
+                </button>
+              </div>
+
+              <!-- Días Filtrados de la Jornada -->
+              <div class="jornada-dias-container">
+                <div *ngFor="let d of getDiasFiltrados(j); trackBy: trackByDia" class="dia-block" [class.pending-block]="d.fechaKey === '0000-00-00'">
+                  <div class="dia-block-header">
+                    <div class="dia-title-group">
+                      <span class="dia-label">{{ d.fechaKey === '0000-00-00' ? '' : '📅 ' }}{{ d.label }}</span>
+                    </div>
+                    <span class="count-badge" [class.pending-badge]="d.fechaKey === '0000-00-00'">{{ d.partidos.length }} partido{{ d.partidos.length > 1 ? 's' : '' }}</span>
+                  </div>
+
+                  <div class="matches-grid">
+                    <div *ngFor="let m of d.partidos; trackBy: trackByPartido" class="match-card">
+                      <!-- 1. ARRIBA: Categoría + Acciones de Gestión en Cabecera -->
+                      <div class="match-card-top">
+                        <span class="cat-badge" *ngIf="m.categoria_nombre">🏷️ {{ m.categoria_nombre }}</span>
+                        
+                        <!-- Acciones discretas de gestión / desprogramar / eliminar -->
+                        <div class="match-top-actions">
+                          <button *ngIf="m.cancha_id || (m.fecha_hora && !m.fecha_hora.startsWith('0000'))"
+                                  class="btn-icon-subtle unassign" 
+                                  (click)="desprogramarPartido(m, $event)"
+                                  title="Quitar fecha y cancha para dejar pendiente">
+                            🚫
+                          </button>
+                          <button class="btn-icon-subtle delete" 
+                                  (click)="eliminarPartidoIndividual(m, $event)" 
+                                  title="Eliminar este partido">
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- 2. CENTRO: Parejas / Enfrentamiento Deportivo -->
+                      <div class="match-body">
+                        <div class="team-row" [class.winner]="m.pareja_ganadora_id === m.pareja1_id">
+                          <div class="team-name-box">
+                            <span class="team-badge-num" [class.active]="m.pareja_ganadora_id === m.pareja1_id">1</span>
+                            <span class="name" [title]="m.pareja1_nombre">{{ m.pareja1_nombre }}</span>
+                          </div>
+                          <span class="score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }} | {{ m.set2_p1 }}-{{ m.set2_p2 }} {{ m.set3_p1 > 0 ? '| ' + m.set3_p1 + '-' + m.set3_p2 : '' }}</span>
+                        </div>
+
+                        <div class="match-vs-divider">
+                          <span class="vs-line"></span>
+                          <span class="vs-pill">vs</span>
+                          <span class="vs-line"></span>
+                        </div>
+
+                        <div class="team-row" [class.winner]="m.pareja_ganadora_id === m.pareja2_id">
+                          <div class="team-name-box">
+                            <span class="team-badge-num" [class.active]="m.pareja_ganadora_id === m.pareja2_id">2</span>
+                            <span class="name" [title]="m.pareja2_nombre">{{ m.pareja2_nombre }}</span>
+                          </div>
+                          <span class="pts-badge" *ngIf="m.estado === 'Jugado' && m.puntos_p2">+{{ m.puntos_p2 }} pts</span>
+                        </div>
+                      </div>
+
+                      <!-- 3. METADATOS: Pista y Hora estructurados -->
+                      <div class="match-meta-location">
+                        <div class="meta-pills-row" *ngIf="m.cancha_nombre || (m.fecha_hora && !m.fecha_hora.startsWith('0000'))">
+                          <span class="cancha-badge" *ngIf="m.cancha_nombre" [title]="m.cancha_nombre">
+                            📍 {{ formatCanchaNombre(m.cancha_nombre) }}
+                          </span>
+                          <span class="time-badge" *ngIf="m.fecha_hora && !m.fecha_hora.startsWith('0000')">
+                            ⏰ {{ m.fecha_hora | date:'HH:mm' }} hrs
+                          </span>
+                        </div>
+                        <span class="pending-tag" *ngIf="!m.cancha_nombre && (!m.fecha_hora || m.fecha_hora.startsWith('0000'))">
+                          ⚠️ Sin Horario Asignado
+                        </span>
+                      </div>
+
+                      <!-- 4. BOTONES DE ACCIÓN PRINCIPALES (50% / 50%) -->
+                      <div class="match-footer">
+                        <button class="btn-schedule" (click)="abrirModalProgramar(m)" title="Reagendar horario o cancha">
+                          <span>📍</span> Reagendar
+                        </button>
+                        <button class="btn-edit-result" (click)="abrirModalResultado(m)" title="Cargar o editar marcador">
+                          <span>✏️</span> {{ m.estado === 'Jugado' ? 'Score' : 'Marcador' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
 
       <!-- TAB 3: Fase Final / Playoffs -->
@@ -380,14 +1272,179 @@
         <div class="tab-header-actions" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">🏆 Cuadro Eliminatorio — Playoffs (Fase Final)</h3>
-            <p class="subtitle" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin: 4px 0 0 0;">Partidos de eliminación directa entre los clasificados de {{ categoriaActual?.nombre }}.</p>
+            <p class="subtitle" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin: 4px 0 0 0;">
+              Partidos de eliminación directa entre los clasificados de {{ categoriaActual?.nombre }}.
+            </p>
           </div>
-          <button class="btn-primary-neon-hero" style="font-size: 0.85rem; padding: 10px 18px;" (click)="generarPlayoffsCategoria()">
-            ⚡ Generar / Re-calcular Playoffs
-          </button>
+          
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- View Mode Switcher -->
+            <div class="playoff-view-toggle" *ngIf="tienePlayoffs" style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 12px; border: 1px solid #cbd5e1;">
+              <button class="toggle-pill-btn" [class.active]="vistaPlayoffs === 'bracket'" (click)="vistaPlayoffs = 'bracket'" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; transition: all 0.15s ease;">
+                🌳 Cuadro Visual
+              </button>
+              <button class="toggle-pill-btn" [class.active]="vistaPlayoffs === 'lista'" (click)="vistaPlayoffs = 'lista'" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; transition: all 0.15s ease;">
+                📋 Lista
+              </button>
+            </div>
+
+            <button class="btn-primary-neon-hero" style="font-size: 0.85rem; padding: 9px 18px;" (click)="generarPlayoffsCategoria()">
+              ⚡ Configurar y Generar Playoffs
+            </button>
+          </div>
         </div>
 
-        <div *ngIf="categoriaActual?.playoffs && categoriaActual.playoffs.length > 0" class="jornada-card">
+        <!-- VISTA 1: CUADRO VISUAL (BRACKET INTERACTIVO) -->
+        <div *ngIf="tienePlayoffs && vistaPlayoffs === 'bracket'" class="playoff-bracket-card animate-in">
+          <div class="bracket-rounds-wrapper">
+            
+            <!-- COLUMNA 1: OCTAVOS / PREVIA -->
+            <div class="bracket-column" *ngIf="playoffsRounds.octavos.length > 0">
+              <div class="column-header-pill previa">
+                <span>1️⃣ Octavos / Previa</span>
+                <small>{{ playoffsRounds.octavos.length }} partidos</small>
+              </div>
+              <div class="column-matches-stack">
+                <div *ngFor="let m of playoffsRounds.octavos" class="bracket-match-node">
+                  <div class="match-mini-meta">
+                    <span class="badge-tag">Octavos</span>
+                    <span *ngIf="m.cancha_nombre" class="court-tag">📍 {{ m.cancha_nombre }}</span>
+                    <span *ngIf="m.fecha_hora" class="time-tag">⏰ {{ m.fecha_hora | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Por definir' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                  </div>
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Por definir' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                  </div>
+
+                  <div class="bracket-match-actions">
+                    <button class="btn-micro-action" (click)="abrirModalProgramar(m)" title="Programar Horario">📅</button>
+                    <button class="btn-micro-action edit" (click)="abrirModalResultado(m)" title="Cargar / Editar Score">✏️ Score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUMNA 2: CUARTOS DE FINAL -->
+            <div class="bracket-column" *ngIf="playoffsRounds.cuartos.length > 0">
+              <div class="column-header-pill cuartos">
+                <span>2️⃣ Cuartos de Final</span>
+                <small>{{ playoffsRounds.cuartos.length }} partidos</small>
+              </div>
+              <div class="column-matches-stack">
+                <div *ngFor="let m of playoffsRounds.cuartos" class="bracket-match-node">
+                  <div class="match-mini-meta">
+                    <span class="badge-tag cuartos">Cuartos</span>
+                    <span *ngIf="m.cancha_nombre" class="court-tag">📍 {{ m.cancha_nombre }}</span>
+                    <span *ngIf="m.fecha_hora" class="time-tag">⏰ {{ m.fecha_hora | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Por definir' }}</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed1_label?.includes('1º') || m.meta_playoff?.seed1_label?.includes('2º') || m.meta_playoff?.seed1_label?.includes('3º') || m.meta_playoff?.seed1_label?.includes('4º')">BYE DIRECTO</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                  </div>
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Por definir' }}</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed2_label?.includes('5º') || m.meta_playoff?.seed2_label?.includes('6º')">BYE DIRECTO</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                  </div>
+
+                  <div class="bracket-match-actions">
+                    <button class="btn-micro-action" (click)="abrirModalProgramar(m)" title="Programar Horario" [disabled]="!m.pareja1_id || !m.pareja2_id">📅</button>
+                    <button class="btn-micro-action edit" (click)="abrirModalResultado(m)" title="Cargar / Editar Score" [disabled]="!m.pareja1_id || !m.pareja2_id">✏️ Score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUMNA 3: SEMIFINALES -->
+            <div class="bracket-column" *ngIf="playoffsRounds.semifinales.length > 0">
+              <div class="column-header-pill semis">
+                <span>3️⃣ Semifinales</span>
+                <small>{{ playoffsRounds.semifinales.length }} partidos</small>
+              </div>
+              <div class="column-matches-stack semis-stack">
+                <div *ngFor="let m of playoffsRounds.semifinales" class="bracket-match-node">
+                  <div class="match-mini-meta">
+                    <span class="badge-tag semis">Semifinal</span>
+                    <span *ngIf="m.cancha_nombre" class="court-tag">📍 {{ m.cancha_nombre }}</span>
+                    <span *ngIf="m.fecha_hora" class="time-tag">⏰ {{ m.fecha_hora | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Ganador Cuartos' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                  </div>
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Ganador Cuartos' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                  </div>
+
+                  <div class="bracket-match-actions">
+                    <button class="btn-micro-action" (click)="abrirModalProgramar(m)" title="Programar Horario" [disabled]="!m.pareja1_id || !m.pareja2_id">📅</button>
+                    <button class="btn-micro-action edit" (click)="abrirModalResultado(m)" title="Cargar / Editar Score" [disabled]="!m.pareja1_id || !m.pareja2_id">✏️ Score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUMNA 4: GRAN FINAL -->
+            <div class="bracket-column" *ngIf="playoffsRounds.final.length > 0">
+              <div class="column-header-pill final">
+                <span>🏆 Gran Final</span>
+                <small>Definición del Título</small>
+              </div>
+              <div class="column-matches-stack final-stack">
+                <div *ngFor="let m of playoffsRounds.final" class="bracket-match-node final-node">
+                  <div class="match-mini-meta">
+                    <span class="badge-tag final">🏆 Final</span>
+                    <span *ngIf="m.cancha_nombre" class="court-tag">📍 {{ m.cancha_nombre }}</span>
+                    <span *ngIf="m.fecha_hora" class="time-tag">⏰ {{ m.fecha_hora | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Finalista 1' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                  </div>
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Finalista 2' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                  </div>
+
+                  <div class="bracket-match-actions">
+                    <button class="btn-micro-action" (click)="abrirModalProgramar(m)" title="Programar Horario" [disabled]="!m.pareja1_id || !m.pareja2_id">📅</button>
+                    <button class="btn-micro-action edit" (click)="abrirModalResultado(m)" title="Cargar / Editar Score" [disabled]="!m.pareja1_id || !m.pareja2_id">✏️ Score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- VISTA 2: LISTA TRADICIONAL DE PARTIDOS DE PLAYOFF -->
+        <div *ngIf="tienePlayoffs && vistaPlayoffs === 'lista'" class="jornada-card animate-in">
           <div class="jornada-header">
             <h4>LLAVES DE ELIMINACIÓN DIRECTA</h4>
             <span class="category-pill" style="background: #fef3c7; color: #b45309; font-weight: 800; padding: 4px 10px; border-radius: 10px; font-size: 0.75rem;">Fase Final</span>
@@ -414,10 +1471,10 @@
               </div>
 
               <div class="match-footer">
-                <button class="btn-schedule" (click)="abrirModalProgramar(m)">
+                <button class="btn-schedule" (click)="abrirModalProgramar(m)" [disabled]="!m.pareja1_id || !m.pareja2_id">
                   📅 Programar Horario
                 </button>
-                <button class="btn-edit-result" (click)="abrirModalResultado(m)">
+                <button class="btn-edit-result" (click)="abrirModalResultado(m)" [disabled]="!m.pareja1_id || !m.pareja2_id">
                   ✏️ {{ m.estado === 'Jugado' ? 'Editar Score' : 'Cargar Resultado' }}
                 </button>
               </div>
@@ -425,57 +1482,235 @@
           </div>
         </div>
 
-        <div *ngIf="!categoriaActual?.playoffs || categoriaActual.playoffs.length === 0" class="fixture-config-card" style="text-align: center; padding: 40px 20px;">
+        <div *ngIf="!tienePlayoffs" class="fixture-config-card" style="text-align: center; padding: 40px 20px;">
           <div style="font-size: 3rem; margin-bottom: 12px;">🏆</div>
           <h3 style="margin: 0 0 8px 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">No se ha generado el cuadro de Playoffs</h3>
           <p style="color: #64748b; font-size: 0.9rem; max-width: 500px; margin: 0 auto 20px auto; font-weight: 600;">
-            Una vez avanzada la Fase Regular (Round-Robin), presiona el botón a continuación para cruzar las parejas clasificadas y armar el cuadro de eliminatorias.
+            Configura cuántas parejas avanzan y cuántos de los primeros lugares pasan directamente a Cuartos de Final (BYE).
           </p>
           <button class="btn-primary-neon-hero" (click)="generarPlayoffsCategoria()">
-            ⚡ Generar Cuadro de Playoffs Ahora
+            ⚡ Configurar y Generar Cuadro de Playoffs
           </button>
         </div>
       </div>
 
-      <!-- TAB: Parejas Inscritas -->
+      <!-- TAB: Parejas Inscritas (Vista Optimizada Full-Width) -->
       <div *ngIf="activeTab === 'inscritos'" class="tab-content animate-in">
-        <div class="tab-header-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h3>Parejas Inscritas en {{ categoriaActual?.nombre }}</h3>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="btn-secondary-dark" (click)="activeTab = 'fixture'; mostrarConfigFixture = true;" style="background: #0f172a; color: #a8ff00; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 800; cursor: pointer;">
-              🎲 Completar Cupos con Parejas Demo & Fixture General
+        
+        <!-- Header Banner de la Categoría Seleccionada -->
+        <div class="inscritos-category-banner">
+          <div class="banner-left">
+            <div class="cat-title-row">
+              <h2>{{ categoriaActual?.nombre || 'Categoría' }}</h2>
+              <span class="gender-pill">{{ categoriaActual?.genero || 'Caballeros' }}</span>
+              <span class="days-pill" *ngIf="categoriaActual?.dias_juego && categoriaActual.dias_juego.length > 0" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.75rem; padding: 4px 10px; border-radius: 10px; margin-left: 8px;">
+                📅 Días: {{ categoriaActual.dias_juego.join(', ') }}
+              </span>
+            </div>
+            
+            <!-- Barra de Avance de Cupos -->
+            <div class="cupos-progress-box">
+              <div class="cupos-text-row">
+                <span>👥 <strong>{{ categoriaActual?.parejas?.length || 0 }}</strong> de <strong>{{ categoriaActual?.max_parejas || 16 }}</strong> parejas inscritas</span>
+                <span class="pct-badge">{{ porcentajeOcupacionCategoria }}% Ocupado</span>
+              </div>
+              <div class="cupos-progress-bar">
+                <div class="progress-fill" [style.width.%]="porcentajeOcupacionCategoria"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtro de Búsqueda y Acciones Rápidas -->
+          <div class="banner-right">
+            <div class="search-box-wrapper">
+              <span class="search-icon">🔍</span>
+              <input 
+                type="text" 
+                [(ngModel)]="searchTermInscritos" 
+                placeholder="Buscar pareja o jugador..." 
+                class="search-input"
+              />
+              <button *ngIf="searchTermInscritos" (click)="searchTermInscritos = ''" class="clear-search-btn">✕</button>
+            </div>
+
+            <div class="action-btns-group">
+              <button class="btn-fixture-gen-sm" (click)="activeTab = 'fixture'; mostrarConfigFixture = true;">
+                ⚡ Completar con Demos & Fixture
+              </button>
+              <button class="btn-primary-action" (click)="abrirModalInscribir()">➕ Inscribir Pareja</button>
+              <button (click)="eliminarCategoriaActual()" title="Eliminar esta categoría y todas sus parejas inscritas" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">🗑️ Eliminar Categoría</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar de Selector de Vista (Tabla vs Tarjetas) y Conteo -->
+        <div class="view-mode-selector-row" *ngIf="categoriaActual?.parejas && categoriaActual?.parejas.length > 0">
+          <div class="results-count-badge">
+            👥 Mostrando <strong>{{ inicioRegistroInscritos }} - {{ finRegistroInscritos }}</strong> de <strong>{{ parejasFiltradas.length }}</strong> parejas
+            <span *ngIf="searchTermInscritos" class="filtered-tag">(filtrado por "{{ searchTermInscritos }}")</span>
+          </div>
+
+          <div class="toggle-view-btns">
+            <button class="view-btn" [class.active]="vistaInscritos === 'tabla'" (click)="vistaInscritos = 'tabla'">
+              📋 Vista de Tabla
             </button>
-            <button class="btn-primary-neon" (click)="abrirModalInscribir()">➕ Inscribir Nueva Pareja</button>
+            <button class="view-btn" [class.active]="vistaInscritos === 'cards'" (click)="vistaInscritos = 'cards'">
+              🎴 Vista de Tarjetas
+            </button>
           </div>
         </div>
 
-        <div class="parejas-grid" *ngIf="categoriaActual?.parejas && categoriaActual?.parejas.length > 0">
-          <div *ngFor="let p of categoriaActual.parejas" class="pareja-card">
-            <div class="pareja-header">
-              <span class="pareja-badge">{{ p.nombre_pareja }}</span>
-              <div class="pareja-actions-row">
-                <span class="status-confirmada">{{ p.estado }}</span>
-                <button class="btn-icon-edit" (click)="editarPareja(p, $event)" title="Editar pareja">✏️</button>
-                <button class="btn-icon-delete" (click)="eliminarPareja(p, $event)" title="Eliminar pareja">🗑️</button>
-              </div>
-            </div>
-            <div class="players-info">
-              <div class="player">
-                <span class="icon">👤</span>
-                <span class="name">{{ p.p1_nom ? (p.p1_nom + ' ' + p.p1_ape) : (p.nombre_externo1 || 'Jugador 1') }}</span>
-              </div>
-              <div class="player">
-                <span class="icon">👤</span>
-                <span class="name">{{ p.p2_nom ? (p.p2_nom + ' ' + p.p2_ape) : (p.nombre_externo2 || 'Jugador 2') }}</span>
-              </div>
+        <!-- VISTA 1: TABLA DE COLUMNAS (Default Paginada) -->
+        <div *ngIf="vistaInscritos === 'tabla' && parejasFiltradas && parejasFiltradas.length > 0" class="table-responsive-card">
+          <table class="inscritos-custom-table">
+            <thead>
+              <tr>
+                <th class="th-num">#</th>
+                <th class="th-pareja">Pareja / Equipo</th>
+                <th class="th-jugador">Jugador 1</th>
+                <th class="th-jugador">Jugador 2</th>
+                <th class="th-estado">Estado</th>
+                <th class="th-acciones">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of parejasPaginadas; let i = index">
+                <td class="td-num">
+                  <span class="index-pill">#{{ (paginaActualInscritos - 1) * itemsPorPaginaInscritos + i + 1 }}</span>
+                </td>
+                <td class="td-pareja">
+                  <strong class="team-title">{{ p.nombre_pareja }}</strong>
+                </td>
+                <td class="td-jugador">
+                  <div class="player-cell">
+                    <span class="player-avatar p1">{{ getInitials(p.p1_nom ? (p.p1_nom + ' ' + p.p1_ape) : (p.nombre_externo1 || 'Jugador 1')) }}</span>
+                    <span class="player-name-text">{{ p.p1_nom ? (p.p1_nom + ' ' + p.p1_ape) : (p.nombre_externo1 || 'Jugador 1') }}</span>
+                  </div>
+                </td>
+                <td class="td-jugador">
+                  <div class="player-cell">
+                    <span class="player-avatar p2">{{ getInitials(p.p2_nom ? (p.p2_nom + ' ' + p.p2_ape) : (p.nombre_externo2 || 'Jugador 2')) }}</span>
+                    <span class="player-name-text">{{ p.p2_nom ? (p.p2_nom + ' ' + p.p2_ape) : (p.nombre_externo2 || 'Jugador 2') }}</span>
+                  </div>
+                </td>
+                <td class="td-estado">
+                  <span class="status-badge-tbl" [class.confirmada]="p.estado === 'Confirmada'">
+                    {{ p.estado === 'Confirmada' ? '✓ Confirmada' : p.estado }}
+                  </span>
+                </td>
+                <td class="td-acciones">
+                  <div class="actions-group-tbl">
+                    <button class="btn-tbl-action edit" (click)="editarPareja(p, $event)" title="Editar pareja">✏️ Editar</button>
+                    <button class="btn-tbl-action delete" (click)="eliminarPareja(p, $event)" title="Eliminar pareja">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- BARRA DE PAGINACIÓN TABLA -->
+          <div class="table-pagination-footer" *ngIf="totalPaginasInscritos > 1">
+            <span class="pagination-info">Página {{ paginaActualInscritos }} de {{ totalPaginasInscritos }}</span>
+            <div class="pagination-controls">
+              <button class="page-nav-btn" [disabled]="paginaActualInscritos === 1" (click)="cambiarPaginaInscritos(paginaActualInscritos - 1)">
+                ◄ Anterior
+              </button>
+              <button 
+                *ngFor="let pag of paginasArrayInscritos" 
+                class="page-num-btn" 
+                [class.active]="pag === paginaActualInscritos" 
+                (click)="cambiarPaginaInscritos(pag)">
+                {{ pag }}
+              </button>
+              <button class="page-nav-btn" [disabled]="paginaActualInscritos === totalPaginasInscritos" (click)="cambiarPaginaInscritos(paginaActualInscritos + 1)">
+                Siguiente ►
+              </button>
             </div>
           </div>
         </div>
 
+        <!-- VISTA 2: GRID DE TARJETAS (Paginada) -->
+        <div *ngIf="vistaInscritos === 'cards' && parejasFiltradas && parejasFiltradas.length > 0">
+          <div class="parejas-grid">
+            <div *ngFor="let p of parejasPaginadas; let i = index" class="pareja-card-v2">
+              <div class="card-top-bar">
+                <div class="pareja-index-badge">#{{ (paginaActualInscritos - 1) * itemsPorPaginaInscritos + i + 1 }}</div>
+                <div class="card-actions">
+                  <span class="status-badge" [class.confirmada]="p.estado === 'Confirmada'">
+                    {{ p.estado === 'Confirmada' ? '✓ Confirmada' : p.estado }}
+                  </span>
+                  <button class="btn-action-icon edit" (click)="editarPareja(p, $event)" title="Editar pareja">✏️</button>
+                  <button class="btn-action-icon delete" (click)="eliminarPareja(p, $event)" title="Eliminar pareja">🗑️</button>
+                </div>
+              </div>
+
+              <div class="pareja-main-title">
+                <h4>{{ p.nombre_pareja }}</h4>
+              </div>
+
+              <div class="players-cards-container">
+                <!-- Jugador 1 -->
+                <div class="player-pill">
+                  <div class="avatar-initials">
+                    {{ getInitials(p.p1_nom ? (p.p1_nom + ' ' + p.p1_ape) : (p.nombre_externo1 || 'Jugador 1')) }}
+                  </div>
+                  <div class="player-details">
+                    <span class="player-role">Jugador 1</span>
+                    <span class="player-name">{{ p.p1_nom ? (p.p1_nom + ' ' + p.p1_ape) : (p.nombre_externo1 || 'Jugador 1') }}</span>
+                  </div>
+                </div>
+
+                <!-- Jugador 2 -->
+                <div class="player-pill">
+                  <div class="avatar-initials partner">
+                    {{ getInitials(p.p2_nom ? (p.p2_nom + ' ' + p.p2_ape) : (p.nombre_externo2 || 'Jugador 2')) }}
+                  </div>
+                  <div class="player-details">
+                    <span class="player-role">Jugador 2</span>
+                    <span class="player-name">{{ p.p2_nom ? (p.p2_nom + ' ' + p.p2_ape) : (p.nombre_externo2 || 'Jugador 2') }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BARRA DE PAGINACIÓN TARJETAS -->
+          <div class="table-pagination-footer" style="background:#ffffff; border-radius:16px; border:1px solid #e2e8f0; margin-top:20px; padding:12px 18px;" *ngIf="totalPaginasInscritos > 1">
+            <span class="pagination-info">Página {{ paginaActualInscritos }} de {{ totalPaginasInscritos }}</span>
+            <div class="pagination-controls">
+              <button class="page-nav-btn" [disabled]="paginaActualInscritos === 1" (click)="cambiarPaginaInscritos(paginaActualInscritos - 1)">
+                ◄ Anterior
+              </button>
+              <button 
+                *ngFor="let pag of paginasArrayInscritos" 
+                class="page-num-btn" 
+                [class.active]="pag === paginaActualInscritos" 
+                (click)="cambiarPaginaInscritos(pag)">
+                {{ pag }}
+              </button>
+              <button class="page-nav-btn" [disabled]="paginaActualInscritos === totalPaginasInscritos" (click)="cambiarPaginaInscritos(paginaActualInscritos + 1)">
+                Siguiente ►
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado si la búsqueda no arroja resultados -->
+        <div *ngIf="categoriaActual?.parejas?.length > 0 && parejasFiltradas.length === 0" class="empty-card">
+          <div class="empty-icon">🔍</div>
+          <h4>No se encontraron parejas con "{{ searchTermInscritos }}"</h4>
+          <p>Intenta buscar con otro nombre de jugador o resetea el filtro de búsqueda.</p>
+          <button class="btn-secondary-action" (click)="searchTermInscritos = ''">Borrar Filtro de Búsqueda</button>
+        </div>
+
+        <!-- Estado si no hay parejas inscritas aún -->
         <div *ngIf="!categoriaActual?.parejas || categoriaActual?.parejas.length === 0" class="empty-card">
-          <p>No hay parejas inscritas en esta categoría aún.</p>
-          <button class="btn-primary-neon" (click)="abrirModalInscribir()">Inscribir Primera Pareja</button>
+          <div class="empty-icon">👥</div>
+          <h4>No hay parejas inscritas en {{ categoriaActual?.nombre || 'esta categoría' }}</h4>
+          <p>Inscribe a la primera pareja de jugadores o utiliza la función de parejas demo para inicializar el fixture automáticamente.</p>
+          <button class="btn-primary-action" (click)="abrirModalInscribir()">➕ Inscribir Primera Pareja</button>
         </div>
+
       </div>
     </div>
   </main>
@@ -512,7 +1747,16 @@
 
 <app-generar-fixture-modal
   *ngIf="mostrarModalGenerarFixture"
-  [categoria]="categoriaActual"
+  [categoria]="categoriaParaGenerarFixture || categoriaActual"
+  [ligaId]="ligaId"
   [canchas]="liga?.canchas || []"
   (cerrar)="cerrarModalGenerarFixture($event)">
 </app-generar-fixture-modal>
+
+<app-compartir-whatsapp-modal
+  *ngIf="mostrarModalWhatsApp"
+  [ligaNombre]="liga?.nombre || ''"
+  [jornada]="jornadaParaWhatsApp"
+  [categorias]="liga?.categorias || []"
+  (cerrar)="mostrarModalWhatsApp = false">
+</app-compartir-whatsapp-modal>

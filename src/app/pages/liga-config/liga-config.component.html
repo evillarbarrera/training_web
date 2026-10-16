@@ -33,7 +33,10 @@
           </div>
           <div class="form-group flex-1">
             <label>Precio de Inscripción ($)</label>
-            <input type="number" [(ngModel)]="precio" placeholder="0.00" class="custom-input" />
+            <input type="text" [(ngModel)]="precioDisplay" (input)="onPrecioInput($event)" placeholder="Ej: $30.000" class="custom-input" />
+            <small *ngIf="precio > 0" style="color: #16a34a; font-weight: 700; font-size: 0.78rem; margin-top: 4px;">
+              ✓ Valor: ${{ precio | number:'1.0-0' }} CLP
+            </small>
           </div>
         </div>
 
@@ -124,6 +127,26 @@
               <div class="form-group flex-1">
                 <label>Pasan a Playoff</label>
                 <input type="number" [(ngModel)]="cat.parejas_clasifican_playoff" class="custom-input" />
+              </div>
+            </div>
+
+            <!-- Días de juego preferidos por categoría -->
+            <div class="form-row" style="margin-top: 10px;">
+              <div class="form-group flex-full" style="width: 100%;">
+                <label style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                  📅 Días de Juego Preferidos / Asignados <small style="font-weight: 500; color: #64748b;">(Opcional — Si se asignan, el fixture semanal los priorizará)</small>
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <button type="button" 
+                          *ngFor="let dia of diasSemanaList" 
+                          (click)="toggleDiaCategoria(cat, dia)"
+                          [style.background]="isDiaSeleccionado(cat, dia) ? '#0f172a' : '#f8fafc'"
+                          [style.color]="isDiaSeleccionado(cat, dia) ? '#38bdf8' : '#475569'"
+                          [style.border-color]="isDiaSeleccionado(cat, dia) ? '#0f172a' : '#cbd5e1'"
+                          style="padding: 5px 12px; border-radius: 18px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border-width: 1px; border-style: solid; transition: all 0.2s ease;">
+                    {{ isDiaSeleccionado(cat, dia) ? '✓ ' : '' }}{{ dia }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

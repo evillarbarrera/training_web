@@ -10,6 +10,7 @@ export interface CategoriaConfig {
   nivel: string;
   max_parejas: number;
   parejas_clasifican_playoff: number;
+  dias_juego?: string[];
   parejas_count?: number;
   parejas?: any[];
   grupos?: any[];
@@ -89,9 +90,10 @@ export class LigaService {
     });
   }
 
-  obtenerLigas(clubId?: number, estado?: 'activas' | 'historicas', mobileOnly: boolean = false): Observable<any> {
+  obtenerLigas(clubId?: number, estado?: 'activas' | 'historicas', mobileOnly: boolean = false, userId?: number): Observable<any> {
     let url = `${this.apiUrl}/obtener_liga.php?`;
     if (clubId) url += `club_id=${clubId}&`;
+    if (userId) url += `user_id=${userId}&`;
     if (estado) url += `estado=${estado}&`;
     if (mobileOnly) url += `mobile_only=1&`;
     return this.http.get(url, { headers: this.getHeaders() });
@@ -110,6 +112,10 @@ export class LigaService {
 
   eliminarLiga(id: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/eliminar_liga.php`, { id }, { headers: this.getHeaders() });
+  }
+
+  eliminarCategoria(categoriaId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/eliminar_categoria.php`, { categoria_id: categoriaId }, { headers: this.getHeaders() });
   }
 
   subirPosterLiga(file: File): Observable<any> {
@@ -159,11 +165,24 @@ export class LigaService {
     return this.http.post(`${this.apiUrl}/eliminar_pareja.php`, { id }, { headers: this.getHeaders() });
   }
 
-  programarPartido(partidoId: number, canchaId: number | null, fechaHora: string | null): Observable<any> {
+  autoCompletarJornadas(params: { categoria_id?: number, jornada_id?: number, liga_id?: number }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auto_completar_v2.php`, params, { headers: this.getHeaders() });
+  }
+
+  agregarPartido(data: { categoria_id?: number, jornada_id: number, pareja1_id: number, pareja2_id: number, grupo_id?: number }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/agregar_partido.php`, data, { headers: this.getHeaders() });
+  }
+
+  eliminarPartido(partidoId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/eliminar_partido.php`, { partido_id: partidoId }, { headers: this.getHeaders() });
+  }
+
+  programarPartido(partidoId: number, canchaId: number | null, fechaHora: string | null, duracionMinutos: number = 90): Observable<any> {
     return this.http.post(`${this.apiUrl}/programar_partido.php`, {
       partido_id: partidoId,
       cancha_id: canchaId,
-      fecha_hora: fechaHora
+      fecha_hora: fechaHora,
+      duracion_minutos: duracionMinutos
     }, { headers: this.getHeaders() });
   }
 
@@ -176,8 +195,13 @@ export class LigaService {
   }
 
   obtenerTablaPosiciones(grupoId?: number | null, categoriaId?: number | null): Observable<any> {
-    const param = grupoId ? `grupo_id=${grupoId}` : `categoria_id=${categoriaId}`;
-    return this.http.get(`${this.apiUrl}/obtener_posiciones.php?${param}`, { headers: this.getHeaders() });
+    let query = '';
+    if (grupoId) {
+      query = `grupo_id=${grupoId}`;
+    } else if (categoriaId) {
+      query = `categoria_id=${categoriaId}`;
+    }
+    return this.http.get(`${this.apiUrl}/obtener_posiciones.php?${query}`, { headers: this.getHeaders() });
   }
 
   buscarJugadores(query?: string): Observable<any> {
@@ -185,10 +209,36 @@ export class LigaService {
     return this.http.get(url, { headers: this.getHeaders() });
   }
 
-  generarPlayoffs(categoriaId: number, numClasificados: number): Observable<any> {
+  limpiarDemos(ligaId?: number, categoriaId?: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/limpiar_demos.php`, {
+      liga_id: ligaId,
+      categoria_id: categoriaId
+    }, { headers: this.getHeaders() });
+  }
+
+  importarParejas(categoriaId: number, parejas: any[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/importar_parejas.php`, {
+      categoria_id: categoriaId,
+      parejas: parejas
+    }, { headers: this.getHeaders() });
+  }
+
+  generarPlayoffs(categoriaId: number, numClasificados: number, directosCuartos: number = 4): Observable<any> {
     return this.http.post(`${this.apiUrl}/generar_playoffs.php`, {
       categoria_id: categoriaId,
-      num_clasificados: numClasificados
+      num_clasificados: numClasificados,
+      directos_cuartos: directosCuartos
     }, { headers: this.getHeaders() });
+  }
+
+  borrarFixture(ligaId?: number, categoriaId?: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/borrar_fixture.php`, {
+      liga_id: ligaId,
+      categoria_id: categoriaId
+    }, { headers: this.getHeaders() });
+  }
+
+  limpiarPartidosSinHorario(params: { categoria_id?: number; jornada_id?: number; liga_id?: number }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/limpiar_partidos_sin_horario.php`, params, { headers: this.getHeaders() });
   }
 }

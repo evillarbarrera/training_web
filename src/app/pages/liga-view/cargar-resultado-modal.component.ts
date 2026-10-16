@@ -27,13 +27,14 @@ export class CargarResultadoModalComponent {
 
   ngOnInit(): void {
     if (this.partido) {
-      this.set1_p1 = this.partido.set1_p1 || 0;
-      this.set1_p2 = this.partido.set1_p2 || 0;
-      this.set2_p1 = this.partido.set2_p1 || 0;
-      this.set2_p2 = this.partido.set2_p2 || 0;
-      this.set3_p1 = this.partido.set3_p1 || 0;
-      this.set3_p2 = this.partido.set3_p2 || 0;
-      this.esWO = this.partido.es_wo || false;
+      this.set1_p1 = parseInt(this.partido.set1_p1, 10) || 0;
+      this.set1_p2 = parseInt(this.partido.set1_p2, 10) || 0;
+      this.set2_p1 = parseInt(this.partido.set2_p1, 10) || 0;
+      this.set2_p2 = parseInt(this.partido.set2_p2, 10) || 0;
+      this.set3_p1 = parseInt(this.partido.set3_p1, 10) || 0;
+      this.set3_p2 = parseInt(this.partido.set3_p2, 10) || 0;
+      this.esWO = (this.partido.es_wo == 1 || this.partido.es_wo === true || this.partido.es_wo === '1' || this.partido.es_wo === 'true');
+      this.parejaWoPerdedoraId = this.partido.pareja_wo_perdedora_id ? parseInt(this.partido.pareja_wo_perdedora_id, 10) : null;
     }
   }
 

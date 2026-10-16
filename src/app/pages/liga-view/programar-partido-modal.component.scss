@@ -22,10 +22,29 @@
 
 .modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 20px;
   h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; }
+  .status-subtitle {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+
+    &.assigned {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    &.pending {
+      background: #fef3c7;
+      color: #b45309;
+    }
+  }
+
   .btn-close {
     background: #f1f5f9;
     border: none;
@@ -71,7 +90,30 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 18px;
-  label { font-size: 0.8rem; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  label { font-size: 0.8rem; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.3px; margin: 0; }
+
+  .btn-clear-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ef4444;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: #b91c1c;
+    }
+  }
 }
 
 .custom-input, .custom-select {
@@ -96,11 +138,13 @@
 
 .modal-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
 
   .btn-cancel {
     background: #f1f5f9;
@@ -113,6 +157,25 @@
     cursor: pointer;
     font-family: inherit;
     &:hover { background: #e2e8f0; color: #0f172a; }
+  }
+
+  .btn-unassign {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1.5px solid #fecdd3;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.88rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background: #ffe4e6;
+      border-color: #fda4af;
+      transform: translateY(-1px);
+    }
   }
 
   .btn-save {

@@ -1,0 +1,555 @@
+<div class="pricing-layout">
+
+  <!-- 📣 TOP ANNOUNCEMENT BAR -->
+  <div class="top-announcement-bar">
+    <div class="container">
+      <div class="top-info">
+        <span class="badge-promo">OFERTA LANZAMIENTO 🚀</span>
+        <span>Prueba 90 días GRATIS en cualquier plan sin tarjeta de crédito</span>
+        <button class="btn-text-link" (click)="openContactModal('Prueba 90 Días')">Comenzar Ahora →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧭 HOMOLOGATED NAVBAR -->
+  <header class="nike-navbar">
+    <div class="navbar-inner">
+      <a routerLink="/" class="logo">
+        <div class="logo-wrapper">
+          <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox Logo">
+        </div>
+        <span class="brand-name">PADEL<span class="highlight">BLOX</span></span>
+      </a>
+
+      <nav class="nav-links">
+        <a routerLink="/" class="nav-link">Inicio</a>
+        <a routerLink="/gestion-club-padel" class="nav-link">Club & Canchas</a>
+        <a routerLink="/gestion-entrenamientos-padel" class="nav-link">Entrenamientos & IA</a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="nav-link">Torneos & Ligas 🏆</a>
+        <a routerLink="/smartwatch-padel" class="nav-link">Reloj & Smartwatch ⌚</a>
+        <a routerLink="/precios" class="nav-link active">Precios & Planes</a>
+      </nav>
+
+      <div class="navbar-actions">
+        <button class="btn-login" (click)="irALogin()">Iniciar Sesión</button>
+        <button class="btn-cta-nav" (click)="openContactModal('Prueba Gratis')">Prueba Gratis</button>
+      </div>
+
+      <!-- Mobile Hamburger Toggle Button -->
+      <button class="mobile-nav-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'">
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+      </button>
+    </div>
+
+    <!-- MOBILE DRAWER MENU -->
+    <div class="mobile-drawer-overlay" [class.open]="mobileMenuOpen">
+      <div class="drawer-header">
+        <a routerLink="/" class="logo" (click)="closeMobileMenu()">
+          <div class="logo-wrapper">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox Logo">
+          </div>
+          <span class="brand-name">PADEL<span class="highlight">BLOX</span></span>
+        </a>
+        <button class="drawer-close-btn" (click)="closeMobileMenu()">✕</button>
+      </div>
+
+      <div class="drawer-nav-list">
+        <a routerLink="/" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏠</span> Inicio
+        </a>
+        <a routerLink="/gestion-club-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏢</span> Club & Canchas
+        </a>
+        <a routerLink="/gestion-entrenamientos-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⚡</span> Entrenamientos & IA
+        </a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏆</span> Torneos & Ligas
+        </a>
+        <a routerLink="/smartwatch-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⌚</span> Reloj & Smartwatch
+        </a>
+        <a routerLink="/precios" class="drawer-nav-item active" (click)="closeMobileMenu()">
+          <span class="d-icon">💎</span> Precios & Planes
+        </a>
+      </div>
+
+      <div class="drawer-action-buttons">
+        <button class="btn-drawer-login" (click)="closeMobileMenu(); irALogin()">Iniciar Sesión</button>
+        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal('Prueba Gratis')">Prueba Gratis (90 Días)</button>
+      </div>
+
+      <div class="drawer-app-links">
+        <span class="app-label">Descargar App Móvil:</span>
+        <div class="app-pills">
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="app-pill"> App Store</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="app-pill">▶ Google Play</a>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-drawer-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
+  </header>
+
+  <!-- 🌟 HERO HEADER -->
+  <section class="pricing-hero">
+    <div class="container">
+      <nav class="breadcrumbs" aria-label="breadcrumb">
+        <ol>
+          <li><a routerLink="/">Inicio</a></li>
+          <li>/</li>
+          <li><span>Precios & Planes</span></li>
+        </ol>
+      </nav>
+
+      <div class="hero-header-content text-center">
+        <span class="overline">EL MODELO JUSTO</span>
+        <h1>ELIGE CÓMO <span class="text-gradient">CRECER</span></h1>
+        <p class="hero-subtitle">
+          Estructuras pensadas para cada etapa de tu academia. Prueba 90 días GRATIS.
+        </p>
+
+        <!-- Category Tabs Switcher -->
+        <div class="category-tabs-wrapper">
+          <button class="cat-pill-btn" 
+                  [class.active]="activeCategory === 'clubes'" 
+                  (click)="setCategory('clubes')">
+            <span>🏢 Para Clubes de Pádel</span>
+          </button>
+          <button class="cat-pill-btn" 
+                  [class.active]="activeCategory === 'entrenadores'" 
+                  (click)="setCategory('entrenadores')">
+            <span>⚡ Para Entrenadores & Coaches</span>
+          </button>
+        </div>
+
+        <!-- Controls: Billing Cycle + Currency Toggle -->
+        <div class="pricing-controls-row">
+          <div class="billing-toggle-box">
+            <button class="billing-btn" [class.active]="billingCycle === 'monthly'" (click)="setBilling('monthly')">
+              Facturación Mensual
+            </button>
+            <button class="billing-btn" [class.active]="billingCycle === 'annual'" (click)="setBilling('annual')">
+              Anual <span class="save-badge">Ahorra 20%</span>
+            </button>
+          </div>
+
+          <button class="currency-toggle-btn" (click)="toggleCurrency()" title="Cambiar moneda">
+            <span>Moneda: <strong>{{ isInternational ? 'USD ($)' : 'CLP ($)' }}</strong></span>
+            <span class="switch-icon">⇄</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 💳 PRICING CARDS SECTION (DIVIDED BY CATEGORY) -->
+  <section class="pricing-cards-section">
+    <div class="container">
+      
+      <!-- 🏢 PARA CLUBES DE PÁDEL (SINGLE COMPLETE PLAN: $49.990) -->
+      <div class="single-club-container" *ngIf="activeCategory === 'clubes'">
+        <div class="pricing-card single-featured-card">
+          
+          <div class="featured-badge">
+            {{ clubPlan.badge }}
+          </div>
+
+          <div class="card-header single-header">
+            <h3 class="plan-title">{{ clubPlan.name }}</h3>
+            <p class="plan-description">{{ clubPlan.description }}</p>
+            
+            <div class="price-box">
+              <span class="currency-symbol">$</span>
+              <span class="price-amount" *ngIf="!isInternational">
+                {{ (billingCycle === 'monthly' ? clubPlan.clpMonthly : clubPlan.clpAnnual) | number:'1.0-0':'es' }}
+              </span>
+              <span class="price-amount" *ngIf="isInternational">
+                {{ (billingCycle === 'monthly' ? clubPlan.usdMonthly : clubPlan.usdAnnual) | number:'1.0-0' }}
+              </span>
+              <span class="price-period">{{ clubPlan.period }}</span>
+              <span class="currency-tag">{{ isInternational ? 'USD' : 'CLP' }}</span>
+            </div>
+            
+            <div class="trial-promo-pill">
+              🎁 <strong>3 Meses (90 Días) 100% GRATIS — Sin Tarjeta de Crédito</strong>
+            </div>
+          </div>
+
+          <div class="card-divider"></div>
+
+          <div class="single-features-grid">
+            <div *ngFor="let feat of clubPlan.features" class="single-feature-item">
+              <span class="check-icon">✓</span>
+              <span class="feature-text">{{ feat }}</span>
+            </div>
+          </div>
+
+          <div class="card-footer single-footer">
+            <button class="btn-plan-cta btn-featured btn-large-cta" 
+                    (click)="openContactModal(clubPlan.name)">
+              {{ clubPlan.btnText }}
+            </button>
+            <span class="guarantee-text">Sin contratos forzosos · Puesta en marcha en menos de 24 horas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⚡ PARA ENTRENADORES & COACHES (3 PLANS: $19.990, $29.990, $49.990) -->
+      <div class="pricing-grid" *ngIf="activeCategory === 'entrenadores'">
+        <div *ngFor="let plan of trainerPlans" 
+             class="pricing-card" 
+             [class.featured]="plan.featured"
+             [class.dark-card]="!plan.featured">
+          
+          <div class="featured-badge" *ngIf="plan.badge" [style.background]="plan.badgeBg" [style.color]="plan.badgeColor">
+            {{ plan.badge }}
+          </div>
+
+          <div class="card-header">
+            <h3 class="plan-title">{{ plan.name }}</h3>
+            <p class="plan-description">{{ plan.description }}</p>
+            
+            <div class="price-box">
+              <span class="currency-symbol">$</span>
+              <span class="price-amount" *ngIf="!isInternational">
+                {{ (billingCycle === 'monthly' ? plan.clpMonthly : plan.clpAnnual) | number:'1.0-0':'es' }}
+              </span>
+              <span class="price-amount" *ngIf="isInternational">
+                {{ (billingCycle === 'monthly' ? plan.usdMonthly : plan.usdAnnual) | number:'1.0-0' }}
+              </span>
+              <span class="price-period">{{ plan.period }}</span>
+              <span class="currency-tag">{{ isInternational ? 'USD' : 'CLP' }}</span>
+            </div>
+            
+            <div class="trial-promo-pill">
+              🎁 <strong>3 Meses (90 Días) 100% GRATIS</strong>
+            </div>
+          </div>
+
+          <div class="card-divider"></div>
+
+          <ul class="features-list">
+            <li *ngFor="let feat of plan.features" class="feature-item included">
+              <span class="check-icon">✓</span>
+              <span>{{ feat }}</span>
+            </li>
+          </ul>
+
+          <div class="card-footer">
+            <button class="btn-plan-cta" 
+                    [class.btn-featured]="plan.featured" 
+                    (click)="openContactModal(plan.name)">
+              {{ plan.btnText }}
+            </button>
+            <span class="guarantee-text">Sin tarjeta de crédito requerida</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 🛡️ PERKS & TRUST BANNER -->
+  <section class="trust-perks-section">
+    <div class="container">
+      <div class="perks-grid">
+        <div class="perk-card">
+          <div class="perk-icon">🎁</div>
+          <h4>90 Días 100% Gratis</h4>
+          <p>Prueba todas las funcionalidades sin pagar un solo peso y sin ingresar datos bancarios.</p>
+        </div>
+        <div class="perk-card">
+          <div class="perk-icon">⚡</div>
+          <h4>Puesta en Marcha en 24h</h4>
+          <p>Te ayudamos gratis a configurar tus canchas, horarios y migrar tu lista de jugadores.</p>
+        </div>
+        <div class="perk-card">
+          <div class="perk-icon">⌚</div>
+          <h4>Smartwatch Incluido</h4>
+          <p>App para Apple Watch y Wear OS sincronizada en vivo sin costo adicional de licencia.</p>
+        </div>
+        <div class="perk-card">
+          <div class="perk-icon">🔒</div>
+          <h4>Sin Permanencia</h4>
+          <p>Cancela, congela o cambia de plan en cualquier momento con un solo clic desde tu panel.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📊 COMPARISON TABLE -->
+  <section class="comparison-section">
+    <div class="container">
+      <div class="section-title-box text-center">
+        <span class="badge-tag">TABLA COMPARATIVA</span>
+        <h2>TODO LO QUE <span class="text-gradient">INCLUYE PADELBLOX</span></h2>
+        <p class="section-sub">Comparativa detallada de funcionalidades según la categoría seleccionada.</p>
+      </div>
+
+      <div class="comparison-table-wrapper">
+        <!-- Comparison Table for Clubes -->
+        <table class="comparison-table" *ngIf="activeCategory === 'clubes'">
+          <thead>
+            <tr>
+              <th class="th-feature">Módulo / Funcionalidad</th>
+              <th class="th-plan featured-th">PadelBlox Gestión de Club ($49.990) 🏆</th>
+              <th class="th-plan">Software Tradicional / Otros</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-feature">Gestión de Canchas & Pistas</td>
+              <td class="featured-td"><strong>Ilimitadas (Sin cobro extra por pista)</strong></td>
+              <td class="text-muted">Cobro extra de $15.000+ por cada cancha</td>
+            </tr>
+            <tr>
+              <td class="td-feature">Reservas en Vivo & Pagos Online Automáticos</td>
+              <td class="featured-td"><span class="check-green">✓ Integrado Webpay / Stripe / MP</span></td>
+              <td class="text-muted">Comisiones altas por reserva</td>
+            </tr>
+            <tr>
+              <td class="td-feature">App Smartwatch (Apple Watch & Wear OS)</td>
+              <td class="featured-td"><span class="check-green">✓ Marcador en muñeca sincronizado en vivo</span></td>
+              <td><span class="cross-gray">✕ No disponible</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Torneos Americanos & Ligas con Cruces IA</td>
+              <td class="featured-td"><span class="check-green">✓ Generación y cruces automáticos</span></td>
+              <td><span class="cross-gray">✕ Cobro extra por torneo o módulo aparte</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Módulo de Tienda, Bar, Arriendos & Stock</td>
+              <td class="featured-td"><span class="check-green">✓ Incluido con arqueo y control</span></td>
+              <td><span class="cross-gray">✕ Requiere software POS externo</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Difusión Masiva por WhatsApp</td>
+              <td class="featured-td"><span class="check-green">✓ Mensajería directa a jugadores</span></td>
+              <td><span class="cross-gray">✕ No disponible</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Matchmaking y Partidas por Nivel</td>
+              <td class="featured-td"><span class="check-green">✓ Emparejamiento inteligente</span></td>
+              <td><span class="cross-gray">✕ No disponible</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Periodo de Prueba</td>
+              <td class="featured-td"><strong>90 Días (3 Meses) 100% GRATIS</strong></td>
+              <td class="text-muted">14 días o sin prueba</td>
+            </tr>
+            <tr>
+              <td class="td-feature">Soporte & Configuración</td>
+              <td class="featured-td"><strong>WhatsApp VIP 24/7 + Migración Gratuita</strong></td>
+              <td class="text-muted">Tickets lentos por correo</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Comparison Table for Entrenadores -->
+        <table class="comparison-table" *ngIf="activeCategory === 'entrenadores'">
+          <thead>
+            <tr>
+              <th class="th-feature">Funcionalidad</th>
+              <th class="th-plan">Inicial 20 ($19.990)</th>
+              <th class="th-plan featured-th">Pro 40 ($29.990) ⚡</th>
+              <th class="th-plan">Elite Ilimitado ($49.990)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-feature">Límite de Alumnos Activos</td>
+              <td>Hasta 20</td>
+              <td class="featured-td"><strong>Hasta 40</strong></td>
+              <td><strong>Ilimitados</strong></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Pizarra Táctica 2D/3D & Ejercicios IA</td>
+              <td><span class="check-green">✓</span></td>
+              <td class="featured-td"><span class="check-green">✓</span></td>
+              <td><span class="check-green">✓</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Evaluaciones Técnicas con Video & IA</td>
+              <td><span class="cross-gray">✕</span></td>
+              <td class="featured-td"><span class="check-green">✓</span></td>
+              <td><span class="check-green">✓</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Venta de Packs de Clases Online</td>
+              <td><span class="cross-gray">✕</span></td>
+              <td class="featured-td"><span class="check-green">✓</span></td>
+              <td><span class="check-green">✓</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Multi-Entrenador / Coaches Asociados</td>
+              <td><span class="cross-gray">✕</span></td>
+              <td class="featured-td"><span class="cross-gray">✕</span></td>
+              <td><span class="check-green">✓</span></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Periodo de Prueba</td>
+              <td><strong>90 Días Gratis</strong></td>
+              <td class="featured-td"><strong>90 Días Gratis</strong></td>
+              <td><strong>90 Días Gratis</strong></td>
+            </tr>
+            <tr>
+              <td class="td-feature">Soporte & Asistencia</td>
+              <td>Email & Chat</td>
+              <td class="featured-td"><strong>WhatsApp</strong></td>
+              <td><strong>Asistencia VIP 24/7</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ❓ FAQ SECTION -->
+  <section class="faq-section">
+    <div class="container">
+      <div class="section-title-box text-center">
+        <span class="badge-tag">RESOLVEMOS TUS DUDAS</span>
+        <h2>PREGUNTAS <span class="text-gradient">FRECUENTES</span></h2>
+        <p class="section-sub">Todo lo que necesitas saber sobre los pagos, facturación y prueba gratuita.</p>
+      </div>
+
+      <div class="faq-accordion">
+        <div *ngFor="let item of faqs; let i = index" 
+             class="faq-item" 
+             [class.open]="item.open"
+             (click)="toggleFaq(i)">
+          <div class="faq-question">
+            <h4>{{ item.q }}</h4>
+            <span class="faq-toggle-icon">{{ item.open ? '−' : '+' }}</span>
+          </div>
+          <div class="faq-answer" *ngIf="item.open">
+            <p>{{ item.a }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🚀 FINAL CALL TO ACTION -->
+  <section class="final-cta-section">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>¿Listo para digitalizar tu club o academia?</h2>
+        <p>Comienza hoy tus 90 días de prueba gratuita sin tarjeta de crédito ni compromisos.</p>
+        <div class="cta-btn-group">
+          <button class="btn-cta-gold" (click)="openContactModal('Prueba 90 Días')">
+            CREAR CUENTA Y PROBAR 90 DÍAS GRATIS
+          </button>
+          <a href="https://wa.me/56969083124?text=Hola,%20quisiera%20agendar%20una%20demostración%20de%20PadelBlox" 
+             target="_blank" 
+             rel="noopener noreferrer" 
+             class="btn-cta-whatsapp">
+            Hablar con un Asesor en WhatsApp →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 🦶 HOMOLOGATED FOOTER -->
+  <footer class="nike-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="brand-col">
+          <div class="footer-logo">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+            <h3>PADEL BLOX</h3>
+          </div>
+          <p>Elevando el rendimiento y la rentabilidad del pádel con tecnología de vanguardia.</p>
+          <div class="socials">
+            <a href="https://www.instagram.com/padelblox/" target="_blank" rel="noopener noreferrer" class="social-link">
+              <span>📸</span> Instagram
+            </a>
+            <a href="mailto:soporte@padelblox.cl" class="social-link">
+              <span>✉️</span> soporte@padelblox.cl
+            </a>
+          </div>
+        </div>
+        <div class="links-col">
+          <h4>Soluciones</h4>
+          <a routerLink="/gestion-club-padel">Gestión de Club de Pádel</a>
+          <a routerLink="/gestion-entrenamientos-padel">Gestión de Entrenamientos</a>
+          <a routerLink="/smartwatch-padel">Smartwatch & Wearables ⌚</a>
+          <a routerLink="/precios">Membresías & Planes</a>
+        </div>
+        <div class="links-col">
+          <h4>Apps Móviles</h4>
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer"> App Store (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">▶ Google Play (Android)</a>
+          <a routerLink="/smartwatch-padel">⌚ Smartwatch App</a>
+        </div>
+        <div class="links-col">
+          <h4>Legal & Ayuda</h4>
+          <a routerLink="/soporte">Soporte Técnico</a>
+          <a routerLink="/login">Iniciar Sesión</a>
+          <a routerLink="/register">Registrarse Gratis</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 PadelBlox Software. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 📩 CONTACT / DEMO MODAL -->
+  <div class="contact-modal-overlay" *ngIf="showContactModal" (click)="closeContactModal()">
+    <div class="contact-modal" (click)="$event.stopPropagation()">
+      <button class="close-btn" (click)="closeContactModal()">✕</button>
+      <div class="modal-header">
+        <h3>Prueba 90 Días Gratis</h3>
+        <p>{{ selectedPlanForContact ? 'Has seleccionado el plan: ' + selectedPlanForContact : 'Déjanos tus datos y activaremos tu prueba de 3 meses gratis.' }}</p>
+      </div>
+      
+      <div class="modal-body" *ngIf="!contactSuccess">
+        <form (ngSubmit)="submitContactForm()" #f="ngForm">
+          <div class="form-group">
+            <label>Nombre y Apellido *</label>
+            <input type="text" [(ngModel)]="contactForm.nombre" name="nombre" required placeholder="Ej: Juan Pérez" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Correo Electrónico *</label>
+            <input type="email" [(ngModel)]="contactForm.email" name="email" required placeholder="Ej: juan@club.com" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Teléfono / WhatsApp (Opcional)</label>
+            <input type="text" [(ngModel)]="contactForm.telefono" name="telefono" placeholder="+56 9 1234 5678" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Nombre del Club o Academia (Opcional)</label>
+            <input type="text" [(ngModel)]="contactForm.academia" name="academia" placeholder="Ej: Padel Club VIP" class="form-control">
+          </div>
+          <button type="submit" class="submit-btn" [disabled]="!f.valid || isSendingContact">
+            <span *ngIf="!isSendingContact">Activar Prueba de 90 Días</span>
+            <span *ngIf="isSendingContact">Activando...</span>
+          </button>
+        </form>
+      </div>
+      
+      <div class="modal-success" *ngIf="contactSuccess">
+        <div class="success-icon">✓</div>
+        <h4>¡Solicitud Recibida!</h4>
+        <p>Hemos activado tu solicitud de prueba para <strong>{{ selectedPlanForContact || 'PadelBlox' }}</strong>. Te contactaremos de inmediato.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 💬 WHATSAPP FLOATING BUTTON -->
+  <a href="https://wa.me/56969083124?text=Hola%20PadelBlox,%20quisiera%20consultar%20sobre%20los%20planes%20y%20precios" 
+     target="_blank" 
+     rel="noopener noreferrer" 
+     class="whatsapp-float-btn" 
+     title="Consultar por WhatsApp">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="wa-icon">
+      <path fill="currentColor" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.6-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+    </svg>
+    <span class="wa-label">¿Dudas con los planes?</span>
+  </a>
+
+</div>

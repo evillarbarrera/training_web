@@ -99,8 +99,21 @@
                 </div>
             </div>
 
+            <!-- Animated Padel Ball Loader -->
+            <div class="padel-ball-container" *ngIf="isLoading">
+                <div class="padel-ball-wrapper">
+                    <div class="padel-ball">
+                        <div class="padel-ball-inner-lines"></div>
+                    </div>
+                    <div class="padel-ball-shadow"></div>
+                </div>
+                <div class="padel-loader-text">
+                    <span>🎾 Cargando información de ventas...</span>
+                </div>
+            </div>
+
             <!-- List -->
-            <div class="sales-list" *ngIf="selectedClubId !== 0">
+            <div class="sales-list" *ngIf="selectedClubId !== 0 && !isLoading">
                 <table>
                     <thead>
                         <tr>
@@ -281,7 +294,8 @@
                     <div *ngFor="let p of filteredAvailableProducts" class="product-card-v2" (click)="addToCart(p)">
                         <span class="name">{{p.nombre}}</span>
                         <span class="price">$ {{p.precio_venta | number:'1.0-0'}}</span>
-                        <span class="stock" [class.low]="p.stock_actual < 5">Stock: {{p.stock_actual}}</span>
+                        <span class="stock" *ngIf="!isServicio(p)" [class.low]="p.stock_actual < 5">Stock: {{p.stock_actual}}</span>
+                        <span class="stock" *ngIf="isServicio(p)" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-weight: 800;">🛠️ Servicio</span>
                         <div class="add-pill">+ AGREGAR</div>
                     </div>
                 </div>

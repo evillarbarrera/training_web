@@ -1,0 +1,702 @@
+<div class="tv-container" 
+     [class.carousel-mode]="viewMode === 'carousel'" 
+     [class.is-fullscreen]="isFullscreen" 
+     [class.cursor-hidden]="!controlsVisible && isFullscreen">
+
+  <!-- BARRA SUPERIOR BROADCAST TV -->
+  <header class="tv-header">
+    <div class="header-left">
+      <div class="club-logo-wrapper">
+        <img [src]="getClubLogo(clubData?.logo)" 
+             [alt]="clubData?.nombre || 'Club de Pádel'" 
+             class="club-logo"
+             (error)="onLogoError($event)">
+      </div>
+      <div class="club-meta">
+        <div class="brand-row">
+          <span class="badge-tv">📺 PADELBLOX TV</span>
+          <span class="live-pill" *ngIf="canchasActivasCount > 0">
+            <span class="live-dot"></span> EN VIVO &bull; {{ canchasActivasCount }} de {{ canchas.length }} Pistas
+          </span>
+          <span class="idle-pill" *ngIf="canchasActivasCount === 0">
+            <span class="idle-dot"></span> CLUB ABIERTO
+          </span>
+        </div>
+        <h1 class="club-name">{{ clubData?.nombre || 'Club de Pádel' }}</h1>
+      </div>
+    </div>
+
+    <!-- CENTRO: FECHA Y TIEMPO -->
+    <div class="header-center">
+      <span class="tv-date">{{ currentDate }}</span>
+      <div class="tv-clock">
+        <span class="clock-digits">{{ currentTime }}</span>
+      </div>
+    </div>
+
+    <!-- DERECHA: CONTROLES DISCRETOS -->
+    <div class="header-right" [class.visible]="controlsVisible">
+      
+      <!-- Atajos de teclado en pantalla completa -->
+      <div class="tv-kbd-hints" *ngIf="isFullscreen">
+        <span class="hint-item"><kbd>F</kbd> Salir</span>
+        <span class="hint-item"><kbd>M</kbd> Modo</span>
+        <span class="hint-item" *ngIf="viewMode === 'carousel'"><kbd>Espacio</kbd> Pausa</span>
+      </div>
+
+      <!-- Selector de Modo -->
+      <button class="tv-ctrl-btn" (click)="toggleViewMode()" [title]="viewMode === 'split' ? 'Cambiar a Modo Carrusel Pantalla Gigante (M)' : 'Cambiar a Modo Tablero Dividido (M)'">
+        <span class="icon">{{ viewMode === 'split' ? '🔲' : '📊' }}</span>
+        <span class="label">{{ viewMode === 'split' ? 'Modo Carrusel' : 'Modo Tablero' }}</span>
+      </button>
+
+      <!-- Pausa en Carrusel -->
+      <button class="tv-ctrl-btn" *ngIf="viewMode === 'carousel'" (click)="togglePause()" [title]="isPaused ? 'Reanudar Rotación (Espacio)' : 'Pausar Rotación (Espacio)'">
+        <span class="icon">{{ isPaused ? '▶️' : '⏸️' }}</span>
+      </button>
+
+      <!-- Botón Pantalla Completa -->
+      <button class="tv-ctrl-btn action" (click)="toggleFullscreen()" [title]="isFullscreen ? 'Salir de Pantalla Completa (F)' : 'Ver en Pantalla Completa (F)'">
+        <span class="icon">{{ isFullscreen ? '🗗' : '⛶' }}</span>
+        <span class="label">{{ isFullscreen ? 'Salir' : 'Pantalla Completa' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- LOADING SPINNER -->
+  <div class="tv-loading" *ngIf="isLoading && !clubData">
+    <div class="spinner-ring"></div>
+    <h2>Cargando Padelblox TV...</h2>
+    <p>Conectando marcadores en vivo y cartelera</p>
+  </div>
+
+  <!-- ERROR ALERT -->
+  <div class="tv-error" *ngIf="errorMessage && !clubData">
+    <span class="err-icon">⚠️</span>
+    <h2>{{ errorMessage }}</h2>
+    <button class="retry-btn" (click)="fetchData()">Reintentar Conexión</button>
+  </div>
+
+  <!-- CUERPO PRINCIPAL (VISTA TABLERO DIVIDIDO) -->
+  <main class="tv-main-split" *ngIf="viewMode === 'split' && clubData">
+    
+    <!-- COLUMNA IZQUIERDA: MARCADORES MULTICANCHA + PRÓXIMOS TURNOS (65%) -->
+    <section class="left-stage">
+      
+      <!-- SUBSECCIÓN 1: MARCADORES EN VIVO POR CANCHA -->
+      <div class="section-box canchas-section">
+        <div class="section-header">
+          <div class="sec-title">
+            <span class="sec-icon">🎾</span>
+            <h2>Marcadores en Cancha en Tiempo Real</h2>
+          </div>
+          <span class="sec-badge">Actualización Automática cada 15s</span>
+        </div>
+
+        <div class="canchas-grid" *ngIf="canchas.length > 0">
+          <div *ngFor="let c of canchas" 
+               class="cancha-card" 
+               [class.en-juego]="c.estado === 'en_juego'"
+               [class.proximo]="c.estado === 'proximo_turno'"
+               [class.disponible]="c.estado === 'disponible'">
+            
+            <!-- Cabecera de Cancha -->
+            <div class="card-court-head">
+              <div class="court-name-box">
+                <span class="court-title">{{ c.cancha_nombre }}</span>
+                <span class="court-type">{{ c.cancha_tipo }}</span>
+              </div>
+              <span class="court-status-badge" [ngClass]="c.estado">
+                {{ c.estado_label }}
+              </span>
+            </div>
+
+            <!-- CUERPO DEL PARTIDO -->
+            <div class="card-match-body" *ngIf="c.estado === 'en_juego'">
+              
+              <!-- Fila Dupla 1 -->
+              <div class="team-row">
+                <div class="team-name">
+                  <span class="team-bullet">🔵</span>
+                  <span class="names-txt">{{ c.dupla1 }}</span>
+                </div>
+                <div class="sets-box" *ngIf="c.smartwatch_sync && ((c.sets && c.sets.length > 0) || c.game_t1)">
+                  <span *ngFor="let s of c.sets" class="set-score">{{ s.t1 }}</span>
+                  <span class="game-score highlight" *ngIf="c.game_t1" [class.oro]="c.punto_oro">{{ c.game_t1 }}</span>
+                </div>
+              </div>
+
+              <div class="vs-divider">
+                <span class="vs-line"></span>
+                <span class="vs-txt">VS</span>
+                <span class="vs-line"></span>
+              </div>
+
+              <!-- Fila Dupla 2 -->
+              <div class="team-row">
+                <div class="team-name">
+                  <span class="team-bullet">🟠</span>
+                  <span class="names-txt">{{ c.dupla2 }}</span>
+                </div>
+                <div class="sets-box" *ngIf="c.smartwatch_sync && ((c.sets && c.sets.length > 0) || c.game_t2)">
+                  <span *ngFor="let s of c.sets" class="set-score">{{ s.t2 }}</span>
+                  <span class="game-score highlight" *ngIf="c.game_t2" [class.oro]="c.punto_oro">{{ c.game_t2 }}</span>
+                </div>
+              </div>
+
+              <!-- FOOTER DE SMARTWATCH / MÉTRICAS -->
+              <div class="smartwatch-bar" *ngIf="c.smartwatch_sync">
+                <span class="watch-icon">⌚</span>
+                <span class="watch-txt">Smartwatch Conectado</span>
+                <ng-container *ngIf="c.smartwatch_fc && c.smartwatch_fc > 0">
+                  <span class="watch-dot">&bull;</span>
+                  <span class="watch-stat">FC: {{ c.smartwatch_fc }} bpm</span>
+                </ng-container>
+                <ng-container *ngIf="c.smartwatch_golpes && c.smartwatch_golpes > 0">
+                  <span class="watch-dot">&bull;</span>
+                  <span class="watch-stat">Golpes: {{ c.smartwatch_golpes }}</span>
+                </ng-container>
+              </div>
+
+              <div class="match-time-footer" *ngIf="!c.smartwatch_sync">
+                <span>⏱️ {{ c.hora_inicio }} - {{ c.hora_fin }} ({{ c.tiempo_transcurrido }})</span>
+                <span class="event-pill">{{ c.tipo_evento }}</span>
+              </div>
+
+            </div>
+
+            <!-- CUERPO DE PRÓXIMO TURNO -->
+            <div class="card-upcoming-body" *ngIf="c.estado === 'proximo_turno'">
+              <span class="clock-icon">🕒</span>
+              <p class="upcoming-time">{{ c.hora_inicio }} - {{ c.hora_fin }}</p>
+              <h4 class="upcoming-match">{{ c.dupla1 }} <span class="vs-mini">vs</span> {{ c.dupla2 }}</h4>
+              <span class="starts-in-badge">{{ c.tiempo_para_inicio }}</span>
+            </div>
+
+            <!-- CUERPO DE PISTA DISPONIBLE -->
+            <div class="card-free-body" *ngIf="c.estado === 'disponible'">
+              <span class="free-icon">🟢</span>
+              <h3>Pista Disponible</h3>
+              <p>Acércate al mesón o reserva en padelblox.cl</p>
+            </div>
+
+          </div>
+        </div>
+        <div class="empty-state-box" *ngIf="canchas.length === 0">
+          <span class="empty-icon">🎾</span>
+          <p>No hay pistas registradas para este club.</p>
+        </div>
+      </div>
+
+      <!-- SUBSECCIÓN 2: CARTELERA DE PRÓXIMOS TURNOS -->
+      <div class="section-box turnos-section">
+        <div class="section-header">
+          <div class="sec-title">
+            <span class="sec-icon">📋</span>
+            <h2>Cartelera Oficial de Partidos y Turnos</h2>
+          </div>
+          <span class="sec-badge count">{{ canchasCartelera.length }} {{ canchasCartelera.length === 1 ? 'Pista Asignada' : 'Pistas Asignadas' }}</span>
+        </div>
+
+        <div class="canchas-cartelera-grid" *ngIf="canchasCartelera.length > 0">
+          <div *ngFor="let item of canchasCartelera" 
+               class="cartelera-court-card"
+               [class.live]="item.en_juego"
+               [class.upcoming]="item.estado === 'proximo_turno'"
+               [class.available]="item.estado === 'disponible'">
+            
+            <div class="card-head">
+              <div class="court-pill-title">
+                <span class="num-tag">PISTA {{ item.pista_numero }}</span>
+                <span class="court-name" [title]="item.cancha_nombre">{{ item.cancha_nombre }}</span>
+              </div>
+              <span class="time-badge" [class.active]="item.en_juego">
+                {{ item.horario }}
+              </span>
+            </div>
+
+            <div class="players-wrap">
+              <div class="dupla-row d1">
+                <span class="dupla-dot">🔵</span>
+                <strong class="dupla-txt" [title]="item.dupla1">{{ item.dupla1 }}</strong>
+              </div>
+              <div class="vs-sep">
+                <span>VS</span>
+              </div>
+              <div class="dupla-row d2">
+                <span class="dupla-dot">🟠</span>
+                <strong class="dupla-txt" [title]="item.dupla2">{{ item.dupla2 }}</strong>
+              </div>
+            </div>
+
+            <div class="card-foot">
+              <span class="type-badge" [class.liga]="item.tipo.includes('Liga')">{{ item.tipo }}</span>
+              <span class="next-peek" *ngIf="item.proximo_horario" [title]="item.proxima_dupla">
+                🔜 {{ item.proximo_horario }}: {{ item.proxima_dupla }}
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="empty-state-box" *ngIf="canchasCartelera.length === 0">
+          <span class="empty-icon">📋</span>
+          <p>No hay pistas configuradas para este club.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- COLUMNA DERECHA: TABLA POSICIONES + MENÚ KIOSKO + AUSPICIADORES (35%) -->
+    <aside class="right-stage">
+      
+      <!-- WIDGET 1: TABLA DE POSICIONES ROTATIVA (SLICES DE LIGAS/CATEGORÍAS) -->
+      <div class="section-box standings-box">
+        <div class="section-header">
+          <div class="sec-title">
+            <span class="sec-icon">🏆</span>
+            <div class="title-block">
+              <h2>{{ competicionNombre }}</h2>
+              <span class="active-category-indicator">{{ getActiveCompCategory() }}</span>
+            </div>
+          </div>
+
+          <div class="standings-header-controls">
+            <!-- Botón de estado de rotación automática -->
+            <button class="rotation-live-btn" 
+                    [class.paused]="isPaused" 
+                    (click)="togglePause()" 
+                    [title]="isPaused ? 'Reanudar rotación automática' : 'Pausar rotación (Espacio)'">
+              <span class="rot-pulse-dot"></span>
+              <span class="rot-label">{{ isPaused ? 'Pausado' : 'Rotativo' }}</span>
+            </button>
+
+            <!-- Flechas para alternar slide -->
+            <div class="comp-nav-arrows" *ngIf="competiciones.length > 1">
+              <button class="nav-arrow-btn" (click)="prevComp()" title="Categoría anterior">‹</button>
+              <button class="nav-arrow-btn" (click)="nextComp()" title="Siguiente categoría">›</button>
+            </div>
+
+            <span class="sec-badge gold" *ngIf="competiciones.length <= 1">Clasificación</span>
+          </div>
+        </div>
+
+        <!-- MENÚ DE CATEGORÍAS (TABS/PILLS DESTACADOS DE TODAS LAS CATEGORÍAS) -->
+        <div class="comp-category-menu" *ngIf="competiciones.length > 1">
+          <div class="category-pills-row">
+            <button *ngFor="let c of competiciones; let idx = index" 
+                    class="category-pill-btn" 
+                    [class.active]="idx === currentCompIndex"
+                    (click)="selectComp(idx)">
+              <span class="pill-dot" *ngIf="idx === currentCompIndex"></span>
+              <span class="pill-name">{{ c.categoria || ('Cat ' + (idx + 1)) }}</span>
+              <span class="pill-badge" *ngIf="c.tabla && c.tabla.length > 0">{{ c.tabla.length }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de progreso visual de rotación de categoría -->
+        <div class="slice-progress-bar" *ngIf="competiciones.length > 1">
+          <div class="progress-fill" [class.paused]="isPaused" [attr.data-key]="progressAnimationKey"></div>
+        </div>
+
+        <div class="standings-table-wrapper">
+          <table class="tv-table standings-table">
+            <thead>
+              <tr>
+                <th width="40" class="text-center">#</th>
+                <th>PAREJA / JUGADOR</th>
+                <th width="40" class="text-center">PJ</th>
+                <th width="40" class="text-center">PG</th>
+                <th width="50" class="text-center">DIF</th>
+                <th width="50" class="text-right">PTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let pos of tablaPosiciones | slice:0:7" [class.podium-1]="pos.posicion === 1" [class.podium-2]="pos.posicion === 2" [class.podium-3]="pos.posicion === 3">
+                <td class="rank-num text-center">
+                  <span *ngIf="pos.posicion === 1">🥇</span>
+                  <span *ngIf="pos.posicion === 2">🥈</span>
+                  <span *ngIf="pos.posicion === 3">🥉</span>
+                  <span *ngIf="pos.posicion > 3">{{ pos.posicion }}</span>
+                </td>
+                <td class="team-cell">
+                  <strong>{{ pos.pareja }}</strong>
+                  <small *ngIf="pos.categoria" class="cat-pill">{{ pos.categoria }}</small>
+                </td>
+                <td class="text-center">{{ pos.pj }}</td>
+                <td class="text-center highlight-pg">{{ pos.pg }}</td>
+                <td class="text-center">{{ pos.dif_sets }}</td>
+                <td class="text-right points-cell">{{ pos.puntos }}</td>
+              </tr>
+              <tr *ngIf="tablaPosiciones.length === 0">
+                <td colspan="6" class="text-center empty-state">No hay partidos registrados en esta categoría aún.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- WIDGET 2: CAFETERÍA, BAR & TIENDA -->
+      <div class="section-box menu-box">
+        <div class="section-header">
+          <div class="sec-title">
+            <span class="sec-icon">☕</span>
+            <h2>Cafetería, Bar &amp; Tienda</h2>
+          </div>
+          <span class="sec-badge lime">Kiosko Club</span>
+        </div>
+
+        <div class="menu-items-grid" *ngIf="cafeteriaMenu.length > 0">
+          <div *ngFor="let item of cafeteriaMenu | slice:0:6" 
+               class="menu-item-card" 
+               [ngClass]="getItemCategoryClass(item)">
+            <div class="mini-prod-icon">
+              <span>{{ getItemIcon(item) }}</span>
+            </div>
+            <div class="item-info">
+              <span class="item-category">{{ item.categoria }}</span>
+              <h4 class="item-name" [title]="item.nombre">{{ item.nombre }}</h4>
+            </div>
+            <div class="item-price">
+              <span>{{ item.precio_formateado }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-menu-box" *ngIf="cafeteriaMenu.length === 0">
+          <span class="empty-icon">☕</span>
+          <p class="empty-txt">Sin productos registrados en el kiosko de este club.</p>
+        </div>
+      </div>
+
+      <!-- WIDGET 3: AUSPICIADORES -->
+      <div class="section-box sponsors-box">
+        <div class="sponsors-row">
+          <div *ngFor="let s of sponsors" class="sponsor-pill">
+            <span class="sp-icon">{{ s.icono }}</span>
+            <div class="sp-text">
+              <strong class="sp-name">{{ s.nombre }}</strong>
+              <small class="sp-tag">{{ s.tagline }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- MODO CARRUSEL AUTOMÁTICO (SLIDES EN PANTALLA COMPLETA GIGANTE) -->
+  <main class="tv-main-carousel" *ngIf="viewMode === 'carousel' && clubData">
+    
+    <!-- SLIDE 0: MARCADORES MULTICANCHAS GIGANTES -->
+    <div class="carousel-slide" *ngIf="currentSlide === 0">
+      <div class="slide-header">
+        <span class="slide-icon">🎾</span>
+        <h2>Marcadores en Cancha en Tiempo Real</h2>
+        <span class="slide-pill">Pistas del Club</span>
+      </div>
+      <div class="canchas-grid giant">
+        <div *ngFor="let c of canchas" class="cancha-card giant-card" [class.en-juego]="c.estado === 'en_juego'" [class.disponible]="c.estado === 'disponible'">
+          <div class="card-court-head">
+            <span class="court-title">{{ c.cancha_nombre }}</span>
+            <span class="court-status-badge" [ngClass]="c.estado">{{ c.estado_label }}</span>
+          </div>
+          <div class="card-match-body" *ngIf="c.estado === 'en_juego'">
+            <div class="team-row giant">
+              <span class="names-txt">{{ c.dupla1 }}</span>
+              <div class="sets-box" *ngIf="c.smartwatch_sync && ((c.sets && c.sets.length > 0) || c.game_t1)">
+                <span *ngFor="let s of c.sets" class="set-score giant">{{ s.t1 }}</span>
+                <span class="game-score giant highlight" *ngIf="c.game_t1">{{ c.game_t1 }}</span>
+              </div>
+            </div>
+            <div class="vs-divider"><span class="vs-txt">VS</span></div>
+            <div class="team-row giant">
+              <span class="names-txt">{{ c.dupla2 }}</span>
+              <div class="sets-box" *ngIf="c.smartwatch_sync && ((c.sets && c.sets.length > 0) || c.game_t2)">
+                <span *ngFor="let s of c.sets" class="set-score giant">{{ s.t2 }}</span>
+                <span class="game-score giant highlight" *ngIf="c.game_t2">{{ c.game_t2 }}</span>
+              </div>
+            </div>
+            <div class="smartwatch-bar giant" *ngIf="c.smartwatch_sync">
+              <span>⌚ Smartwatch en Cancha
+                <ng-container *ngIf="c.smartwatch_fc && c.smartwatch_fc > 0">&bull; FC: {{ c.smartwatch_fc }} bpm </ng-container>
+                <ng-container *ngIf="c.smartwatch_golpes && c.smartwatch_golpes > 0">&bull; Golpes: {{ c.smartwatch_golpes }}</ng-container>
+              </span>
+            </div>
+            <div class="match-time-footer" *ngIf="!c.smartwatch_sync">
+              <span>⏱️ {{ c.hora_inicio }} - {{ c.hora_fin }} ({{ c.tiempo_transcurrido }})</span>
+              <span class="event-pill">{{ c.tipo_evento }}</span>
+            </div>
+          </div>
+          <div class="card-free-body giant" *ngIf="c.estado !== 'en_juego'">
+            <h3>Pista Disponible</h3>
+            <p>{{ c.cancha_tipo }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 1: CARTELERA OFICIAL DE PARTIDOS Y TURNOS GIGANTE -->
+    <div class="carousel-slide" *ngIf="currentSlide === 1">
+      <div class="slide-header">
+        <span class="slide-icon">📋</span>
+        <div class="slide-title-wrap">
+          <h2>Cartelera Oficial de Partidos y Turnos</h2>
+          <span class="slide-pill lime">Programación Oficial por Cancha</span>
+        </div>
+        <span class="sec-badge count giant">{{ canchasCartelera.length }} {{ canchasCartelera.length === 1 ? 'Pista' : 'Pistas' }} &bull; {{ proximosTurnos.length }} Partidos Hoy</span>
+      </div>
+
+      <div class="giant-canchas-cartelera-grid" *ngIf="canchasCartelera.length > 0">
+        <div *ngFor="let item of canchasCartelera" 
+             class="giant-cartelera-court-card"
+             [class.live]="item.en_juego"
+             [class.upcoming]="item.estado === 'proximo_turno'"
+             [class.available]="item.estado === 'disponible'">
+          
+          <div class="giant-card-head">
+            <div class="giant-court-info">
+              <span class="giant-num-tag">PISTA {{ item.pista_numero }}</span>
+              <h3 class="giant-court-name">{{ item.cancha_nombre }}</h3>
+            </div>
+            <div class="giant-time-box">
+              <span class="giant-time-badge" [class.active]="item.en_juego">{{ item.horario }}</span>
+              <span class="giant-type-pill" [class.liga]="item.tipo.includes('Liga')">{{ item.tipo }}</span>
+            </div>
+          </div>
+
+          <div class="giant-players-box">
+            <div class="giant-dupla-item d1">
+              <span class="giant-team-bullet">🔵</span>
+              <div class="giant-team-names">
+                <span class="giant-sub-lbl">PAREJA 1</span>
+                <strong class="giant-names-txt">{{ item.dupla1 }}</strong>
+              </div>
+            </div>
+
+            <div class="giant-vs-divider">
+              <span class="giant-vs-line"></span>
+              <span class="giant-vs-txt">VS</span>
+              <span class="giant-vs-line"></span>
+            </div>
+
+            <div class="giant-dupla-item d2">
+              <span class="giant-team-bullet">🟠</span>
+              <div class="giant-team-names">
+                <span class="giant-sub-lbl">PAREJA 2</span>
+                <strong class="giant-names-txt">{{ item.dupla2 }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="giant-card-foot" *ngIf="item.proximo_horario">
+            <span class="giant-next-label">Próximo partido en esta pista:</span>
+            <span class="giant-next-val">⏰ {{ item.proximo_horario }} &bull; {{ item.proxima_dupla }}</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="empty-state-box giant" *ngIf="canchasCartelera.length === 0">
+        <span class="empty-icon">📋</span>
+        <p>No hay pistas configuradas para este club.</p>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: TABLA DE POSICIONES GIGANTE -->
+    <div class="carousel-slide" *ngIf="currentSlide === 2">
+      <div class="slide-header">
+        <span class="slide-icon">🏆</span>
+        <div class="slide-title-wrap">
+          <h2>{{ competicionNombre }}</h2>
+          <span class="slide-pill gold">{{ getActiveCompCategory() }} &bull; Clasificación Oficial</span>
+        </div>
+        <div class="slide-nav-arrows" *ngIf="competiciones.length > 1">
+          <button class="nav-arrow-btn giant" (click)="prevComp()" title="Categoría anterior">‹</button>
+          <button class="nav-arrow-btn giant" (click)="nextComp()" title="Siguiente categoría">›</button>
+        </div>
+      </div>
+
+      <!-- Menú de categorías en modo carrusel gigante -->
+      <div class="comp-category-menu giant" *ngIf="competiciones.length > 1">
+        <div class="category-pills-row">
+          <button *ngFor="let c of competiciones; let idx = index" 
+                  class="category-pill-btn giant" 
+                  [class.active]="idx === currentCompIndex"
+                  (click)="selectComp(idx)">
+            <span class="pill-dot" *ngIf="idx === currentCompIndex"></span>
+            <span class="pill-name">{{ c.categoria || ('Cat ' + (idx + 1)) }}</span>
+            <span class="pill-badge" *ngIf="c.tabla && c.tabla.length > 0">{{ c.tabla.length }}</span>
+          </button>
+        </div>
+      </div>
+      <div class="standings-table-wrapper giant-table">
+        <table class="tv-table standings-table giant">
+          <thead>
+            <tr>
+              <th width="70" class="text-center">POS</th>
+              <th>PAREJA / JUGADOR</th>
+              <th width="80" class="text-center">CATEGORÍA</th>
+              <th width="70" class="text-center">PJ</th>
+              <th width="70" class="text-center">PG</th>
+              <th width="70" class="text-center">PP</th>
+              <th width="80" class="text-center">DIF</th>
+              <th width="90" class="text-right">PUNTOS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pos of tablaPosiciones" [class.podium-1]="pos.posicion === 1" [class.podium-2]="pos.posicion === 2" [class.podium-3]="pos.posicion === 3">
+              <td class="rank-num text-center">
+                <span *ngIf="pos.posicion === 1">🥇</span>
+                <span *ngIf="pos.posicion === 2">🥈</span>
+                <span *ngIf="pos.posicion === 3">🥉</span>
+                <span *ngIf="pos.posicion > 3">{{ pos.posicion }}</span>
+              </td>
+              <td class="team-cell"><strong>{{ pos.pareja }}</strong></td>
+              <td class="text-center"><span class="cat-pill">{{ pos.categoria }}</span></td>
+              <td class="text-center">{{ pos.pj }}</td>
+              <td class="text-center highlight-pg">{{ pos.pg }}</td>
+              <td class="text-center">{{ pos.pp }}</td>
+              <td class="text-center">{{ pos.dif_sets }}</td>
+              <td class="text-right points-cell">{{ pos.puntos }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: MENÚ CAFETERÍA & AUSPICIADORES GIGANTE (DIGITAL MENU BOARD) -->
+    <div class="carousel-slide slide-cafeteria" *ngIf="currentSlide === 3">
+      
+      <!-- HERO HEADER CAFETERÍA -->
+      <div class="cafeteria-hero-header">
+        <div class="header-main">
+          <div class="hero-badge-icon">
+            <span class="coffee-glow-icon">☕</span>
+          </div>
+          <div class="hero-titles">
+            <div class="title-with-pill">
+              <h2>Cafetería, Bar &amp; Tienda Oficial</h2>
+              <span class="hero-tag-pill lime">
+                <span class="pulse-dot"></span> Tercer Tiempo
+              </span>
+            </div>
+            <p class="hero-subtitle">
+              Pide en caja o mesón del club con tu número de pista &bull; Bebidas frías, accesorios oficiales y energía post-partido
+            </p>
+          </div>
+        </div>
+
+        <div class="header-quick-stats">
+          <div class="quick-stat-badge blue">
+            <span class="qs-icon">🥤</span>
+            <span class="qs-val">Bebidas Frías</span>
+          </div>
+          <div class="quick-stat-badge gold">
+            <span class="qs-icon">🎾</span>
+            <span class="qs-val">Tienda Pádel</span>
+          </div>
+          <div class="quick-stat-badge green">
+            <span class="qs-icon">⚡</span>
+            <span class="qs-val">Snacks &amp; Bar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID DE PRODUCTOS DIGITAL MENU BOARD -->
+      <div class="menu-carousel-grid" *ngIf="cafeteriaMenu.length > 0">
+        <div *ngFor="let item of cafeteriaMenu" 
+             class="menu-product-card" 
+             [ngClass]="getItemCategoryClass(item)">
+          
+          <!-- LADO IZQUIERDO: ICONO DECORATIVO DE CATEGORÍA -->
+          <div class="product-icon-wrap">
+            <span class="prod-emoji">{{ getItemIcon(item) }}</span>
+          </div>
+
+          <!-- CENTRO: DETALLES DEL PRODUCTO -->
+          <div class="product-details">
+            <div class="prod-top-line">
+              <span class="prod-cat-badge">{{ item.categoria }}</span>
+              <span class="prod-special-badge" *ngIf="getItemBadge(item)">
+                {{ getItemBadge(item) }}
+              </span>
+            </div>
+            <h3 class="prod-name" [title]="item.nombre">{{ item.nombre }}</h3>
+            <span class="prod-avail"><span class="dot-live"></span> En Barra / Kiosko</span>
+          </div>
+
+          <!-- LADO DERECHO: PRECIO GIGANTE DIGITAL -->
+          <div class="product-price-tag">
+            <small class="currency-sign">CLP</small>
+            <span class="price-val">{{ item.precio_formateado }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-menu-box giant" *ngIf="cafeteriaMenu.length === 0">
+        <span class="empty-icon">☕</span>
+        <p class="empty-txt">Sin productos registrados en cafetería o tienda para este club.</p>
+      </div>
+
+      <!-- BANNER DE AUSPICIADORES ULTRA-PREMIUM -->
+      <div class="sponsors-banner-giant">
+        <div class="sponsors-label-tag">
+          <span>PARTNERS OFICIALES</span>
+        </div>
+        <div class="sponsors-list-wrap">
+          <div *ngFor="let s of sponsors" class="sponsor-giant-card">
+            <div class="sp-logo-ring">
+              <span class="sp-icon">{{ s.icono }}</span>
+            </div>
+            <div class="sp-txt">
+              <strong class="sp-name">{{ s.nombre }}</strong>
+              <small class="sp-tag">{{ s.tagline }}</small>
+            </div>
+            <span class="partner-verified-badge">✓ Oficial</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NAVEGACIÓN Y PROGRESO DE CARRUSEL -->
+    <div class="carousel-nav-bar">
+      <button class="nav-arrow" (click)="prevSlide()">◀</button>
+      <div class="carousel-dots">
+        <span *ngFor="let i of [0, 1, 2, 3]" 
+              class="dot" 
+              [class.active]="currentSlide === i" 
+              (click)="setSlide(i)">
+        </span>
+      </div>
+      <button class="nav-arrow" (click)="nextSlide()">▶</button>
+    </div>
+
+  </main>
+
+  <!-- BARRA INFERIOR DE TICKER / NOTICIAS -->
+  <footer class="tv-footer-ticker">
+    <div class="ticker-label">
+      <span>🎾 PADELBLOX TV</span>
+    </div>
+    <div class="ticker-content">
+      <div class="ticker-track">
+        <span class="ticker-item">🏆 Descarga la app Padelblox para anotar tus partidos con Smartwatch y consultar las tablas de posiciones en vivo</span>
+        <span class="ticker-sep">&bull;</span>
+        <span class="ticker-item">🏢 Gestiona tu club de pádel en padelblox.cl &bull; Reserva canchas y torneos sin comisiones abusivas</span>
+        <span class="ticker-sep">&bull;</span>
+        <span class="ticker-item">☕ Tercer Tiempo: Disfruta de nuestra cafetería, bar y tienda oficial</span>
+        <span class="ticker-sep">&bull;</span>
+        <span class="ticker-item">🏆 Descarga la app Padelblox para anotar tus partidos con Smartwatch y consultar las tablas de posiciones en vivo</span>
+        <span class="ticker-sep">&bull;</span>
+        <span class="ticker-item">🏢 Gestiona tu club de pádel en padelblox.cl &bull; Reserva canchas y torneos sin comisiones abusivas</span>
+        <span class="ticker-sep">&bull;</span>
+        <span class="ticker-item">☕ Tercer Tiempo: Disfruta de nuestra cafetería, bar y tienda oficial</span>
+      </div>
+    </div>
+  </footer>
+
+</div>

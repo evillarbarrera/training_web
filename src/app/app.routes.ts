@@ -24,6 +24,9 @@ import { TorneoJugadorComponent } from './pages/torneo-jugador/torneo-jugador.co
 import { EntrenadorCuponesComponent } from './pages/entrenador-cupones/entrenador-cupones.component';
 import { ClubHomeComponent } from './pages/club-home/club-home.component';
 import { SupportComponent } from './pages/support/support.component';
+import { MisHabilidadesComponent } from './pages/mis-habilidades/mis-habilidades.component';
+import { JugadorPartidosComponent } from './pages/jugador-partidos/jugador-partidos.component';
+import { ClubTurnosComponent } from './pages/club-turnos/club-turnos.component';
 
 export const routes: Routes = [
   { path: 'soporte', component: SupportComponent },
@@ -32,6 +35,74 @@ export const routes: Routes = [
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { 
+    path: 'gestion-club-padel', 
+    loadComponent: () => import('./pages/gestion-club-padel/gestion-club-padel.component').then(m => m.GestionClubPadelComponent) 
+  },
+  { 
+    path: 'software-club-padel', 
+    loadComponent: () => import('./pages/gestion-club-padel/gestion-club-padel.component').then(m => m.GestionClubPadelComponent) 
+  },
+  { 
+    path: 'software-gestion-padel', 
+    loadComponent: () => import('./pages/gestion-club-padel/gestion-club-padel.component').then(m => m.GestionClubPadelComponent) 
+  },
+  { 
+    path: 'administracion-club-padel', 
+    loadComponent: () => import('./pages/gestion-club-padel/gestion-club-padel.component').then(m => m.GestionClubPadelComponent) 
+  },
+  { 
+    path: 'gestion-entrenamientos', 
+    loadComponent: () => import('./pages/gestion-entrenamientos/gestion-entrenamientos.component').then(m => m.GestionEntrenamientosComponent) 
+  },
+  { 
+    path: 'gestion-entrenamientos-padel', 
+    loadComponent: () => import('./pages/gestion-entrenamientos/gestion-entrenamientos.component').then(m => m.GestionEntrenamientosComponent) 
+  },
+  { 
+    path: 'software-entrenadores-padel', 
+    loadComponent: () => import('./pages/gestion-entrenamientos/gestion-entrenamientos.component').then(m => m.GestionEntrenamientosComponent) 
+  },
+  { 
+    path: 'entrenadores-padel', 
+    loadComponent: () => import('./pages/gestion-entrenamientos/gestion-entrenamientos.component').then(m => m.GestionEntrenamientosComponent) 
+  },
+  { 
+    path: 'app-entrenadores-padel', 
+    loadComponent: () => import('./pages/gestion-entrenamientos/gestion-entrenamientos.component').then(m => m.GestionEntrenamientosComponent) 
+  },
+  { 
+    path: 'smartwatch-padel', 
+    loadComponent: () => import('./pages/smartwatch-padel/smartwatch-padel.component').then(m => m.SmartwatchPadelComponent) 
+  },
+  { 
+    path: 'reloj-padel', 
+    loadComponent: () => import('./pages/smartwatch-padel/smartwatch-padel.component').then(m => m.SmartwatchPadelComponent) 
+  },
+  { 
+    path: 'smartwatch', 
+    loadComponent: () => import('./pages/smartwatch-padel/smartwatch-padel.component').then(m => m.SmartwatchPadelComponent) 
+  },
+  { 
+    path: 'reloj', 
+    loadComponent: () => import('./pages/smartwatch-padel/smartwatch-padel.component').then(m => m.SmartwatchPadelComponent) 
+  },
+  { 
+    path: 'precios', 
+    loadComponent: () => import('./pages/precios-planes/precios-planes.component').then(m => m.PreciosPlanesComponent) 
+  },
+  { 
+    path: 'planes', 
+    loadComponent: () => import('./pages/precios-planes/precios-planes.component').then(m => m.PreciosPlanesComponent) 
+  },
+  { 
+    path: 'precios-planes', 
+    loadComponent: () => import('./pages/precios-planes/precios-planes.component').then(m => m.PreciosPlanesComponent) 
+  },
+  { 
+    path: 'planes-precios', 
+    loadComponent: () => import('./pages/precios-planes/precios-planes.component').then(m => m.PreciosPlanesComponent) 
+  },
   { path: '', component: LandingComponent, pathMatch: 'full' },
 
   // Student Routes
@@ -41,15 +112,9 @@ export const routes: Routes = [
   { path: 'jugador-packs', component: JugadorPacksComponent },
   { path: 'clubes-reservar', component: ClubesJugadorComponent },
   { path: 'club-reservas', component: ClubReservasComponent },
-  {
-    path: 'mis-habilidades',
-    loadComponent: () => import('./pages/mis-habilidades/mis-habilidades.component').then(m => m.MisHabilidadesComponent)
-  },
+  { path: 'mis-habilidades', component: MisHabilidadesComponent },
   { path: 'mis-torneos', component: TorneoJugadorComponent },
-  {
-    path: 'mis-partidos',
-    loadComponent: () => import('./pages/jugador-partidos/jugador-partidos.component').then(m => m.JugadorPartidosComponent)
-  },
+  { path: 'mis-partidos', component: JugadorPartidosComponent },
 
   // Trainer Routes
   { path: 'entrenador-home', component: EntrenadorHomeComponent },
@@ -64,11 +129,14 @@ export const routes: Routes = [
   },
   { path: 'club-home', component: ClubHomeComponent },
   { path: 'admin-club', component: ClubAdminComponent },
+  { path: 'club-turnos', component: ClubTurnosComponent },
   { path: 'club-inventario', loadComponent: () => import('./pages/club-inventario/club-inventario.component').then(m => m.ClubInventarioComponent) },
   { path: 'club-categorias', loadComponent: () => import('./pages/club-categorias/club-categorias.component').then(m => m.ClubCategoriasComponent) },
   { path: 'club-ventas', loadComponent: () => import('./pages/club-ventas/club-ventas.component').then(m => m.ClubVentasComponent) },
   { path: 'club-reportes', loadComponent: () => import('./pages/club-reportes/club-reportes.component').then(m => m.ClubReportesComponent) },
   { path: 'club-whatsapp-difusion', loadComponent: () => import('./pages/club-whatsapp-difusion/club-whatsapp-difusion.component').then(m => m.ClubWhatsappDifusionComponent) },
+  { path: 'matchmaking', loadComponent: () => import('./pages/club-matchmaking/club-matchmaking.component').then(m => m.ClubMatchmakingComponent) },
+  { path: 'club-matchmaking', loadComponent: () => import('./pages/club-matchmaking/club-matchmaking.component').then(m => m.ClubMatchmakingComponent) },
   { path: 'crear-americano', component: TorneoAmericanoComponent },
   { path: 'torneos', component: TorneoGestionComponent },
   { path: 'ligas', loadComponent: () => import('./pages/ligas-list/ligas-list.component').then(m => m.LigasListComponent) },
@@ -117,6 +185,23 @@ export const routes: Routes = [
   },
 
   {
+    path: 'perfil-publico',
+    loadComponent: () => import('./pages/coach-profile-config/coach-profile-config.component').then(m => m.CoachProfileConfigComponent)
+  },
+  {
+    path: 'e/:slug',
+    loadComponent: () => import('./pages/public-coach-profile/public-coach-profile.component').then(m => m.PublicCoachProfileComponent)
+  },
+  {
+    path: 'entrenador/:slug',
+    loadComponent: () => import('./pages/public-coach-profile/public-coach-profile.component').then(m => m.PublicCoachProfileComponent)
+  },
+  {
+    path: 'entrenador-perfil/:slug',
+    loadComponent: () => import('./pages/public-coach-profile/public-coach-profile.component').then(m => m.PublicCoachProfileComponent)
+  },
+
+  {
     path: 'club-landing-config',
     loadComponent: () => import('./pages/club-landing-config/club-landing-config.component').then(m => m.ClubLandingConfigComponent)
   },
@@ -127,6 +212,18 @@ export const routes: Routes = [
   {
     path: 'club-landing/:slug',
     loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+  {
+    path: 'tv/:clubId',
+    loadComponent: () => import('./pages/club-tv/club-tv.component').then(m => m.ClubTvComponent)
+  },
+  {
+    path: 'tv',
+    loadComponent: () => import('./pages/club-tv/club-tv.component').then(m => m.ClubTvComponent)
+  },
+  {
+    path: 'club-tv/:clubId',
+    loadComponent: () => import('./pages/club-tv/club-tv.component').then(m => m.ClubTvComponent)
   },
 
   { path: '**', redirectTo: '' }

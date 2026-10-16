@@ -7,9 +7,26 @@
 
         <div class="dashboard-container">
             <div class="header-main">
-                <h1>Gestión de Torneos</h1>
-                <p>Crea y administra tus torneos americanos.</p>
+                <div class="header-title-container">
+                    <div>
+                        <h1>Gestión de Torneos</h1>
+                        <p>Crea y administra tus torneos americanos.</p>
+                    </div>
+                    <span class="club-badge-indicator" *ngIf="selectedClubNombre">
+                        🏢 {{ selectedClubNombre }}
+                    </span>
+                </div>
             </div>
+
+            <!-- NAVEGACIÓN ENTRE CLUBES / SEDES -->
+            <nav class="club-tabs-nav animate-in" *ngIf="clubes && clubes.length > 1">
+                <button *ngFor="let c of clubes" 
+                        class="club-tab-btn" 
+                        [class.active]="selectedClubId === c.id" 
+                        (click)="onClubSelect(c.id)">
+                    🏢 {{ c.nombre }}
+                </button>
+            </nav>
 
             <!-- TAB NAVIGATION -->
             <div class="main-tabs-nav">
@@ -35,7 +52,7 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label><span class="label-icon">🏢</span> Club</label>
-                                    <select [(ngModel)]="torneo.club_id">
+                                    <select [(ngModel)]="torneo.club_id" (change)="onClubChange()">
                                         <option *ngFor="let c of clubes" [value]="c.id">{{ c.nombre }}</option>
                                     </select>
                                 </div>
@@ -101,7 +118,19 @@
                                         </optgroup>
                                     </select>
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group full-width animate-in" *ngIf="clubCanchas.length > 0">
+                                    <label><span class="label-icon">🏟️</span> Pistas a Reservar para el Americano (Bloque Completo)</label>
+                                    <div class="cancha-selector-pills">
+                                        <button type="button" class="cancha-pill" *ngFor="let c of clubCanchas"
+                                            [class.active]="isCanchaSelected(c.id)"
+                                            (click)="toggleCanchaSelection(c.id)">
+                                            <span class="pill-check">{{ isCanchaSelected(c.id) ? '✓' : '+' }}</span>
+                                            <span class="pill-name">{{ c.nombre }}</span>
+                                        </button>
+                                    </div>
+                                    <small class="form-hint">Se reservará automáticamente el bloque completo desde el inicio al término en las {{ selectedCanchas.length }} pista(s) seleccionadas.</small>
+                                </div>
+                                <div class="form-group" *ngIf="clubCanchas.length === 0">
                                     <label><span class="label-icon">🎾</span> Cantidad de Canchas</label>
                                     <input type="number" [(ngModel)]="torneo.num_canchas" min="1" max="10">
                                 </div>
@@ -244,9 +273,13 @@
                                         </span>
                                     </div>
                                 </div>
-                                <div class="header-actions" *ngIf="!isCerrado" style="display: flex; gap: 10px;">
+                                <div class="header-actions" *ngIf="!isCerrado" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                    <button class="btn-view-reservas" [routerLink]="['/club-reservas']" [queryParams]="{ fecha: selectedTorneo.fecha }"
+                                        style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; transition: all 0.2s ease;">
+                                        📅 Ver en Reservas
+                                    </button>
                                     <button class="btn-cancel-edit" (click)="cancelarTorneo(selectedTorneo.id)"
-                                        style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+                                        style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer;">
                                         🗑️ Cancelar Torneo
                                     </button>
                                     <button class="btn-close-torneo" (click)="cerrarTorneo(selectedTorneo.id)">
@@ -280,7 +313,19 @@
                                             <label>Minutos por Partido</label>
                                             <input type="number" [(ngModel)]="selectedTorneo.tiempo_por_partido">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group full-width animate-in" *ngIf="clubCanchas.length > 0">
+                                            <label><span class="label-icon">🏟️</span> Pistas a Reservar para el Americano (Bloque Completo)</label>
+                                            <div class="cancha-selector-pills">
+                                                <button type="button" class="cancha-pill" *ngFor="let c of clubCanchas"
+                                                    [class.active]="isEditCanchaSelected(c.id)"
+                                                    (click)="toggleEditCanchaSelection(c.id)">
+                                                    <span class="pill-check">{{ isEditCanchaSelected(c.id) ? '✓' : '+' }}</span>
+                                                    <span class="pill-name">{{ c.nombre }}</span>
+                                                </button>
+                                            </div>
+                                            <small class="form-hint">Se reservarán automáticamente estas {{ editSelectedCanchas.length }} pista(s) en la fecha y horario definidos.</small>
+                                        </div>
+                                        <div class="form-group" *ngIf="clubCanchas.length === 0">
                                             <label>Cantidad de Canchas</label>
                                             <input type="number" [(ngModel)]="selectedTorneo.num_canchas" min="1" max="10">
                                         </div>
@@ -289,8 +334,36 @@
                                             <input type="number" [(ngModel)]="selectedTorneo.max_parejas">
                                         </div>
                                     </div>
-                                    <div class="form-footer" style="margin-top: 20px;">
+
+                                    <div class="points-config-header" style="margin-top: 20px;">
+                                        <span class="icon">⭐</span>
+                                        <span>Puntos para el Ranking (APP)</span>
+                                    </div>
+
+                                    <div class="form-grid points-grid">
+                                        <div class="form-group points-item">
+                                            <label>🥇 1° Lugar</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.puntos_1er_lugar">
+                                        </div>
+                                        <div class="form-group points-item">
+                                            <label>🥈 2° Lugar</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.puntos_2do_lugar">
+                                        </div>
+                                        <div class="form-group points-item">
+                                            <label>🥉 3° Lugar</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.puntos_3er_lugar">
+                                        </div>
+                                        <div class="form-group points-item">
+                                            <label>🎟️ Participación</label>
+                                            <input type="number" [(ngModel)]="selectedTorneo.puntos_participacion">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-footer" style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
                                         <button class="btn-primary" (click)="actualizarAmericano()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                                        <small style="color: #64748b; font-size: 0.8rem; text-align: center;">
+                                            ℹ️ Si cambias la fecha u hora, las reservas de canchas se trasladarán automáticamente al nuevo día y se reiniciará el fixture para volver a generarlo.
+                                        </small>
                                     </div>
                                 </div>
                                 <div *ngIf="isCerrado" class="empty-state">

@@ -2,20 +2,6 @@
 <div class="dashboard-container" [class.not-authenticated]="!isAuthenticated">
   <!-- Si no está autenticado: Mostrar landing -->
   
-  <!-- TOP NOTIFICATION BAR -->
-  <div class="top-announcement-bar" style="background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); border-bottom: 1px solid rgba(204, 255, 0, 0.15); padding: 8px 0; z-index: 1001; position: relative; width: 100%;">
-    <div class="container" style="display: flex; justify-content: center; align-items: center;">
-      <div class="top-info" style="display: flex; align-items: center; color: #e2e8f0; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.3px;">
-        <span style="display: flex; align-items: center; gap: 10px;">
-          <span style="background: rgba(204, 255, 0, 0.15); color: #ccff00; padding: 2px 10px; border-radius: 20px; font-weight: 800; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; border: 1px solid rgba(204, 255, 0, 0.3);">Exclusivo</span>
-          <span>¿Quieres agendar una capacitación gratuita para tu academia?</span>
-          <button (click)="openContactModal()" style="background: transparent; border: none; padding: 0; color: #ccff00; text-decoration: none; font-weight: 800; display: flex; align-items: center; gap: 4px; transition: 0.2s; border-bottom: 1px solid transparent; cursor: pointer; font-size: 0.85rem;" onmouseover="this.style.borderBottom='1px solid #ccff00'" onmouseout="this.style.borderBottom='1px solid transparent'">
-            Contáctanos aquí <span style="font-size: 1.1rem; line-height: 1;">→</span>
-          </button>
-        </span>
-      </div>
-    </div>
-  </div>
 
   <!-- CONTACT MODAL -->
   <div class="contact-modal-overlay" *ngIf="showContactModal" (click)="closeContactModal()">
@@ -59,31 +45,100 @@
     </div>
   </div>
 
-  <nav class="nike-navbar" style="position: sticky; top: 0;">
-    <div class="container navbar-inner">
-      <div class="logo">
+  <!-- TOP ANNOUNCEMENT BAR -->
+  <div class="top-announcement-bar">
+    <div class="container">
+      <div class="top-info">
+        <span class="badge-promo">NUEVO ⌚ SMARTWATCH & TORNEOS</span>
+        <span>Marcador en vivo en tu reloj + Ligas y Torneos Americanos automáticos</span>
+        <button (click)="openContactModal()" class="btn-text-link">Probar 90 días gratis →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="nike-navbar">
+    <div class="navbar-inner">
+      <a routerLink="/" class="logo">
         <div class="logo-wrapper">
           <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
         </div>
         <span class="text">PADEL<span>BLOX</span></span>
-      </div>
+      </a>
       <div class="menu">
-        <a href="#features" class="nav-link">Características</a>
-        <a href="#club-management" class="nav-link">Gestión de Club</a>
-        <a href="#technology" class="nav-link">Tecnología IA</a>
-        <a href="#pricing" class="nav-link">Precios</a>
+        <a routerLink="/" class="nav-link active">Inicio</a>
+        <a routerLink="/gestion-club-padel" class="nav-link">Club & Canchas</a>
+        <a routerLink="/gestion-entrenamientos-padel" class="nav-link">Entrenamientos & IA</a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="nav-link">Torneos & Ligas 🏆</a>
+        <a routerLink="/smartwatch-padel" class="nav-link">Reloj & Smartwatch ⌚</a>
+        <a routerLink="/precios" class="nav-link">Precios & Planes</a>
       </div>
       <div class="auth-buttons">
         <button class="btn-login" (click)="irALogin()">Iniciar Sesión</button>
-        <button class="btn-register" (click)="irALogin()">Registrarse</button>
+        <button class="btn-register" (click)="openContactModal()">Prueba Gratis</button>
+      </div>
+
+      <!-- Mobile Hamburger Toggle Button -->
+      <button class="mobile-nav-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'">
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+      </button>
+    </div>
+
+    <!-- MOBILE DRAWER MENU OVERLAY -->
+    <div class="mobile-drawer-overlay" [class.open]="mobileMenuOpen">
+      <div class="drawer-header">
+        <a routerLink="/" class="logo" (click)="closeMobileMenu()">
+          <div class="logo-wrapper">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+          </div>
+          <span class="text">PADEL<span>BLOX</span></span>
+        </a>
+        <button class="drawer-close-btn" (click)="closeMobileMenu()">✕</button>
+      </div>
+
+      <div class="drawer-nav-list">
+        <a routerLink="/" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏠</span> Inicio
+        </a>
+        <a routerLink="/gestion-club-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏢</span> Club & Canchas
+        </a>
+        <a routerLink="/gestion-entrenamientos-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⚡</span> Entrenamientos & IA
+        </a>
+        <a routerLink="/gestion-club-padel" fragment="torneos" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏆</span> Torneos & Ligas
+        </a>
+        <a routerLink="/smartwatch-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⌚</span> Reloj & Smartwatch
+        </a>
+        <a routerLink="/precios" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">💎</span> Precios & Planes
+        </a>
+      </div>
+
+      <div class="drawer-action-buttons">
+        <button class="btn-drawer-login" (click)="closeMobileMenu(); irALogin()">Iniciar Sesión</button>
+        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal()">Prueba Gratis (90 Días)</button>
+      </div>
+
+      <div class="drawer-app-links">
+        <span class="app-label">Descargar App Móvil:</span>
+        <div class="app-pills">
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="app-pill"> App Store</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="app-pill">▶ Google Play</a>
+        </div>
       </div>
     </div>
+    <div class="mobile-drawer-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
   </nav>
 
   <!-- HERO SECTION -->
   <header class="nike-hero">
     <div class="hero-background">
-      <img src="assets/images/padel-bg.png" class="bg-image" alt="Padel Court">
+      <img src="assets/images/padel-bg.png" class="bg-image" alt="Software de gestión de clubes y pistas de pádel PadelBlox">
       <div class="overlay-gradient"></div>
     </div>
     <!-- (Remnants removed) -->
@@ -105,7 +160,7 @@
                 </div>
                 <!-- App Content (Image) -->
                 <div class="phone-slider-wrapper">
-                  <img *ngFor="let slide of slides; let i = index" [src]="slide.image" alt="App Screenshot"
+                  <img *ngFor="let slide of slides; let i = index" [src]="slide.image" [alt]="slide.badge + ' ' + slide.title + ' ' + slide.highlight + ' PadelBlox'"
                     class="app-screen-img slider-img" [class.active]="currentSlide === i">
                 </div>
               </div>
@@ -133,11 +188,11 @@
           </div>
 
           <div class="cta-group">
-            <button class="btn-primary-large" (click)="irALogin()">
+            <button class="btn-primary-large" (click)="irARegister()">
               <span class="btn-text">REGÍSTRATE GRATIS</span>
             </button>
-            <button class="btn-secondary-large" (click)="irALogin()">
-              <span class="btn-text">VER FUNCIONES</span>
+            <button class="btn-secondary-large" (click)="openContactModal()">
+              <span class="btn-text">PROBAR 90 DÍAS GRATIS</span>
             </button>
           </div>
 
@@ -152,7 +207,7 @@
 
           <!-- APP STORES -->
           <div class="app-buttons" style="display: flex; gap: 15px; flex-wrap: wrap;">
-            <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" class="btn-store btn-apple" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
+            <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="btn-store btn-apple" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
               <span class="icon" style="font-size: 1.5rem;"></span>
               <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
                 <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Descárgalo en</span>
@@ -160,10 +215,17 @@
               </div>
             </a>
             
-            <a href="mailto:soporte@padelblox.cl?subject=Interés en periodo de prueba Android - PadelBlox" class="btn-store btn-google" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
-              <span class="icon" style="font-size: 1.5rem;">▶</span>
+            <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="btn-store btn-google" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
+              <span class="icon" style="font-size: 1.4rem; color: #ccff00; display: flex; align-items: center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3.609 1.814C3.25 2.19 3 2.766 3 3.518v16.964c0 .752.25 1.328.609 1.704l.088.082 9.53-9.53v-.226l-9.53-9.53-.088.082z" fill="#00E676"/>
+                  <path d="M16.41 15.932l-3.183-3.184v-.226l3.184-3.184.072.042 3.768 2.14c1.077.61 1.077 1.613 0 2.224l-3.769 2.146-.072.042z" fill="#FFD600"/>
+                  <path d="M16.482 15.89l-3.255-3.255-9.618 9.618c.356.376.945.42 1.614.042l11.259-6.405" fill="#FF3D00"/>
+                  <path d="M16.482 8.788L5.223 2.383c-.669-.378-1.258-.334-1.614.042l9.618 9.618 3.255-3.255z" fill="#00B0FF"/>
+                </svg>
+              </span>
               <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
-                <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Solicitar Trial</span>
+                <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Disponible en</span>
                 <span class="large" style="font-size: 0.9rem; font-weight: 800;">Google Play</span>
               </div>
             </a>
@@ -259,10 +321,18 @@
                 </div>
             </div>
             <div class="why-visual" style="position: relative; display: flex; justify-content: center;">
-                <img src="assets/images/app-screenshot-v2.png" style="width: 75%; border-radius: 40px; box-shadow: 0 50px 100px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); transform: perspective(1000px) rotateY(-10deg) rotateX(5deg);" alt="PadelBlox Dashboard">
-                <div style="position: absolute; bottom: -20px; right: 10%; background: #ccff00; padding: 25px; border-radius: 20px; color: #000; box-shadow: 0 20px 40px rgba(0,0,0,0.2); z-index: 10;">
+                <div class="browser-frame-preview" style="width: 85%; border-radius: 24px; overflow: hidden; box-shadow: 0 50px 100px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.08); background: #111; transform: perspective(1000px) rotateY(-8deg) rotateX(4deg);">
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #ff5f56; display: inline-block;"></span>
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #ffbd2e; display: inline-block;"></span>
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: #27c93f; display: inline-block;"></span>
+                        <span style="color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-left: 10px; font-family: monospace;">padelblox.cl/admin-club</span>
+                    </div>
+                    <img src="assets/img/web/home-club.png" style="width: 100%; display: block; object-fit: cover;" alt="Software de administración y reservas de clubes de pádel PadelBlox">
+                </div>
+                <div style="position: absolute; bottom: -20px; right: 5%; background: #ccff00; padding: 20px 25px; border-radius: 20px; color: #000; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 10;">
                     <h3 style="font-size: 2.2rem; font-weight: 950; line-height: 1; margin: 0;">+45%</h3>
-                    <p style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">Eficiencia Operativa</p>
+                    <p style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin: 0;">Eficiencia Operativa</p>
                 </div>
             </div>
         </div>
@@ -362,90 +432,76 @@
           </ul>
         </div>
 
-        <!-- Graphic Dashboard Mockup on the right -->
+        <!-- Graphic Dashboard Mockup on the right with Interactive Screenshot Tabs -->
         <div class="club-visual reveal slide-right">
-          <div class="dashboard-mockup">
-            <div class="mockup-header">
-              <div class="mockup-dots">
-                <span class="dot-red"></span>
-                <span class="dot-yellow"></span>
-                <span class="dot-green"></span>
-              </div>
-              <div class="mockup-title">PadelBlox Admin - Sede Las Condes ▾</div>
+          <div class="club-tabs-wrapper">
+            <!-- Modern Segmented Tabs Nav -->
+            <div class="club-tabs-nav">
+              <button *ngFor="let tab of clubScreenshotTabs; let i = index" 
+                      [class.active]="activeClubTab === i" 
+                      (click)="setActiveClubTab(i)"
+                      class="tab-pill-btn">
+                <span>{{ tab.label }}</span>
+              </button>
             </div>
-            
-            <div class="mockup-body">
-              <!-- Top Row: Stats Widgets -->
-              <div class="mockup-row">
-                <div class="mockup-card stat-card">
-                  <span class="card-label">Ocupación Canchas</span>
-                  <div class="radial-progress-mock">
-                    <svg viewBox="0 0 36 36" class="circular-chart">
-                      <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      <path class="circle" stroke-dasharray="92, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    </svg>
-                    <span class="progress-val">92%</span>
+
+            <!-- 3D Glow Container with Floating Badges -->
+            <div class="mockup-glow-wrapper">
+              <!-- Ambient Background Glows -->
+              <div class="glow-orb glow-primary"></div>
+              <div class="glow-orb glow-cyan"></div>
+
+              <!-- Floating Dynamic 3D Badges -->
+              <div class="floating-badge badge-top-right">
+                <div class="badge-icon">📈</div>
+                <div class="badge-content">
+                  <span class="badge-title">+42% Ocupación</span>
+                  <span class="badge-sub">Horarios pico optimizados</span>
+                </div>
+              </div>
+
+              <div class="floating-badge badge-bottom-left">
+                <div class="badge-icon pulse-icon">⚡</div>
+                <div class="badge-content">
+                  <span class="badge-title">12 Canchas Conectadas</span>
+                  <span class="badge-sub">Arriendos en tiempo real</span>
+                </div>
+              </div>
+
+              <!-- Browser Mockup Window with Web Screenshot -->
+              <div class="dashboard-mockup" (click)="openZoom(clubScreenshotTabs[activeClubTab].image, clubScreenshotTabs[activeClubTab].title)">
+                <div class="mockup-header">
+                  <div class="mac-dots">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                  </div>
+                  <div class="url-pill">
+                    <span class="lock-icon">🔒</span>
+                    <span class="title-bar">https://app.padelblox.cl/{{ clubScreenshotTabs[activeClubTab].id }}</span>
+                  </div>
+                  <div class="live-status">
+                    <span class="live-dot"></span>
+                    <span>EN VIVO</span>
                   </div>
                 </div>
                 
-                <div class="mockup-card stat-card">
-                  <span class="card-label">Ventas de Hoy</span>
-                  <span class="stat-value text-green">$485.600</span>
-                  <span class="stat-sub">+12.4% vs ayer</span>
+                <div class="mockup-body">
+                  <img [src]="clubScreenshotTabs[activeClubTab].image" 
+                       [alt]="clubScreenshotTabs[activeClubTab].title" 
+                       class="dashboard-screenshot">
+                  
+                  <div class="zoom-hover-overlay">
+                    <span class="zoom-btn-pill">🔍 Clic para Pantalla Completa</span>
+                  </div>
+                </div>
+
+                <div class="card-footer-desc">
+                  <span class="footer-icon">⚡</span>
+                  <span class="footer-text">{{ clubScreenshotTabs[activeClubTab].desc }}</span>
+                  <span class="footer-action">Ver detalles →</span>
                 </div>
               </div>
-
-              <!-- Middle: Active Tournament & Match -->
-              <div class="mockup-card tournament-card">
-                <div class="card-header-mock">
-                  <span class="t-badge">EN VIVO</span>
-                  <strong>Americano Categoría 3ª</strong>
-                </div>
-                <div class="match-score-mock">
-                  <div class="team-score">
-                    <span>M. Villar / C. Ruiz</span>
-                    <strong>6 | 6</strong>
-                  </div>
-                  <div class="team-score">
-                    <span>J. Pérez / A. Gómez</span>
-                    <strong class="text-dim">4 | 3</strong>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Bottom: Inventory Alerts & Rankings -->
-              <div class="mockup-row">
-                <div class="mockup-card inventory-card">
-                  <span class="card-label">Inventario Crítico</span>
-                  <div class="inv-items-list">
-                    <div class="inv-item">
-                      <span>Bebida Isotónica</span>
-                      <span class="badge-crit">4 u.</span>
-                    </div>
-                    <div class="inv-item">
-                      <span>Tarros Pelotas Head</span>
-                      <span class="badge-crit">8 u.</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mockup-card ranking-card">
-                  <span class="card-label">Ranking 1ª Categoría</span>
-                  <div class="rank-list-mock">
-                    <div class="rank-row">
-                      <span class="num">1</span>
-                      <span class="name">Emilio Villar</span>
-                      <span class="pts">1250 pts</span>
-                    </div>
-                    <div class="rank-row">
-                      <span class="num">2</span>
-                      <span class="name">Ignacio Sos</span>
-                      <span class="pts">1180 pts</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
@@ -453,28 +509,24 @@
     </div>
   </section>
 
-  <!-- TECH & AI SECTION -->
+  <!-- TECH & AI & WEARABLES SECTION -->
   <section id="technology" class="nike-tech reveal fade-in">
     <div class="container">
       <div class="tech-layout">
         <div class="tech-text">
-          <span class="badge-ai">GEMINI INTEGRATION</span>
-          <h2>ANÁLISIS BIOMECÁNICO <br><span class="highlight-alt">POWERED BY IA</span></h2>
-          <p>La IA revisa videos cortos de tus golpes para entregarte feedback instantáneo sobre tu técnica y
-            recomendaciones específicas para subir de nivel.</p>
+          <span class="badge-ai">GEMINI INTEGRATION & SMARTWATCH</span>
+          <h2>TECNOLOGÍA DE ÉLITE <br><span class="highlight-alt">EN TU MUÑECA Y EN PISTA</span></h2>
+          <p>Lleva el marcador de tus partidos en tiempo real desde tu <strong>Apple Watch o Smartwatch</strong>, y analiza videos cortos de tus golpes con IA para recibir feedback instantáneo.</p>
 
           <ul class="tech-features">
-            <li class="reveal slide-left" style="--d: 0.1s"><span class="check">✓</span> Análisis de clips por golpe
-              individual</li>
-            <li class="reveal slide-left" style="--d: 0.2s"><span class="check">✓</span> Detección de errores
-              posturales</li>
-            <li class="reveal slide-left" style="--d: 0.3s"><span class="check">✓</span> Feedback basado en patrones
-              pro</li>
+            <li class="reveal slide-left" style="--d: 0.1s"><span class="check">✓</span> <strong>Marcador en la muñeca:</strong> Puntuación en vivo sincronizada entre reloj y smartphone.</li>
+            <li class="reveal slide-left" style="--d: 0.2s"><span class="check">✓</span> <strong>Métricas de partido:</strong> Estadísticas de puntos ganados, errores y rendimiento físico.</li>
+            <li class="reveal slide-left" style="--d: 0.3s"><span class="check">✓</span> <strong>Análisis biomecánico por IA:</strong> Corrección técnica de golpes con visión computacional.</li>
           </ul>
 
           <div class="chart-mini-container reveal scale-in">
             <div class="chart-card">
-              <h4>Evolución del Servicio</h4>
+              <h4>Evolución del Servicio & Voleas</h4>
               <div class="canvas-wrapper">
                 <canvas id="landingLineChart"></canvas>
               </div>
@@ -483,20 +535,22 @@
         </div>
 
         <div class="tech-visual reveal scale-in">
-          <div class="radar-card">
-            <h3>Resumen de Habilidades</h3>
-            <div class="radar-wrapper">
-              <canvas id="landingRadarChart"></canvas>
+          <!-- Smartwatch & Mobile Sync Showcase -->
+          <div class="wearable-cards-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div class="watch-card-mock" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 15px; text-align: center;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: #ccff00; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">⌚ Marcador en Vivo</span>
+              <img src="assets/img/Reloj/marcador.png" style="width: 100%; max-width: 170px; border-radius: 20px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" alt="Marcador de pádel en vivo en Apple Watch y Smartwatch PadelBlox">
+            </div>
+            <div class="watch-card-mock" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 15px; text-align: center;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: #ccff00; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">📊 Estadísticas Smartwatch</span>
+              <img src="assets/img/Reloj/estadisticas.png" style="width: 100%; max-width: 170px; border-radius: 20px; display: inline-block; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" alt="Estadísticas de esfuerzo, ritmo cardíaco y marcador en reloj de pádel">
             </div>
           </div>
 
-          <div class="video-mockup reveal slide-up">
-            <div class="video-badge">PROCESANDO...</div>
-            <div class="video-play">▶</div>
-            <div class="ai-overlay">
-              <div class="body-point p1"></div>
-              <div class="body-point p2"></div>
-              <div class="body-line l1"></div>
+          <div class="radar-card">
+            <h3>Resumen de Habilidades & Radar IA</h3>
+            <div class="radar-wrapper">
+              <canvas id="landingRadarChart"></canvas>
             </div>
           </div>
         </div>
@@ -580,56 +634,13 @@
       </div>
   </section>
 
-  <!-- PRICING SECTION -->
-  <section id="pricing" class="nike-pricing reveal fade-in">
-    <div class="container">
-      <div class="section-header text-center">
-        <span class="overline">EL MODELO JUSTO</span>
-        <h2>ELIGE CÓMO <span class="text-gradient">CRECER</span></h2>
-        <p class="subtitle">Estructuras pensadas para cada etapa de tu academia. Prueba 90 días GRATIS.</p>
-      </div>
-
-      <div class="pricing-grid">
-        <div *ngFor="let plan of plans; let i = index" 
-             class="p-card reveal slide-up" 
-             [class.featured]="plan.featured"
-             [style.--d]="(0.1 * (i+1)) + 's'">
-          
-          <div class="badge-best" *ngIf="plan.badge" [style.background]="plan.name === 'PRO 40' ? '#fff' : ''" [style.color]="plan.name === 'PRO 40' ? '#111' : ''">
-            {{ plan.badge }}
-          </div>
-
-          <div class="p-header">
-            <span class="p-name">{{ plan.name }}</span>
-            <div class="p-price">
-              <span class="currency">{{ isInternational ? '$' : '$' }}</span>
-              <span class="amount">{{ isInternational ? (plan.usd | number:'1.0-0') : (plan.clp | number:'1.0-0':'es') }}</span>
-              <span class="period">{{ plan.period }}</span>
-              <div class="currency-tag" *ngIf="plan.clp > 0">{{ isInternational ? 'USD' : 'CLP' }}</div>
-            </div>
-          </div>
-          
-          <div class="p-features">
-            <div class="f-item"><span>✓</span> {{ plan.sessions }}</div>
-            <div class="f-item"><span>✓</span> {{ plan.fee }}</div>
-            <div class="f-item promo">💎 <b>{{ plan.promo }}</b></div>
-          </div>
-          
-          <button class="btn-p-card" [class.active]="plan.featured" (click)="irALogin()">
-            {{ plan.btnText }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- CALL TO ACTION -->
   <section class="nike-cta reveal slide-up">
     <div class="cta-content">
       <h2>¿LISTO PARA <span class="text-white">EMPEZAR?</span></h2>
       <p>Únete hoy a la comunidad de pádel más influyente y comienza tu transformación.</p>
-      <button class="btn-primary-large" (click)="irALogin()">
-        CREAR CUENTA AHORA
+      <button class="btn-primary-large" (click)="irARegister()">
+        CREAR CUENTA AHORA (90 DÍAS GRATIS)
       </button>
     </div>
   </section>
@@ -643,32 +654,38 @@
             <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
             <h3>PADEL BLOX</h3>
           </div>
-          <p>Elevando el rendimiento con tecnología de vanguardia.</p>
-          <div class="socials" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-            <a href="https://www.instagram.com/padelblox/" target="_blank" class="social-link" style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.9rem; transition: 0.3s;">
-              <span style="font-size: 1.2rem;">📸</span> Instagram
+          <p>Elevando el rendimiento y la rentabilidad del pádel con tecnología de vanguardia.</p>
+          <div class="socials">
+            <a href="https://www.instagram.com/padelblox/" target="_blank" rel="noopener noreferrer" class="social-link">
+              <span>📸</span> Instagram
             </a>
-            <a href="mailto:soporte@padelblox.cl" class="social-link" style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.9rem; transition: 0.3s;">
-              <span style="font-size: 1.2rem;">✉️</span> soporte@padelblox.cl
+            <a href="mailto:soporte@padelblox.cl" class="social-link">
+              <span>✉️</span> soporte@padelblox.cl
             </a>
           </div>
         </div>
         <div class="links-col">
-          <h4>Plataforma</h4>
-          <a href="#">Jugadores</a>
-          <a href="#">Entrenadores</a>
-          <a href="#pricing">Membresías</a>
+          <h4>Soluciones</h4>
+          <a routerLink="/gestion-club-padel">Gestión de Club de Pádel</a>
+          <a routerLink="/gestion-entrenamientos-padel">Gestión de Entrenamientos</a>
+          <a routerLink="/smartwatch-padel">Smartwatch & Wearables ⌚</a>
+          <a routerLink="/precios">Membresías & Planes</a>
         </div>
         <div class="links-col">
-          <h4>Legal</h4>
+          <h4>Apps Móviles</h4>
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer"> App Store (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">▶ Google Play (Android)</a>
+          <a routerLink="/smartwatch-padel">⌚ Smartwatch App</a>
+        </div>
+        <div class="links-col">
+          <h4>Legal & Ayuda</h4>
           <a routerLink="/soporte">Soporte Técnico</a>
-          <a href="#">Privacidad</a>
-          <a href="#">Términos de Uso</a>
-          <a href="#">Cookies</a>
+          <a routerLink="/login">Iniciar Sesión</a>
+          <a routerLink="/register">Registrarse Gratis</a>
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 PadelBlox AI Academy. Desarrollado con ❤️ para padeleros.</p>
+        <p>&copy; 2026 PadelBlox Software. Todos los derechos reservados.</p>
       </div>
     </div>
   </footer>
@@ -684,5 +701,18 @@
     </svg>
     <span class="wa-label">¿Necesitas ayuda?</span>
   </a>
+
+  <!-- LIGHTBOX IMAGE ZOOM MODAL -->
+  <div class="image-zoom-modal-backdrop" *ngIf="showZoomModal" (click)="closeZoom()">
+    <div class="zoom-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="zoom-modal-header">
+        <div class="modal-tab-badge">{{ zoomTitle }}</div>
+        <button class="btn-close-zoom" (click)="closeZoom()">✕ Cerrar</button>
+      </div>
+      <div class="zoom-modal-body">
+        <img [src]="zoomImage" [alt]="zoomTitle" class="zoom-full-img">
+      </div>
+    </div>
+  </div>
 
 </div>

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ClubesService } from '../../services/clubes.service';
 import { ApiService } from '../../services/api.service';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 @Component({
     selector: 'app-torneo-americano',
     standalone: true,
-    imports: [CommonModule, FormsModule, SidebarComponent],
+    imports: [CommonModule, FormsModule, SidebarComponent, RouterLink],
     templateUrl: './torneo-americano.component.html',
     styleUrls: ['./torneo-americano.component.scss']
 })
@@ -39,6 +39,8 @@ export class TorneoAmericanoComponent implements OnInit {
     userFoto: string | null = null;
     userRole: any = 'administrador_club';
     clubId: number | null = null;
+    selectedClubId: number | null = null;
+    selectedClubNombre: string = '';
 
     // Tab State
     activeTab: 'create' | 'list' | 'history' = 'list';
@@ -84,6 +86,12 @@ export class TorneoAmericanoComponent implements OnInit {
         precio: 0
     };
 
+    clubCanchas: any[] = [];
+    selectedCanchas: number[] = [];
+    editSelectedCanchas: number[] = [];
+    originalTorneoFecha: string = '';
+    originalTorneoHora: string = '';
+
     constructor(
         private clubesService: ClubesService,
         private apiService: ApiService,
@@ -91,14 +99,28 @@ export class TorneoAmericanoComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        const currentUser = this.apiService.getCurrentUser();
+        let currentUser = this.apiService.getCurrentUser();
+        if (!currentUser) {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+            }
+        }
 
         if (currentUser) {
             this.userId = currentUser.id;
             this.userName = currentUser.nombre || 'Usuario';
             this.userRole = currentUser.rol || 'administrador_club';
             this.userFoto = currentUser.foto || null;
-            this.clubId = currentUser.club_id || null;
+            if (currentUser.club_id) {
+                this.selectedClubId = Number(currentUser.club_id);
+            }
+
+            const storedClubId = localStorage.getItem('selectedClubId');
+            if (storedClubId && storedClubId !== 'undefined' && storedClubId !== 'null') {
+                this.selectedClubId = Number(storedClubId);
+            }
+            this.clubId = this.selectedClubId;
 
             const isStaff = this.userRole.toLowerCase().includes('staff');
             const isAdmin = this.userRole.toLowerCase().includes('admin');
@@ -109,13 +131,20 @@ export class TorneoAmericanoComponent implements OnInit {
                 return;
             }
 
-                this.loadTorneos(this.userId, this.clubId);
             this.clubesService.getUsers().subscribe(res => this.allUsers = res);
             this.clubesService.getClubes(this.userId).subscribe(res => {
-                this.clubes = res;
+                this.clubes = res || [];
                 if (this.clubes.length > 0) {
-                    this.torneo.club_id = this.clubes[0].id;
+                    const matched = this.clubes.find(c => Number(c.id) === Number(this.selectedClubId));
+                    const activeClub = matched || this.clubes[0];
+                    this.selectedClubId = Number(activeClub.id);
+                    this.selectedClubNombre = activeClub.nombre;
+                    this.clubId = this.selectedClubId;
+                    this.torneo.club_id = this.selectedClubId;
+                    localStorage.setItem('selectedClubId', String(this.selectedClubId));
+                    this.loadClubCanchas(this.selectedClubId);
                 }
+                this.loadTorneos(this.userId, this.selectedClubId);
             });
 
             // Fetch fresh profile data (photo URL)
@@ -128,56 +157,82 @@ export class TorneoAmericanoComponent implements OnInit {
                 }
             });
         } else {
-            // Fallback to manual localStorage if BehaviorSubject is empty (e.g. on direct refresh)
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                const user = JSON.parse(storedUser);
-                this.userId = user.id;
-                this.userName = user.nombre || 'Usuario';
-                this.userRole = user.rol || 'administrador_club';
-                this.userFoto = user.foto || null;
-
-                const isStaff = this.userRole.toLowerCase().includes('staff');
-                const isAdmin = this.userRole.toLowerCase().includes('admin');
-                
-                // 🔐 SEGURIDAD: Solo Admin y Staff pueden gestionar americanos
-                if (!isStaff && !isAdmin) {
-                    this.router.navigate(['/login']);
-                    return;
-                }
-
-                this.loadTorneos(this.userId, this.clubId);
-                this.clubesService.getUsers().subscribe(res => this.allUsers = res);
-                this.clubesService.getClubes(this.userId).subscribe(res => {
-                    this.clubes = res;
-                    if (this.clubes.length > 0) {
-                        this.torneo.club_id = this.clubes[0].id;
-                    }
-                });
-
-                // Fetch fresh profile data (photo URL)
-                this.apiService.getPerfil(this.userId).subscribe({
-                    next: (res) => {
-                        if (res.success && res.user) {
-                            this.userFoto = res.user.foto_perfil || this.userFoto;
-                            this.userName = res.user.nombre || this.userName;
-                        }
-                    }
-                });
-            } else {
-                this.router.navigate(['/login']);
-            }
+            this.router.navigate(['/login']);
         }
     }
 
+    loadClubCanchas(clubId: number) {
+        if (!clubId) return;
+        this.clubesService.getCanchas(clubId).subscribe(res => {
+            this.clubCanchas = res || [];
+            if (this.clubCanchas.length > 0) {
+                const count = Math.min(this.clubCanchas.length, Math.max(1, Number(this.torneo.num_canchas) || 2));
+                this.selectedCanchas = this.clubCanchas.slice(0, count).map(c => c.id);
+                this.torneo.num_canchas = this.selectedCanchas.length;
+            }
+        });
+    }
+
+    onClubSelect(clubId: number | string): void {
+        this.selectedClubId = Number(clubId);
+        this.clubId = this.selectedClubId;
+        this.torneo.club_id = this.selectedClubId;
+        const matched = this.clubes.find(c => Number(c.id) === Number(this.selectedClubId));
+        if (matched) {
+            this.selectedClubNombre = matched.nombre;
+        }
+        localStorage.setItem('selectedClubId', String(this.selectedClubId));
+        this.loadClubCanchas(this.selectedClubId);
+        this.selectedTorneo = null;
+        this.loadTorneos(this.userId, this.selectedClubId);
+    }
+
+    onClubChange(): void {
+        if (this.torneo.club_id) {
+            this.selectedClubId = Number(this.torneo.club_id);
+            this.clubId = this.selectedClubId;
+            const matched = this.clubes.find(c => Number(c.id) === Number(this.selectedClubId));
+            if (matched) {
+                this.selectedClubNombre = matched.nombre;
+            }
+            localStorage.setItem('selectedClubId', String(this.selectedClubId));
+            this.loadClubCanchas(this.torneo.club_id);
+            this.selectedTorneo = null;
+            this.loadTorneos(this.userId, this.selectedClubId);
+        }
+    }
+
+    toggleCanchaSelection(canchaId: number) {
+        const idx = this.selectedCanchas.indexOf(canchaId);
+        if (idx > -1) {
+            if (this.selectedCanchas.length > 1) {
+                this.selectedCanchas.splice(idx, 1);
+            }
+        } else {
+            this.selectedCanchas.push(canchaId);
+        }
+        this.torneo.num_canchas = this.selectedCanchas.length;
+    }
+
+    isCanchaSelected(canchaId: number): boolean {
+        return this.selectedCanchas.includes(canchaId);
+    }
+
     loadTorneos(adminId: number, clubId: number | null = null) {
-        this.clubesService.getTorneosAdmin(adminId, clubId || undefined).subscribe((res: any) => {
-            this.torneos = res;
+        const targetClubId = (clubId !== null && clubId !== undefined) ? Number(clubId) : (this.selectedClubId ? Number(this.selectedClubId) : undefined);
+        this.clubesService.getTorneosAdmin(adminId, targetClubId || undefined).subscribe((res: any) => {
+            let list = res || [];
+            if (targetClubId) {
+                list = list.filter((t: any) => Number(t.club_id) === Number(targetClubId));
+            }
+            this.torneos = list;
             // Sync selectedTorneo if it exists
             if (this.selectedTorneo) {
                 const updated = this.torneos.find(t => t.id === this.selectedTorneo.id);
                 if (updated) {
                     this.selectedTorneo = { ...updated };
+                } else {
+                    this.selectedTorneo = null;
                 }
             }
         });
@@ -195,6 +250,9 @@ export class TorneoAmericanoComponent implements OnInit {
             modalidad: 'unicategoria',
             precio: 0
         };
+        if (this.torneo.club_id) {
+            this.loadClubCanchas(this.torneo.club_id);
+        }
     }
 
     crearTorneo() {
@@ -203,10 +261,16 @@ export class TorneoAmericanoComponent implements OnInit {
             return;
         }
 
-        this.clubesService.createTorneoAmericano({ ...this.torneo, creator_id: this.userId }).subscribe({
+        const payload = { 
+            ...this.torneo, 
+            creator_id: this.userId,
+            canchas_ids: this.selectedCanchas.length > 0 ? this.selectedCanchas : undefined
+        };
+
+        this.clubesService.createTorneoAmericano(payload).subscribe({
             next: () => {
-                Swal.fire('¡Éxito!', 'Torneo creado correctamente.', 'success');
-                this.loadTorneos(this.userId);
+                Swal.fire('¡Éxito!', 'Torneo creado correctamente y canchas reservadas con éxito.', 'success');
+                this.loadTorneos(this.userId, this.selectedClubId);
                 this.activeTab = 'list';
                 this.resetForm();
             },
@@ -216,11 +280,33 @@ export class TorneoAmericanoComponent implements OnInit {
         });
     }
 
+    toggleEditCanchaSelection(canchaId: number) {
+        const idx = this.editSelectedCanchas.indexOf(canchaId);
+        if (idx > -1) {
+            if (this.editSelectedCanchas.length > 1) {
+                this.editSelectedCanchas.splice(idx, 1);
+            }
+        } else {
+            this.editSelectedCanchas.push(canchaId);
+        }
+        if (this.selectedTorneo) {
+            this.selectedTorneo.num_canchas = this.editSelectedCanchas.length;
+        }
+    }
+
+    isEditCanchaSelected(canchaId: number): boolean {
+        return this.editSelectedCanchas.includes(canchaId);
+    }
+
     actualizarAmericano() {
         if (!this.selectedTorneo.nombre || !this.selectedTorneo.fecha || !this.selectedTorneo.hora_inicio) {
             Swal.fire('Datos Incompletos', 'Nombre, fecha y hora son obligatorios.', 'warning');
             return;
         }
+
+        const fechaCambio = this.originalTorneoFecha && this.originalTorneoFecha !== this.selectedTorneo.fecha;
+        const horaCambio = this.originalTorneoHora && this.originalTorneoHora !== this.selectedTorneo.hora_inicio;
+        const tienePartidos = this.matches && this.matches.length > 0;
 
         const payload = {
             id: this.selectedTorneo.id,
@@ -230,16 +316,73 @@ export class TorneoAmericanoComponent implements OnInit {
             precio: this.selectedTorneo.precio,
             tiempo_por_partido: this.selectedTorneo.tiempo_por_partido,
             num_canchas: this.selectedTorneo.num_canchas,
-            max_parejas: this.selectedTorneo.max_parejas
+            max_parejas: this.selectedTorneo.max_parejas,
+            puntos_1er_lugar: this.selectedTorneo.puntos_1er_lugar,
+            puntos_2do_lugar: this.selectedTorneo.puntos_2do_lugar,
+            puntos_3er_lugar: this.selectedTorneo.puntos_3er_lugar,
+            puntos_participacion: this.selectedTorneo.puntos_participacion,
+            canchas_ids: this.editSelectedCanchas.length > 0 ? this.editSelectedCanchas : undefined
         };
 
+        if (fechaCambio || horaCambio || tienePartidos) {
+            let warningText = 'Has modificado la configuración del torneo.';
+            if (fechaCambio) {
+                warningText = `La fecha cambiará de <b>${this.originalTorneoFecha}</b> a <b>${this.selectedTorneo.fecha}</b>.<br><br>` +
+                              `⚠️ <b>Importante:</b> Las reservas de canchas antiguas se eliminarán y se crearán automáticamente en la nueva fecha (<b>${this.selectedTorneo.fecha}</b>). Además, el fixture actual se reiniciará para que puedas volver a generarlo limpiamente.`;
+            } else if (horaCambio) {
+                warningText = `El horario cambiará de <b>${this.originalTorneoHora}</b> a <b>${this.selectedTorneo.hora_inicio}</b>.<br><br>` +
+                              `⚠️ <b>Importante:</b> Las reservas de canchas y el fixture se actualizarán/reiniciarán para el nuevo horario.`;
+            } else {
+                warningText = `Al modificar los datos del torneo, el fixture actual se reiniciará para que puedas volver a generarlo con los nuevos parámetros.`;
+            }
+
+            Swal.fire({
+                title: '¿Confirmar cambios en el Americano?',
+                html: warningText,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, guardar y regenerar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#64748b'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.ejecutarActualizacionAmericano(payload, !!fechaCambio, !!tienePartidos);
+                }
+            });
+        } else {
+            this.ejecutarActualizacionAmericano(payload, false, false);
+        }
+    }
+
+    private ejecutarActualizacionAmericano(payload: any, fechaCambio: boolean, tienePartidos: boolean) {
         this.clubesService.updateAmericano(payload).subscribe({
             next: () => {
-                Swal.fire('¡Torneo Actualizado!', 'Los detalles han sido guardados.', 'success');
-                this.loadTorneos(this.userId);
+                this.originalTorneoFecha = this.selectedTorneo.fecha;
+                this.originalTorneoHora = this.selectedTorneo.hora_inicio;
+
+                // Limpiar fixture local para forzar regeneración limpia
+                this.matches = [];
+                this.matchesGrouped = [];
+
+                Swal.fire({
+                    title: '¡Torneo Actualizado!',
+                    html: fechaCambio
+                        ? 'La fecha se ha actualizado. Las reservas de canchas se trasladaron al nuevo día y el fixture se reinició para que puedas volver a generarlo.'
+                        : 'Los detalles del torneo han sido guardados y las canchas sincronizadas correctamente.',
+                    icon: 'success',
+                    confirmButtonColor: '#10b981'
+                });
+
+                this.loadTorneos(this.userId, this.selectedClubId);
+                this.loadMatches(this.selectedTorneo.id);
+
+                if (fechaCambio || tienePartidos) {
+                    this.activeDetailTab = 'fixture';
+                }
             },
             error: (err) => {
-                Swal.fire('Error', 'No se pudo actualizar el torneo.', 'error');
+                Swal.fire('Error', err.error?.message || err.error?.error || 'No se pudo actualizar el torneo.', 'error');
             }
         });
     }
@@ -247,21 +390,26 @@ export class TorneoAmericanoComponent implements OnInit {
     cancelarTorneo(torneoId: number) {
         Swal.fire({
             title: '¿Cancelar Torneo?',
-            text: "El torneo desaparecerá para los jugadores y no se podrán registrar más parejas.",
-            icon: 'error',
+            text: "El torneo se cancelará, liberará todas las reservas de cancha asociadas y no se podrán registrar más parejas.",
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Sí, cancelar torneo',
+            confirmButtonText: 'Sí, cancelar torneo y liberar canchas',
             confirmButtonColor: '#d33',
             cancelButtonText: 'Volver'
         }).then((result) => {
             if (result.isConfirmed) {
                 this.clubesService.cancelarTorneoAmericano(torneoId).subscribe({
                     next: () => {
-                        Swal.fire('Cancelado', 'El torneo ha sido cerrado.', 'success');
-                        this.loadTorneos(this.userId);
-                        this.selectedTorneo.estado = 'Cerrado';
+                        Swal.fire('Cancelado', 'El torneo ha sido cancelado y las canchas fueron liberadas exitosamente.', 'success');
+                        this.loadTorneos(this.userId, this.selectedClubId);
+                        if (this.selectedTorneo) {
+                            this.selectedTorneo.estado = 'Cerrado';
+                        }
                     },
-                    error: (err: any) => Swal.fire('Error', 'No se pudo cancelar el torneo.', 'error')
+                    error: (err: any) => {
+                        const msg = err?.error?.error || err?.message || 'No se pudo cancelar el torneo.';
+                        Swal.fire('Error', msg, 'error');
+                    }
                 });
             }
         });
@@ -283,7 +431,7 @@ export class TorneoAmericanoComponent implements OnInit {
                         if (this.selectedTorneo) {
                             this.selectedTorneo.estado = 'Cerrado';
                         }
-                        this.loadTorneos(this.userId);
+                        this.loadTorneos(this.userId, this.selectedClubId);
                     },
                     error: (err) => {
                         Swal.fire('Error', err.error?.error || 'No se pudo cerrar el torneo.', 'error');
@@ -303,10 +451,28 @@ export class TorneoAmericanoComponent implements OnInit {
 
     selectTorneo(torneo: any) {
         if (!torneo) return;
-        this.selectedTorneo = { ...torneo };
+        this.selectedTorneo = { 
+            ...torneo,
+            puntos_1er_lugar: torneo.puntos_1er_lugar !== null && torneo.puntos_1er_lugar !== undefined ? Number(torneo.puntos_1er_lugar) : 100,
+            puntos_2do_lugar: torneo.puntos_2do_lugar !== null && torneo.puntos_2do_lugar !== undefined ? Number(torneo.puntos_2do_lugar) : 60,
+            puntos_3er_lugar: torneo.puntos_3er_lugar !== null && torneo.puntos_3er_lugar !== undefined ? Number(torneo.puntos_3er_lugar) : 40,
+            puntos_participacion: torneo.puntos_participacion !== null && torneo.puntos_participacion !== undefined ? Number(torneo.puntos_participacion) : 5,
+        };
+        this.originalTorneoFecha = torneo.fecha;
+        this.originalTorneoHora = torneo.hora_inicio;
         this.activeDetailTab = 'inscription';
         this.loadParticipantes(torneo.id);
         this.loadMatches(torneo.id);
+
+        if (torneo.club_id) {
+            this.clubesService.getCanchas(torneo.club_id).subscribe(res => {
+                this.clubCanchas = res || [];
+                if (this.clubCanchas.length > 0) {
+                    const count = Math.min(this.clubCanchas.length, Math.max(1, Number(this.selectedTorneo.num_canchas) || 2));
+                    this.editSelectedCanchas = this.clubCanchas.slice(0, count).map(c => c.id);
+                }
+            });
+        }
     }
 
     loadParticipantes(torneoId: number) {
@@ -514,7 +680,7 @@ export class TorneoAmericanoComponent implements OnInit {
                     Swal.fire('¡Éxito!', res.mensaje || 'Pareja actualizada.', 'success');
                     this.loadParticipantes(this.selectedTorneo.id);
                     this.loadMatches(this.selectedTorneo.id);
-                    this.loadTorneos(this.userId);
+                    this.loadTorneos(this.userId, this.selectedClubId);
                     this.cancelEdit();
                 },
                 error: (err) => {
@@ -584,7 +750,7 @@ export class TorneoAmericanoComponent implements OnInit {
                         Swal.fire('Eliminado', res.mensaje || 'Pareja removida correctamente.', 'success');
                         this.loadParticipantes(this.selectedTorneo.id);
                         this.loadMatches(this.selectedTorneo.id);
-                        this.loadTorneos(this.userId);
+                        this.loadTorneos(this.userId, this.selectedClubId);
                     },
                     error: (err) => {
                         Swal.fire('Error', err.error?.error || 'No se pudo quitar la pareja.', 'error');
@@ -676,7 +842,7 @@ export class TorneoAmericanoComponent implements OnInit {
                     next: () => {
                         Swal.fire('¡Listo!', 'Fixture generado.', 'success');
                         this.loadMatches(torneoId);
-                        this.loadTorneos(this.userId);
+                        this.loadTorneos(this.userId, this.selectedClubId);
                     },
                     error: (err) => {
                         Swal.fire('Error', err.error?.error || 'No se pudo generar.', 'error');

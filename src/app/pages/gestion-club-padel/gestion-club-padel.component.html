@@ -1,0 +1,404 @@
+<div class="landing-page club-page">
+
+  <!-- TOP ANNOUNCEMENT BAR -->
+  <div class="top-announcement-bar">
+    <div class="container">
+      <div class="top-info">
+        <span class="badge-promo">NUEVO ⌚ SMARTWATCH & TORNEOS</span>
+        <span>Marcador en vivo en tu reloj + Ligas y Torneos Americanos automáticos</span>
+        <button (click)="openContactModal()" class="btn-text-link">Probar 90 días gratis →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT MODAL -->
+  <div class="contact-modal-overlay" *ngIf="showContactModal" (click)="closeContactModal()">
+    <div class="contact-modal" (click)="$event.stopPropagation()">
+      <button class="close-btn" (click)="closeContactModal()">✕</button>
+      <div class="modal-header">
+        <h3>Demo de Gestión de Club</h3>
+        <p>Cuéntanos sobre tu club de pádel y te mostraremos una demostración a medida.</p>
+      </div>
+      <div class="modal-body" *ngIf="!contactSuccess">
+        <form (ngSubmit)="submitContactForm()" #f="ngForm">
+          <div class="form-group">
+            <label>Nombre y Apellido *</label>
+            <input type="text" [(ngModel)]="contactForm.nombre" name="nombre" required placeholder="Ej: Juan Pérez" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Correo Electrónico *</label>
+            <input type="email" [(ngModel)]="contactForm.email" name="email" required placeholder="Ej: contacto@miclub.com" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Teléfono / WhatsApp</label>
+            <input type="text" [(ngModel)]="contactForm.telefono" name="telefono" placeholder="+56 9 1234 5678" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Nombre de tu Club de Pádel</label>
+            <input type="text" [(ngModel)]="contactForm.academia" name="academia" placeholder="Padel Center" class="form-control">
+          </div>
+          <button type="submit" class="submit-btn" [disabled]="!f.valid || isSendingContact">
+            <span *ngIf="!isSendingContact">Solicitar Demo Gratuita</span>
+            <span *ngIf="isSendingContact">Enviando...</span>
+          </button>
+        </form>
+      </div>
+      <div class="modal-success" *ngIf="contactSuccess">
+        <div class="success-icon">✓</div>
+        <h4>¡Solicitud Enviada!</h4>
+        <p>Nos pondremos en contacto contigo a la brevedad para coordinar la demostración.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="nike-navbar">
+    <div class="navbar-inner">
+      <a routerLink="/" class="logo">
+        <div class="logo-wrapper">
+          <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+        </div>
+        <span class="text">PADEL<span>BLOX</span></span>
+      </a>
+      <div class="menu">
+        <a routerLink="/" class="nav-link">Inicio</a>
+        <a routerLink="/gestion-club-padel" class="nav-link active">Club & Canchas</a>
+        <a routerLink="/gestion-entrenamientos-padel" class="nav-link">Entrenamientos & IA</a>
+        <a href="#torneos" class="nav-link">Torneos & Ligas 🏆</a>
+        <a routerLink="/smartwatch-padel" class="nav-link">Reloj & Smartwatch ⌚</a>
+        <a routerLink="/precios" class="nav-link">Precios</a>
+      </div>
+      <div class="auth-buttons">
+        <button class="btn-login" (click)="irALogin()">Iniciar Sesión</button>
+        <button class="btn-register" (click)="openContactModal()">Prueba Gratis</button>
+      </div>
+
+      <!-- Mobile Hamburger Toggle Button -->
+      <button class="mobile-nav-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'">
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+        <span class="hamburger-line" [class.active]="mobileMenuOpen"></span>
+      </button>
+    </div>
+
+    <!-- MOBILE DRAWER MENU -->
+    <div class="mobile-drawer-overlay" [class.open]="mobileMenuOpen">
+      <div class="drawer-header">
+        <a routerLink="/" class="logo" (click)="closeMobileMenu()">
+          <div class="logo-wrapper">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+          </div>
+          <span class="text">PADEL<span>BLOX</span></span>
+        </a>
+        <button class="drawer-close-btn" (click)="closeMobileMenu()">✕</button>
+      </div>
+
+      <div class="drawer-nav-list">
+        <a routerLink="/" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏠</span> Inicio
+        </a>
+        <a routerLink="/gestion-club-padel" class="drawer-nav-item active" (click)="closeMobileMenu()">
+          <span class="d-icon">🏢</span> Club & Canchas
+        </a>
+        <a routerLink="/gestion-entrenamientos-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⚡</span> Entrenamientos & IA
+        </a>
+        <a href="#torneos" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">🏆</span> Torneos & Ligas
+        </a>
+        <a routerLink="/smartwatch-padel" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">⌚</span> Reloj & Smartwatch
+        </a>
+        <a routerLink="/precios" class="drawer-nav-item" (click)="closeMobileMenu()">
+          <span class="d-icon">💎</span> Precios & Planes
+        </a>
+      </div>
+
+      <div class="drawer-action-buttons">
+        <button class="btn-drawer-login" (click)="closeMobileMenu(); irALogin()">Iniciar Sesión</button>
+        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal()">Prueba Gratis (90 Días)</button>
+      </div>
+
+      <div class="drawer-app-links">
+        <span class="app-label">Descargar App Móvil:</span>
+        <div class="app-pills">
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="app-pill"> App Store</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="app-pill">▶ Google Play</a>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-drawer-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <header class="seo-hero">
+    <div class="container">
+      <nav class="breadcrumbs" aria-label="breadcrumb">
+        <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a itemprop="item" routerLink="/"><span itemprop="name">Inicio</span></a>
+            <meta itemprop="position" content="1" />
+          </li>
+          <li>/</li>
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <span itemprop="name">Gestión de Club de Pádel</span>
+            <meta itemprop="position" content="2" />
+          </li>
+        </ol>
+      </nav>
+
+      <div class="hero-grid">
+        <div class="hero-copy reveal slide-left">
+          <span class="badge-tag">SOFTWARE ESPECIALIZADO</span>
+          <h1>SOFTWARE PARA LA <span class="text-gradient">GESTIÓN DE CLUB DE PÁDEL</span></h1>
+          <p class="hero-subtext">
+            Centraliza las reservas de tus pistas, automatiza cobros, organiza torneos americanos y gestiona el stock de tu tienda. 
+            El sistema de administración de clubes de pádel diseñado para maximizar la ocupación y rentabilidad de tus canchas.
+          </p>
+          <div class="cta-actions">
+            <button class="btn-primary-large" (click)="openContactModal()">
+              <span>PROBAR 90 DÍAS GRATIS</span>
+            </button>
+            <button class="btn-secondary-large" (click)="irALogin()">
+              <span>ACCEDER AL PANEL</span>
+            </button>
+          </div>
+          <div class="trust-pill">
+            <span>⭐️⭐️⭐️⭐️⭐️ 4.9/5 Calificación de Clubes en Chile y Latam</span>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal slide-right">
+          <div class="browser-preview-wrapper">
+            <!-- Modern Segmented Tabs Bar -->
+            <div class="preview-tabs-bar">
+              <button *ngFor="let tab of previewTabs; let i = index" 
+                      (click)="setPreviewTab(i)"
+                      class="tab-pill-btn"
+                      [class.active]="activePreviewTab === i">
+                <span class="tab-label">{{ tab.label }}</span>
+              </button>
+            </div>
+
+            <!-- 3D Glow Container with Floating Badges -->
+            <div class="mockup-glow-wrapper">
+              <!-- Ambient Background Glows -->
+              <div class="glow-orb glow-primary"></div>
+              <div class="glow-orb glow-cyan"></div>
+
+              <!-- Floating Dynamic 3D Badges -->
+              <div class="floating-badge badge-top-right">
+                <div class="badge-icon">📈</div>
+                <div class="badge-content">
+                  <span class="badge-title">+42% Ocupación</span>
+                  <span class="badge-sub">Horarios pico optimizados</span>
+                </div>
+              </div>
+
+              <div class="floating-badge badge-bottom-left">
+                <div class="badge-icon pulse-icon">⚡</div>
+                <div class="badge-content">
+                  <span class="badge-title">12 Canchas en Vivo</span>
+                  <span class="badge-sub">Arriendos sincronizados</span>
+                </div>
+              </div>
+
+              <!-- Premium Browser Mockup Card -->
+              <div class="dashboard-preview-card" (click)="openZoom(previewTabs[activePreviewTab].img, previewTabs[activePreviewTab].label)">
+                <div class="card-header-bar">
+                  <div class="mac-dots">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                  </div>
+                  <div class="url-pill">
+                    <span class="lock-icon">🔒</span>
+                    <span class="title-bar">https://app.padelblox.cl/club-dashboard</span>
+                  </div>
+                  <div class="live-status">
+                    <span class="live-dot"></span>
+                    <span>EN VIVO</span>
+                  </div>
+                </div>
+
+                <!-- Image Showcase Container with Zoom Overlay -->
+                <div class="image-showcase-box">
+                  <img [src]="previewTabs[activePreviewTab].img" 
+                       [alt]="previewTabs[activePreviewTab].label" 
+                       class="dashboard-screenshot">
+                  
+                  <!-- Hover Zoom Trigger -->
+                  <div class="zoom-hover-overlay">
+                    <span class="zoom-btn-pill">🔍 Clic para Pantalla Completa</span>
+                  </div>
+                </div>
+
+                <!-- Dynamic Bottom Feature Banner -->
+                <div class="card-footer-desc">
+                  <span class="footer-icon">⚡</span>
+                  <span class="footer-text">{{ previewTabs[activePreviewTab].desc }}</span>
+                  <span class="footer-action">Ver detalles →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- VALUE PROPOSITION -->
+  <section class="section-features reveal fade-in">
+    <div class="container">
+      <div class="section-title text-center">
+        <span class="section-badge">TODO EN UN SOLO LUGAR</span>
+        <h2>¿POR QUÉ ELEGIR NUESTRO SOFTWARE DE <span class="text-gradient">GESTIÓN DE CLUBES?</span></h2>
+        <p class="section-subtitle">
+          Diseñado específicamente para las necesidades de los clubes de pádel modernos. Olvídate de planillas de Excel complejas y chats desordenados.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-box" *ngFor="let item of clubFeatures">
+          <div class="box-icon">{{ item.icon }}</div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOURNAMENT MANAGEMENT SHOWCASE -->
+  <section id="torneos" class="section-highlight reveal fade-in">
+    <div class="container">
+      <div class="highlight-grid">
+        <div class="highlight-text">
+          <span class="section-badge">DINAMIZA TU CLUB</span>
+          <h2>CREACIÓN Y GESTIÓN DE <span class="text-gradient">TORNEOS AMERICANOS</span></h2>
+          <p>
+            Los torneos y ligas son el motor de comunidad e ingresos de cualquier club de pádel. Con PadelBlox puedes:
+          </p>
+          <ul class="check-list">
+            <li>✓ Crear cuadrantes y fixtures automáticos en segundos.</li>
+            <li>✓ Asignar canchas, horarios y rotaciones dinámicas.</li>
+            <li>✓ Registrar resultados en vivo desde cualquier tablet o smartphone.</li>
+            <li>✓ Publicar el ranking oficial del club por categorías (1ª a 6ª).</li>
+          </ul>
+          <button class="btn-primary-large" (click)="openContactModal()">
+            <span>AUTOMATIZAR MIS TORNEOS</span>
+          </button>
+        </div>
+        <div class="highlight-visual">
+          <div class="tournament-mockup-card" style="padding: 0; overflow: hidden; border-radius: 24px; background: #0c101d; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 60px rgba(0,0,0,0.6);">
+            <div style="padding: 12px 18px; background: rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mockup-badge" style="margin: 0; background: #ccff00; color: #000; font-weight: 800; padding: 4px 10px; border-radius: 12px; font-size: 0.7rem;">TORNEOS Y LIGAS</span>
+              <span style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">Panel de Fixtures y Marcadores</span>
+            </div>
+            <img src="assets/img/web/americanos.png" alt="Software para organizar torneos americanos y ligas de pádel PadelBlox" style="width: 100%; display: block; object-fit: contain;">
+            <div style="padding: 12px 18px; background: rgba(10,15,26,0.95); border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; color: #a0aec0;">
+              Rotaciones automáticas de parejas y cálculo instantáneo de tablas de posiciones.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION WITH SCHEMA MARKUP -->
+  <section class="section-faqs reveal fade-in" itemscope itemtype="https://schema.org/FAQPage">
+    <div class="container">
+      <div class="section-title text-center">
+        <span class="section-badge">RESOLVEMOS TUS DUDAS</span>
+        <h2>PREGUNTAS FRECUENTES SOBRE LA <span class="text-gradient">ADMINISTRACIÓN DE CLUBES</span></h2>
+      </div>
+
+      <div class="faq-container">
+        <div *ngFor="let faq of faqs; let i = index" 
+             class="faq-item" 
+             itemscope 
+             itemprop="mainEntity" 
+             itemtype="https://schema.org/Question">
+          <button class="faq-question" (click)="toggleFaq(i)">
+            <span itemprop="name">{{ faq.q }}</span>
+            <span class="toggle-icon" [class.open]="faq.open">+</span>
+          </button>
+          <div class="faq-answer" *ngIf="faq.open" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">{{ faq.a }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FOOTER -->
+  <section class="section-final-cta reveal slide-up">
+    <div class="container text-center">
+      <h2>LLEVA LA GESTIÓN DE TU CLUB DE PÁDEL AL SIGUIENTE NIVEL</h2>
+      <p>Comienza hoy tu prueba de 90 días sin compromiso y comprueba la diferencia en tu facturación.</p>
+      <div class="btn-wrapper">
+        <button class="btn-primary-large" (click)="openContactModal()">
+          <span>EMPEZAR PRUEBA GRATUITA</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="nike-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="brand-col">
+          <div class="footer-logo">
+            <img src="assets/images/logo-transparent.png" class="logo-img" alt="PadelBlox">
+            <h3>PADEL BLOX</h3>
+          </div>
+          <p>Elevando el rendimiento y la rentabilidad del pádel con tecnología de vanguardia.</p>
+          <div class="socials">
+            <a href="https://www.instagram.com/padelblox/" target="_blank" rel="noopener noreferrer" class="social-link">
+              <span>📸</span> Instagram
+            </a>
+            <a href="mailto:soporte@padelblox.cl" class="social-link">
+              <span>✉️</span> soporte@padelblox.cl
+            </a>
+          </div>
+        </div>
+        <div class="links-col">
+          <h4>Soluciones</h4>
+          <a routerLink="/gestion-club-padel">Gestión de Club de Pádel</a>
+          <a routerLink="/gestion-entrenamientos-padel">Gestión de Entrenamientos</a>
+          <a routerLink="/smartwatch-padel">Smartwatch & Wearables ⌚</a>
+          <a routerLink="/precios">Membresías & Planes</a>
+        </div>
+        <div class="links-col">
+          <h4>Apps Móviles</h4>
+          <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer"> App Store (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">▶ Google Play (Android)</a>
+          <a routerLink="/smartwatch-padel">⌚ Smartwatch App</a>
+        </div>
+        <div class="links-col">
+          <h4>Legal & Ayuda</h4>
+          <a routerLink="/soporte">Soporte Técnico</a>
+          <a routerLink="/login">Iniciar Sesión</a>
+          <a routerLink="/register">Registrarse Gratis</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 PadelBlox Software. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- LIGHTBOX IMAGE ZOOM MODAL -->
+  <div class="image-zoom-modal-backdrop" *ngIf="showZoomModal" (click)="closeZoom()">
+    <div class="zoom-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="zoom-modal-header">
+        <div class="modal-tab-badge">{{ zoomTitle }}</div>
+        <button class="btn-close-zoom" (click)="closeZoom()">✕ Cerrar</button>
+      </div>
+      <div class="zoom-modal-body">
+        <img [src]="zoomImage" [alt]="zoomTitle" class="zoom-full-img">
+      </div>
+    </div>
+  </div>
+
+</div>
