@@ -226,8 +226,8 @@ export class TorneoGestionComponent implements OnInit {
     selectBracketCategory(id: number) {
         this.selectedBracketCategoryId = id;
 
-        // Priority 1: If we have simulated matches, use them
-        const simMatches = this.matchesToSchedule.filter(m => m.categoryId == id && m.id < -1000);
+        // Priority 1: If we have simulated matches, filter strictly playoff matches
+        const simMatches = this.matchesToSchedule.filter(m => m.categoryId == id && (m.isPlayoff || (m.dummy && m.ronda && !m.ronda.startsWith('Grupo'))));
 
         if (simMatches.length > 0) {
             this.playoffMatches = simMatches;
@@ -426,14 +426,29 @@ export class TorneoGestionComponent implements OnInit {
                 this.activeDetailTab = 'generar';
                 this.simSubTab = 'agenda';
 
+                const assignedCount = this.matchesToSchedule.filter(m => m.tempTime).length;
+                const pendingCount = this.matchesToSchedule.filter(m => !m.tempTime).length;
+                const lastDay = this.gridDays[this.gridDays.length - 1];
+
                 Swal.close();
                 Swal.fire({
-                    title: 'Proyección Lista',
-                    text: 'Se ha generado el calendario simulado a capacidad máxima.',
-                    icon: 'success',
+                    title: 'Proyección Lista 🚀',
+                    html: `
+                        <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+                            <p style="margin: 0 0 10px 0;"><strong>Planificación Experta Generada:</strong></p>
+                            <ul style="margin: 0 0 10px 18px; padding: 0;">
+                                <li><strong>${assignedCount}</strong> partidos programados en turnos disponibles.</li>
+                                ${pendingCount > 0
+                                    ? `<li style="color: #dc2626;"><strong>${pendingCount}</strong> partidos pendientes (turnos insuficientes en la configuración).</li>`
+                                    : '<li style="color: #16a34a;"><strong>0 partidos pendientes</strong> (100% encuadrados).</li>'}
+                                <li>Fase de grupos programada en los días iniciales.</li>
+                                <li>Playoffs progresivos según parejas clasificadas.</li>
+                                <li><strong>Finales estelares programadas el último día (${lastDay || 'Día Final'}).</strong></li>
+                            </ul>
+                        </div>
+                    `,
+                    icon: pendingCount > 0 ? 'info' : 'success',
                     showConfirmButton: true,
-                    showCancelButton: false,
-                    showDenyButton: false,
                     confirmButtonText: 'Ver Agenda',
                     confirmButtonColor: '#0f172a'
                 });
@@ -532,8 +547,14 @@ export class TorneoGestionComponent implements OnInit {
                     this.selectedTorneo.formato_grupos = res.torneo.formato_grupos || 4;
                     this.selectedTorneo.formato_sets = res.torneo.formato_sets || 'Full Sets';
                 }
+                this.initAvailabilityGrid();
+                this.calculateStats();
             },
-            error: (err) => console.error('Error loading availability', err)
+            error: (err) => {
+                console.error('Error loading availability', err);
+                this.initAvailabilityGrid();
+                this.calculateStats();
+            }
         });
 
         // Load courts
@@ -541,30 +562,34 @@ export class TorneoGestionComponent implements OnInit {
     }
 
     processSchedule(allInscripciones: any[][]) {
-        console.log('Processing schedule for', this.categorias.length, 'categories');
+        console.log('Processing expert schedule for', this.categorias.length, 'categories');
         this.matchesToSchedule = [];
 
         // 1. Prepare Available Slots (Time x Courts)
-        // usage of "this" works correctly here
         let usableCourts = this.clubCanchas.filter(c => this.planParams.selectedCanchasIds.includes(c.id));
         if (usableCourts.length === 0) usableCourts = this.clubCanchas;
+        if (usableCourts.length === 0) {
+            const courtNum = Math.max(1, Number(this.selectedTorneo?.num_canchas) || 2);
+            usableCourts = [];
+            for (let i = 1; i <= courtNum; i++) {
+                usableCourts.push({ id: i, nombre: `Pista ${i}` });
+            }
+        }
 
-        // Create a pool of "Assignable Slots"
         const slots: any[] = [];
         const durationMins = this.matchDuration || 75;
 
         this.gridDays.forEach(day => {
             if (this.availabilityGrid[day]) {
-                const hours = this.availabilityGrid[day].sort((a, b) => a - b);
+                const hours = [...this.availabilityGrid[day]].sort((a, b) => a - b);
                 if (hours.length === 0) return;
 
-                // 1a. Group discrete hours into continuous time blocks
+                // Group discrete hours into continuous blocks
                 let blocks = [];
                 let currentBlock = { start: hours[0], end: hours[0] + 1 };
-                
                 for (let i = 1; i < hours.length; i++) {
                     if (hours[i] === currentBlock.end) {
-                        currentBlock.end = hours[i] + 1; // Extend block
+                        currentBlock.end = hours[i] + 1;
                     } else {
                         blocks.push(currentBlock);
                         currentBlock = { start: hours[i], end: hours[i] + 1 };
@@ -572,7 +597,6 @@ export class TorneoGestionComponent implements OnInit {
                 }
                 blocks.push(currentBlock);
 
-                // 1b. Fill each block with back-to-back matches of `durationMins`
                 usableCourts.forEach((court) => {
                     blocks.forEach(block => {
                         const parts = day.split('-');
@@ -584,18 +608,18 @@ export class TorneoGestionComponent implements OnInit {
                             const h = dateObj.getHours();
                             const m = dateObj.getMinutes();
                             const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                            
+
                             slots.push({
                                 date: day,
                                 hour: h,
+                                minute: m,
                                 timeString: timeString,
                                 courtId: court.id,
                                 courtName: court.nombre,
                                 timestamp: currentTimestamp,
-                                label: `${day} ${timeString} - ${court.nombre}`
+                                used: false
                             });
-                            
-                            // Advance exactly by the duration of the match (e.g. 75 minutes)
+
                             currentTimestamp += (durationMins * 60000);
                         }
                     });
@@ -603,180 +627,277 @@ export class TorneoGestionComponent implements OnInit {
             }
         });
 
-        // Sort slots chronologically
-        slots.sort((a, b) => a.timestamp - b.timestamp);
-        let slotIndex = 0;
-        const allGroupMatches: any[] = [];
+        // Chronological sort
+        slots.sort((a, b) => a.timestamp - b.timestamp || a.courtId - b.courtId);
 
-        // Use a map to collect playoff matches by round across ALL categories
-        const playoffRoundsMap: { [key: string]: any[] } = {
-            'Dieciseisavos': [],
-            'Octavos': [],
-            'Cuartos': [],
-            'Semi': [],
-            'Final': []
-        };
+        const allGroupMatches: any[] = [];
+        const allDieciseisMatches: any[] = [];
+        const allOctavosMatches: any[] = [];
+        const allCuartosMatches: any[] = [];
+        const allSemiMatches: any[] = [];
+        const allFinalMatches: any[] = [];
 
         this.simulatedGroupsSummary = [];
 
         let groupMatchId = -5000;
         let playoffMatchId = -8000;
 
-        // 2. Collection Phase
+        // 2. Collection Phase: Groups & Mathematical Playoff Generation
         this.categorias.forEach((cat, index) => {
             let inscritos = [...(allInscripciones[index] || [])];
-
-            // Intelligent Group Distribution
-            const prefSize = this.selectedTorneo.formato_grupos || 4;
+            const prefSize = this.selectedTorneo?.formato_grupos || 4;
             const dist = this.getOptimalGroupDistribution(inscritos.length, prefSize);
 
-            console.log(`Category ${cat.nombre}: ${inscritos.length} pairs distributed as:`, dist);
-            
             const catSummary: any = { category: cat.nombre, categoryId: cat.id, groups: [] };
 
             let pairIndex = 0;
             dist.forEach((size, groupIdx) => {
                 const group = inscritos.slice(pairIndex, pairIndex + size);
                 pairIndex += size;
-
                 const groupName = String.fromCharCode(65 + groupIdx);
                 const groupPairs = group.map(p => p.nombre_jugador_1 ? `${p.nombre_jugador_1} / ${p.nombre_jugador_2}` : (p.nombre_pareja || 'TBD'));
-                
+
                 catSummary.groups.push({
                     name: groupName,
                     matchCount: (group.length * (group.length - 1)) / 2,
                     pairs: groupPairs
                 });
 
-                // If group is incomplete (dummies needed if we wanted to force size, 
-                // but let's just use what we have to be real)
                 for (let x = 0; x < group.length; x++) {
                     for (let y = x + 1; y < group.length; y++) {
                         allGroupMatches.push({
-                            id: groupMatchId--, // UNIQUE ID per group match
+                            id: groupMatchId--,
                             category: cat.nombre,
                             categoryId: cat.id,
                             ronda: `Grupo ${groupName}`,
+                            roundOrder: 1,
                             team1: group[x],
                             team2: group[y],
-                            pareja1_nombre: group[x].nombre_jugador_1 ? `${group[x].nombre_jugador_1} / ${group[x].nombre_jugador_2}` : (group[x].nombre_pareja || 'TBD'),
-                            pareja2_nombre: group[y].nombre_jugador_1 ? `${group[y].nombre_jugador_1} / ${group[y].nombre_jugador_2}` : (group[y].nombre_pareja || 'TBD'),
-                            duration: this.matchDuration
+                            pareja1_id: group[x].id,
+                            pareja2_id: group[y].id,
+                            pareja1_nombre: group[x].nombre_jugador_1 ? `${group[x].nombre_jugador_1} / ${group[x].nombre_jugador_2}` : (group[x].nombre_pareja || `Pareja ${x + 1}`),
+                            pareja2_nombre: group[y].nombre_jugador_1 ? `${group[y].nombre_jugador_1} / ${group[y].nombre_jugador_2}` : (group[y].nombre_pareja || `Pareja ${y + 1}`),
+                            duration: durationMins,
+                            isGroup: true,
+                            dummy: true
                         });
                     }
                 }
             });
             this.simulatedGroupsSummary.push(catSummary);
 
-            // Playoffs - Expert Padel Logic
-            // In Padel, usually the top 2 from each group advance to the bracket.
-            const advancingPairs = dist.length * 2; // Number of groups * 2
-            let rounds: string[] = [];
-            
-            if (advancingPairs > 16) rounds = ['Dieciseisavos', 'Octavos', 'Cuartos', 'Semi', 'Final'];
-            else if (advancingPairs > 8) rounds = ['Octavos', 'Cuartos', 'Semi', 'Final'];
-            else if (advancingPairs > 4) rounds = ['Cuartos', 'Semi', 'Final'];
-            else if (advancingPairs > 2) rounds = ['Semi', 'Final'];
-            else if (advancingPairs > 0) rounds = ['Final'];
+            // Playoff Generation: Top 2 from each group advance (Standard Padel)
+            const advancingPairs = Math.max(2, dist.length * 2);
+            const catPrefix = cat.id * 1000;
 
-            rounds.forEach(round => {
-                const matchCount = round === 'Dieciseisavos' ? 16 : (round === 'Octavos' ? 8 : (round === 'Cuartos' ? 4 : (round === 'Semi' ? 2 : 1)));
-                for (let i = 0; i < matchCount; i++) {
-                    playoffRoundsMap[round].push({
-                        id: playoffMatchId--, // UNIQUE ID for dummies
+            // Dieciseisavos (if > 16 advancing pairs)
+            if (advancingPairs > 16) {
+                const count16 = advancingPairs === 32 ? 16 : (advancingPairs - 16);
+                for (let i = 0; i < count16; i++) {
+                    allDieciseisMatches.push({
+                        id: playoffMatchId--,
                         category: cat.nombre,
                         categoryId: cat.id,
-                        ronda: round,
+                        ronda: 'Dieciseisavos',
+                        roundOrder: 2,
+                        nivel: 5,
+                        posicion: i,
+                        pareja1_id: -(catPrefix + 100 + (i * 2 + 1)),
+                        pareja2_id: -(catPrefix + 100 + (i * 2 + 2)),
                         pareja1_nombre: `Clasificado ${i * 2 + 1}`,
                         pareja2_nombre: `Clasificado ${i * 2 + 2}`,
-                        duration: this.matchDuration,
+                        duration: durationMins,
+                        isPlayoff: true,
                         dummy: true
                     });
                 }
+            }
+
+            // Octavos (if > 8 advancing pairs)
+            if (advancingPairs > 8) {
+                const count8 = (advancingPairs >= 16) ? 8 : (advancingPairs - 8);
+                for (let i = 0; i < count8; i++) {
+                    allOctavosMatches.push({
+                        id: playoffMatchId--,
+                        category: cat.nombre,
+                        categoryId: cat.id,
+                        ronda: 'Octavos',
+                        roundOrder: 3,
+                        nivel: 4,
+                        posicion: i,
+                        pareja1_id: -(catPrefix + 200 + (i * 2 + 1)),
+                        pareja2_id: -(catPrefix + 200 + (i * 2 + 2)),
+                        pareja1_nombre: `Octavofinalista ${i * 2 + 1}`,
+                        pareja2_nombre: `Octavofinalista ${i * 2 + 2}`,
+                        duration: durationMins,
+                        isPlayoff: true,
+                        dummy: true
+                    });
+                }
+            }
+
+            // Cuartos (if > 4 advancing pairs)
+            if (advancingPairs > 4) {
+                const count4 = (advancingPairs >= 8) ? 4 : (advancingPairs - 4);
+                for (let i = 0; i < count4; i++) {
+                    allCuartosMatches.push({
+                        id: playoffMatchId--,
+                        category: cat.nombre,
+                        categoryId: cat.id,
+                        ronda: 'Cuartos',
+                        roundOrder: 4,
+                        nivel: 3,
+                        posicion: i,
+                        pareja1_id: -(catPrefix + 300 + (i * 2 + 1)),
+                        pareja2_id: -(catPrefix + 300 + (i * 2 + 2)),
+                        pareja1_nombre: `Cuartofinalista ${i * 2 + 1}`,
+                        pareja2_nombre: `Cuartofinalista ${i * 2 + 2}`,
+                        duration: durationMins,
+                        isPlayoff: true,
+                        dummy: true
+                    });
+                }
+            }
+
+            // Semifinales (if > 2 advancing pairs)
+            if (advancingPairs > 2) {
+                const countSemi = 2;
+                for (let i = 0; i < countSemi; i++) {
+                    allSemiMatches.push({
+                        id: playoffMatchId--,
+                        category: cat.nombre,
+                        categoryId: cat.id,
+                        ronda: 'Semi',
+                        roundOrder: 5,
+                        nivel: 2,
+                        posicion: i,
+                        pareja1_id: -(catPrefix + 400 + (i * 2 + 1)),
+                        pareja2_id: -(catPrefix + 400 + (i * 2 + 2)),
+                        pareja1_nombre: `Semifinalista ${i * 2 + 1}`,
+                        pareja2_nombre: `Semifinalista ${i * 2 + 2}`,
+                        duration: durationMins,
+                        isPlayoff: true,
+                        dummy: true
+                    });
+                }
+            }
+
+            // Final (Always 1 Final per category)
+            allFinalMatches.push({
+                id: playoffMatchId--,
+                category: cat.nombre,
+                categoryId: cat.id,
+                ronda: 'Final',
+                roundOrder: 6,
+                nivel: 1,
+                posicion: 0,
+                pareja1_id: -(catPrefix + 501),
+                pareja2_id: -(catPrefix + 502),
+                pareja1_nombre: `Finalista 1 (${cat.nombre})`,
+                pareja2_nombre: `Finalista 2 (${cat.nombre})`,
+                duration: durationMins,
+                isPlayoff: true,
+                dummy: true
             });
         });
 
-        // 3. Phased Scheduling - Expert Padel Distribution
-        this.matchesToSchedule = [];
-        const lastDay = this.gridDays[this.gridDays.length - 1];
-        const prevDay = this.gridDays.length > 1 ? this.gridDays[this.gridDays.length - 2] : lastDay;
+        // 3. Phased Scheduling: Finals on Last Day & Chronological Progression Across the Week
+        const D = this.gridDays.length;
+        const lastDay = this.gridDays[D - 1];
+        const prevDay = D > 1 ? this.gridDays[D - 2] : lastDay;
 
-        const semiCount = playoffRoundsMap['Semi'].length;
-        const finalCount = playoffRoundsMap['Final'].length;
+        // Target day sets for each phase
+        // Finales: ALWAYS lastDay
+        const finalTargetDays = new Set([lastDay]);
 
-        const semiPoolRaw = slots.filter(s => s.date === prevDay);
-        const finalPoolRaw = slots.filter(s => s.date === lastDay);
+        // Semifinales:
+        // Multi-day (>=3 days): prevDay and lastDay morning
+        // <=2 days: all days
+        const semiTargetDays = new Set(D >= 3 ? [prevDay, lastDay] : this.gridDays);
 
-        let semiPool = semiPoolRaw.length >= semiCount ? semiPoolRaw : slots.slice(-(semiCount + finalCount));
-        let finalPool = finalPoolRaw.length >= finalCount ? finalPoolRaw : slots.slice(-finalCount);
+        // Cuartos:
+        // Week-long (>=5 days): Days D-3 and D-2 (e.g. Viernes and Sábado)
+        // 3-4 days: prevDay (Day D-2)
+        // <=2 days: all days
+        const cuartosTargetDays = new Set(
+            D >= 5 ? [this.gridDays[D - 3], prevDay]
+            : (D >= 3 ? [prevDay] : this.gridDays)
+        );
 
-        const usedBySF = new Set([...semiPool, ...finalPool]);
-        let rPool = slots.filter(s => !usedBySF.has(s));
-        if (rPool.length === 0) rPool = slots;
+        // Octavos & Dieciseis:
+        // Week-long (>=5 days): Days D-4 and D-3 (e.g. Jueves and Viernes)
+        // 3-4 days: Days 0 and prevDay
+        // <=2 days: all days
+        const earlyPlayoffTargetDays = new Set(
+            D >= 5 ? [this.gridDays[D - 4], this.gridDays[D - 3]]
+            : (D >= 3 ? [this.gridDays[0], prevDay] : this.gridDays)
+        );
 
-        // Player Constraints Trackers
+        // Fase de Grupos:
+        // Week-long (>=5 days): Days 0 to D-3 (e.g. Sáb 24, Dom 25, Lun 26, Mar 27, Mié 28, Jue 29...)
+        // 3-4 days: Days 0 to D-2 (e.g. Viernes and Sábado morning)
+        // <=2 days: all days
+        const groupTargetDays = new Set(
+            D >= 5 ? this.gridDays.slice(0, D - 2)
+            : (D >= 3 ? this.gridDays.slice(0, D - 1) : this.gridDays)
+        );
+
+        // Player & Category Constraints Trackers
         const playerDailyMatches: { [playerId: string]: { [date: string]: number } } = {};
-        const playerLastMatch: { [playerId: string]: number } = {};
+        const playerLastEnd: { [playerId: string]: number } = {};
+        const categoryFinalTime: { [catId: number]: number } = {};
+        const categoryEarliestSemiTime: { [catId: number]: number } = {};
+        const categoryEarliestCuartosTime: { [catId: number]: number } = {};
+        const categoryEarliestPlayoffTime: { [catId: number]: number } = {};
 
-        const getPlayerIds = (m: any) => {
-            let ids = [];
-            if (m.team1 && m.team1.id) ids.push(m.team1.id);
-            if (m.team2 && m.team2.id) ids.push(m.team2.id);
-            // If playoff/dummy, track by category+round to prevent back-to-back in playoffs
-            if (ids.length === 0) {
-                ids.push(`${m.categoryId}_playoffs`);
-            }
+        const getMatchPlayerIds = (m: any): any[] => {
+            const ids: any[] = [];
+            if (m.pareja1_id != null) ids.push(m.pareja1_id);
+            if (m.pareja2_id != null) ids.push(m.pareja2_id);
+            if (m.team1 && m.team1.id != null) ids.push(m.team1.id);
+            if (m.team2 && m.team2.id != null) ids.push(m.team2.id);
             return ids;
         };
 
-        const canPlay = (m: any, slot: any) => {
-            const ids = getPlayerIds(m);
+        const canPairPlayInSlot = (m: any, slot: any, checkRest: boolean = true, maxDaily: number = 2): boolean => {
+            const ids = getMatchPlayerIds(m);
             for (let id of ids) {
-                if (playerDailyMatches[id] && playerDailyMatches[id][slot.date] >= 2) return false;
-                // Minimum rest period: 1 match duration gap
-                if (playerLastMatch[id] && (slot.timestamp - playerLastMatch[id]) < (durationMins * 60000)) return false;
+                if (maxDaily && playerDailyMatches[id] && playerDailyMatches[id][slot.date] >= maxDaily) {
+                    return false;
+                }
+                if (checkRest && playerLastEnd[id]) {
+                    const diff = Math.abs(slot.timestamp - playerLastEnd[id]);
+                    if (diff < durationMins * 60000) return false;
+                }
             }
             return true;
         };
 
-        const violatesAmateurRestrictions = (m: any, slot: any) => {
-            // In amateur padel, players have day/time restrictions.
-            // We check if the team object has declared any restricted days.
-            const checkTeam = (team: any) => {
-                if (!team) return false;
-                // This gracefully handles generic restrictions if added to the team object in the future
-                // e.g. team.dias_restringidos = ['15-05-2026']
-                if (team.dias_restringidos && team.dias_restringidos.includes(slot.date)) return true;
-                
-                // Common amateur logic: If slot is weekday (Mon=1..Fri=5) and hour < 18:00, 
-                // and team explicitly marked "Solo tardes", we block it.
-                const dayOfWeek = new Date(slot.timestamp).getDay();
-                if (dayOfWeek >= 1 && dayOfWeek <= 5 && slot.hour < 18 && team.solo_tardes) return true;
+        const recordMatchAssignment = (m: any, slot: any) => {
+            slot.used = true;
+            m.tempDate = slot.date;
+            m.tempTime = slot.timeString;
+            m.tempCanchaId = slot.courtId;
+            m.court = slot.courtName;
 
-                return false;
-            };
-            return checkTeam(m.team1) || checkTeam(m.team2);
-        };
-
-        const recordPlay = (m: any, slot: any) => {
-            const ids = getPlayerIds(m);
+            const ids = getMatchPlayerIds(m);
             for (let id of ids) {
                 if (!playerDailyMatches[id]) playerDailyMatches[id] = {};
                 playerDailyMatches[id][slot.date] = (playerDailyMatches[id][slot.date] || 0) + 1;
-                playerLastMatch[id] = slot.timestamp;
+                playerLastEnd[id] = slot.timestamp + durationMins * 60000;
             }
+            this.matchesToSchedule.push(m);
         };
 
         const mixCategories = (matches: any[]) => {
-            // Interleaving Algorithm: Distributes categories evenly to avoid clustering
             const byCategory: { [catId: string]: any[] } = {};
             matches.forEach(m => {
                 if (!byCategory[m.categoryId]) byCategory[m.categoryId] = [];
                 byCategory[m.categoryId].push(m);
             });
-            const mixed = [];
+            const mixed: any[] = [];
             let added = true;
-            while(added) {
+            while (added) {
                 added = false;
                 for (const catId in byCategory) {
                     if (byCategory[catId].length > 0) {
@@ -788,109 +909,261 @@ export class TorneoGestionComponent implements OnInit {
             return mixed;
         };
 
-        const scheduleIntelligently = (batch: any[], primaryPool: any[], fallbackPool: any[]) => {
-            // Interleave categories to ensure visual and chronological variety
-            const mixedBatch = mixCategories(batch);
+        // --- STAGE A: FINALES (Siempre el último día, horarios estelares de tarde) ---
+        const lastDaySlots = slots.filter(s => s.date === lastDay);
+        const afternoonFinalSlots = lastDaySlots.filter(s => s.hour >= 15);
+        const finalCandidateSlots = afternoonFinalSlots.length >= allFinalMatches.length
+            ? afternoonFinalSlots
+            : lastDaySlots;
 
-            // Priority: Schedule groups first, then playoffs
-            mixedBatch.forEach(m => {
-                let assigned = false;
-                
-                // Pass 1: Strict constraints on Primary Pool (Ideal Phase)
-                for (let i = 0; i < primaryPool.length; i++) {
-                    const slot = primaryPool[i];
-                    if (!slot.used && canPlay(m, slot) && !violatesAmateurRestrictions(m, slot)) {
-                        slot.used = true;
-                        m.tempDate = slot.date;
-                        m.tempTime = slot.timeString;
-                        m.tempCanchaId = slot.courtId;
-                        m.court = slot.courtName;
-                        recordPlay(m, slot);
-                        assigned = true;
+        allFinalMatches.forEach(m => {
+            let assignedSlot: any = null;
+            for (let i = finalCandidateSlots.length - 1; i >= 0; i--) {
+                const s = finalCandidateSlots[i];
+                if (!s.used && canPairPlayInSlot(m, s, false, 0)) {
+                    assignedSlot = s;
+                    break;
+                }
+            }
+            if (!assignedSlot) {
+                for (let i = lastDaySlots.length - 1; i >= 0; i--) {
+                    const s = lastDaySlots[i];
+                    if (!s.used) {
+                        assignedSlot = s;
                         break;
                     }
                 }
+            }
+            if (!assignedSlot) {
+                for (let i = slots.length - 1; i >= 0; i--) {
+                    if (!slots[i].used) {
+                        assignedSlot = slots[i];
+                        break;
+                    }
+                }
+            }
 
-                // Pass 2: Strict constraints on Fallback Pool (If forced to overflow Phase)
-                if (!assigned && fallbackPool) {
-                    for (let i = 0; i < fallbackPool.length; i++) {
-                        const slot = fallbackPool[i];
-                        if (!slot.used && canPlay(m, slot) && !violatesAmateurRestrictions(m, slot)) {
-                            slot.used = true;
-                            m.tempDate = slot.date;
-                            m.tempTime = slot.timeString;
-                            m.tempCanchaId = slot.courtId;
-                            m.court = slot.courtName;
-                            recordPlay(m, slot);
-                            assigned = true;
-                            break;
-                        }
-                    }
-                }
-                
-                // Pass 3: Relax constraints on Fallback Pool (Force fit if tight on days, BUT still respect work hours)
-                if (!assigned && fallbackPool) {
-                    for (let i = 0; i < fallbackPool.length; i++) {
-                        const slot = fallbackPool[i];
-                        if (!slot.used && !violatesAmateurRestrictions(m, slot)) {
-                            slot.used = true;
-                            m.tempDate = slot.date;
-                            m.tempTime = slot.timeString;
-                            m.tempCanchaId = slot.courtId;
-                            m.court = slot.courtName;
-                            recordPlay(m, slot);
-                            assigned = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!assigned) {
-                    m.tempDate = '';
-                    m.tempTime = '';
-                    m.tempCanchaId = null;
-                    m.court = 'Sin Horario';
-                }
+            if (assignedSlot) {
+                recordMatchAssignment(m, assignedSlot);
+                categoryFinalTime[m.categoryId] = assignedSlot.timestamp;
+            } else {
+                m.tempDate = '';
+                m.tempTime = '';
+                m.court = 'Sin Horario';
                 this.matchesToSchedule.push(m);
+            }
+        });
+
+        // --- STAGE B: SEMIFINALES ---
+        // Deben terminar antes de las finales de su categoría con al menos 60-90 min de descanso
+        // Programadas en semiTargetDays (prevDay tarde/noche o lastDay mañana)
+        const mixedSemis = mixCategories(allSemiMatches);
+        mixedSemis.forEach(m => {
+            const finalTime = categoryFinalTime[m.categoryId] || Infinity;
+            const maxSemiEnd = finalTime - (durationMins + 60) * 60000;
+
+            let assignedSlot: any = null;
+
+            // Búsqueda en días destino de semifinales
+            for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!s.used && semiTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxSemiEnd && canPairPlayInSlot(m, s, true, 2)) {
+                    assignedSlot = s;
+                    break;
+                }
+            }
+
+            // Fallback: relajar descanso dentro de semiTargetDays
+            if (!assignedSlot) {
+                for (let i = 0; i < slots.length; i++) {
+                    const s = slots[i];
+                    if (!s.used && semiTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxSemiEnd && canPairPlayInSlot(m, s, false, 0)) {
+                        assignedSlot = s;
+                        break;
+                    }
+                }
+            }
+
+            if (assignedSlot) {
+                recordMatchAssignment(m, assignedSlot);
+                categoryEarliestSemiTime[m.categoryId] = Math.min(categoryEarliestSemiTime[m.categoryId] || Infinity, assignedSlot.timestamp);
+                categoryEarliestPlayoffTime[m.categoryId] = Math.min(categoryEarliestPlayoffTime[m.categoryId] || Infinity, assignedSlot.timestamp);
+            } else {
+                m.tempDate = '';
+                m.tempTime = '';
+                m.court = 'Sin Horario';
+                this.matchesToSchedule.push(m);
+            }
+        });
+
+        // --- STAGE C: CUARTOS DE FINAL ---
+        // Deben terminar antes de las semifinales de su categoría
+        // Programados en cuartosTargetDays (días D-3 y D-2)
+        const mixedCuartos = mixCategories(allCuartosMatches);
+        mixedCuartos.forEach(m => {
+            const nextRoundTime = categoryEarliestSemiTime[m.categoryId] || categoryFinalTime[m.categoryId] || Infinity;
+            const maxCuartosEnd = nextRoundTime - (durationMins + 45) * 60000;
+
+            let assignedSlot: any = null;
+
+            for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!s.used && cuartosTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxCuartosEnd && canPairPlayInSlot(m, s, true, 2)) {
+                    assignedSlot = s;
+                    break;
+                }
+            }
+
+            if (!assignedSlot) {
+                for (let i = 0; i < slots.length; i++) {
+                    const s = slots[i];
+                    if (!s.used && cuartosTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxCuartosEnd && canPairPlayInSlot(m, s, false, 0)) {
+                        assignedSlot = s;
+                        break;
+                    }
+                }
+            }
+
+            if (assignedSlot) {
+                recordMatchAssignment(m, assignedSlot);
+                categoryEarliestCuartosTime[m.categoryId] = Math.min(categoryEarliestCuartosTime[m.categoryId] || Infinity, assignedSlot.timestamp);
+                categoryEarliestPlayoffTime[m.categoryId] = Math.min(categoryEarliestPlayoffTime[m.categoryId] || Infinity, assignedSlot.timestamp);
+            } else {
+                m.tempDate = '';
+                m.tempTime = '';
+                m.court = 'Sin Horario';
+                this.matchesToSchedule.push(m);
+            }
+        });
+
+        // --- STAGE D: OCTAVOS & DIECISEISAVOS ---
+        // Programados en earlyPlayoffTargetDays (días D-4 y D-3)
+        const earlyPlayoffs = mixCategories([...allDieciseisMatches, ...allOctavosMatches]);
+        earlyPlayoffs.forEach(m => {
+            const nextRoundTime = categoryEarliestCuartosTime[m.categoryId] || categoryEarliestSemiTime[m.categoryId] || categoryFinalTime[m.categoryId] || Infinity;
+            const maxEnd = nextRoundTime - (durationMins + 45) * 60000;
+
+            let assignedSlot: any = null;
+
+            for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!s.used && earlyPlayoffTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxEnd && canPairPlayInSlot(m, s, true, 2)) {
+                    assignedSlot = s;
+                    break;
+                }
+            }
+
+            if (!assignedSlot) {
+                for (let i = 0; i < slots.length; i++) {
+                    const s = slots[i];
+                    if (!s.used && earlyPlayoffTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxEnd && canPairPlayInSlot(m, s, false, 0)) {
+                        assignedSlot = s;
+                        break;
+                    }
+                }
+            }
+
+            if (assignedSlot) {
+                recordMatchAssignment(m, assignedSlot);
+                categoryEarliestPlayoffTime[m.categoryId] = Math.min(categoryEarliestPlayoffTime[m.categoryId] || Infinity, assignedSlot.timestamp);
+            } else {
+                m.tempDate = '';
+                m.tempTime = '';
+                m.court = 'Sin Horario';
+                this.matchesToSchedule.push(m);
+            }
+        });
+
+        // --- STAGE E: FASE DE GRUPOS (OCUPA TODO EL HORARIO DE LA SEMANA) ---
+        // Se programan en groupTargetDays (días 0 a D-3) ocupando todos los horarios de la semana
+        const mixedGroupMatches = mixCategories(allGroupMatches);
+
+        mixedGroupMatches.forEach(m => {
+            const nextRoundTime = categoryEarliestPlayoffTime[m.categoryId] || categoryFinalTime[m.categoryId] || Infinity;
+            const maxGroupEnd = nextRoundTime - (durationMins + 45) * 60000;
+
+            let assignedSlot: any = null;
+
+            // Pase 1: Restricciones óptimas (descansos completos, máx 2 partidos/día) en groupTargetDays
+            for (let i = 0; i < slots.length; i++) {
+                const s = slots[i];
+                if (!s.used && groupTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxGroupEnd && canPairPlayInSlot(m, s, true, 2)) {
+                    assignedSlot = s;
+                    break;
+                }
+            }
+
+            // Pase 2: Flexibilidad de descanso dentro de groupTargetDays
+            if (!assignedSlot) {
+                for (let i = 0; i < slots.length; i++) {
+                    const s = slots[i];
+                    if (!s.used && groupTargetDays.has(s.date) && s.timestamp + (durationMins * 60000) <= maxGroupEnd && canPairPlayInSlot(m, s, false, 3)) {
+                        assignedSlot = s;
+                        break;
+                    }
+                }
+            }
+
+            // Pase 3: Si los días asignados se llenan, permitir cualquier día previo a la final antes de los playoffs
+            if (!assignedSlot) {
+                for (let i = 0; i < slots.length; i++) {
+                    const s = slots[i];
+                    const allowDate = D >= 3 ? s.date !== lastDay : true;
+                    if (!s.used && allowDate && s.timestamp + (durationMins * 60000) <= maxGroupEnd && canPairPlayInSlot(m, s, false, 0)) {
+                        assignedSlot = s;
+                        break;
+                    }
+                }
+            }
+
+            if (assignedSlot) {
+                recordMatchAssignment(m, assignedSlot);
+            } else {
+                m.tempDate = '';
+                m.tempTime = '';
+                m.court = 'Sin Horario';
+                this.matchesToSchedule.push(m);
+            }
+        });
+
+        // --- STAGE F: GARANTÍA CERO PENDIENTES (Greedy Allocation) ---
+        // Si quedó algún partido sin turno por restricciones estrictas pero aún hay canchas libres:
+        const unassignedMatches = this.matchesToSchedule.filter(m => !m.tempTime || m.tempTime === '');
+        if (unassignedMatches.length > 0) {
+            console.log(`Pase Greedy: Acomodando ${unassignedMatches.length} partidos pendientes en canchas libres restantes`);
+            const freeSlots = slots.filter(s => !s.used);
+
+            unassignedMatches.forEach(m => {
+                const nextRoundTime = (m.ronda === 'Final')
+                    ? Infinity
+                    : ((m.ronda === 'Semi')
+                        ? (categoryFinalTime[m.categoryId] || Infinity)
+                        : (categoryEarliestPlayoffTime[m.categoryId] || categoryFinalTime[m.categoryId] || Infinity));
+
+                for (let i = 0; i < freeSlots.length; i++) {
+                    const s = freeSlots[i];
+                    if (!s.used && (s.timestamp + durationMins * 60000) <= nextRoundTime) {
+                        s.used = true;
+                        m.tempDate = s.date;
+                        m.tempTime = s.timeString;
+                        m.tempCanchaId = s.courtId;
+                        m.court = s.courtName;
+                        break;
+                    }
+                }
             });
-        };
-
-        const earlyPlayoffMatches = [...playoffRoundsMap['Dieciseisavos'], ...playoffRoundsMap['Octavos']];
-        const midPlayoffMatches = playoffRoundsMap['Cuartos'];
-
-        const groupCount = allGroupMatches.length;
-        const earlyCount = earlyPlayoffMatches.length;
-        const midCount = midPlayoffMatches.length;
-        const totalRegCount = groupCount + earlyCount + midCount;
-
-        // Phase-Based Distributed Allocation (Professional Pacing)
-        let groupPool = rPool;
-        let earlyPool = rPool;
-        let midPool = rPool;
-
-        if (rPool.length >= totalRegCount && totalRegCount > 0) {
-            const gSlots = Math.floor((groupCount / totalRegCount) * rPool.length);
-            const eSlots = Math.floor((earlyCount / totalRegCount) * rPool.length);
-            
-            groupPool = rPool.slice(0, gSlots);
-            earlyPool = rPool.slice(gSlots, gSlots + eSlots);
-            midPool = rPool.slice(gSlots + eSlots);
         }
-        
-        // Intelligent Phase Loading (Try ideal phase first, fallback to entire week if constraints force it)
-        scheduleIntelligently(allGroupMatches, groupPool, rPool);
-        scheduleIntelligently(earlyPlayoffMatches, earlyPool, rPool);
-        scheduleIntelligently(midPlayoffMatches, midPool, rPool);
 
-        // Semis and Finals explicitly scheduled on specific days
-        scheduleIntelligently(playoffRoundsMap['Semi'], semiPool, semiPool);
-        scheduleIntelligently(playoffRoundsMap['Final'], finalPool, finalPool);
+        // Ordenar todos los partidos cronológicamente
+        this.matchesToSchedule.sort((a, b) => {
+            const timeA = a.tempDate && a.tempTime ? new Date(`${a.tempDate} ${a.tempTime}:00`).getTime() : 9999999999999;
+            const timeB = b.tempDate && b.tempTime ? new Date(`${b.tempDate} ${b.tempTime}:00`).getTime() : 9999999999999;
+            return timeA - timeB || (a.roundOrder || 0) - (b.roundOrder || 0);
+        });
 
-        console.log('Phased scheduling complete: Chronological proportional distribution applied.');
+        console.log(`Phased scheduling complete: ${this.matchesToSchedule.filter(m => m.tempTime).length} assigned, ${this.matchesToSchedule.filter(m => !m.tempTime).length} pending.`);
 
         // 4. Update Views
-        // We do not set this.playoffMatches here directly because selectBracketCategory handles it
-        // Auto-select first category if none selected to show visual content immediately
         if (this.categorias.length > 0 && !this.selectedBracketCategoryId) {
             this.selectedBracketCategoryId = this.categorias[0].id;
         }
@@ -1046,6 +1319,25 @@ export class TorneoGestionComponent implements OnInit {
         });
     }
 
+    bracketViewMode: 'bilateral' | 'linear' = 'bilateral';
+    bracketZoom: number = 1;
+
+    linearRounds: any = {
+        dieciseisavos: [],
+        octavos: [],
+        cuartos: [],
+        semi: [],
+        final: null
+    };
+
+    setBracketZoom(delta: number) {
+        this.bracketZoom = Math.min(1.4, Math.max(0.6, Math.round((this.bracketZoom + delta) * 10) / 10));
+    }
+
+    resetBracketZoom() {
+        this.bracketZoom = 1;
+    }
+
     playoffRounds: any = {
         left: { dieciseisavos: [], octavos: [], cuartos: [], semi: [] },
         right: { dieciseisavos: [], octavos: [], cuartos: [], semi: [] },
@@ -1066,6 +1358,13 @@ export class TorneoGestionComponent implements OnInit {
             right: { dieciseisavos: [], octavos: [], cuartos: [], semi: [] },
             final: null
         };
+        this.linearRounds = {
+            dieciseisavos: [],
+            octavos: [],
+            cuartos: [],
+            semi: [],
+            final: null
+        };
 
         if (!matches || matches.length === 0) return;
 
@@ -1074,10 +1373,12 @@ export class TorneoGestionComponent implements OnInit {
             const r = (m.ronda || '').toLowerCase().trim();
             return m.nivel === 1 || r === 'final' || (r.includes('final') && !r.includes('semi') && !r.includes('dieciseis') && !r.includes('16') && !r.includes('cuart') && !r.includes('octav'));
         }) || null;
+        this.linearRounds.final = this.playoffRounds.final;
 
         // 2. Helper to distribute rounds
         const distributeRound = (roundMatches: any[], targetKey: string) => {
             roundMatches.sort((a, b) => (a.posicion != null && b.posicion != null) ? (a.posicion - b.posicion) : (a.id - b.id));
+            this.linearRounds[targetKey] = [...roundMatches];
             const mid = Math.ceil(roundMatches.length / 2);
             this.playoffRounds.left[targetKey] = roundMatches.slice(0, mid);
             this.playoffRounds.right[targetKey] = roundMatches.slice(mid);
@@ -1095,6 +1396,7 @@ export class TorneoGestionComponent implements OnInit {
         distributeRound(r2, 'semi');
 
         console.log('Bracket organized bilateral:', this.playoffRounds);
+        console.log('Bracket organized linear:', this.linearRounds);
     }
 
     cerrarGrupos() {
@@ -1236,6 +1538,13 @@ export class TorneoGestionComponent implements OnInit {
     organizeCalendar() {
         // Group matches by date
         const groups: { [key: string]: any[] } = {};
+
+        // Pre-populate with all gridDays that have configured hours so all tournament days appear as tabs
+        this.gridDays.forEach(day => {
+            if (this.availabilityGrid[day] && this.availabilityGrid[day].length > 0) {
+                groups[day] = [];
+            }
+        });
 
         this.matchesToSchedule.forEach(m => {
             const dateKey = m.tempDate || 'Sin Programar';
