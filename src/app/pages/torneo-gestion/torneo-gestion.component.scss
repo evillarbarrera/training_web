@@ -123,28 +123,30 @@
 .bracket-elite-container {
     width: 100%;
     background: #f8fafc;
-    padding: 80px 40px;
+    padding: 50px 30px;
     overflow-x: auto;
+    overflow-y: hidden;
     border: 1px solid #e2e8f0;
-    min-height: 850px;
-    border-radius: 8px;
-    box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.01);
+    min-height: 800px;
+    border-radius: 12px;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.02);
+    position: relative;
 }
 
 .bracket-elite-layout {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 0;
+    gap: 50px;
     min-width: max-content;
-    padding: 0 40px;
+    padding: 20px;
+    transition: transform 0.2s ease;
 }
 
 .bracket-elite-side {
     display: flex;
     flex: 1;
-    gap: 80px;
-    /* Space for the staple connectors */
+    gap: 60px;
     align-items: stretch;
 
     &.side-left {
@@ -153,18 +155,18 @@
     }
 
     &.side-right {
-        flex-direction: row-reverse;
-        justify-content: flex-end;
+        flex-direction: row; // Critical fix: row flows from center (Semis) outward (Dieciseis)
+        justify-content: flex-start;
     }
 }
 
 .round-elite-col {
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
     min-width: 250px;
     position: relative;
-    padding: 60px 0;
+    padding-top: 45px;
+    padding-bottom: 20px;
 }
 
 .round-elite-header {
@@ -172,88 +174,131 @@
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 10px;
-    font-weight: 1000;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    opacity: 0.8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+
+    .round-badge {
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        padding: 4px 14px;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+        &.highlight {
+            background: #0f172a;
+            color: #ccff00;
+        }
+
+        &.final-badge {
+            background: #0f172a;
+            color: #ccff00;
+            font-size: 11px;
+            padding: 5px 16px;
+        }
+    }
+
+    .round-count {
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+    }
 }
 
-/* THE "STAPLE" SCOREBOARD MATCH CARD */
+.round-matches-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex: 1;
+    gap: 25px;
+    position: relative;
+}
+
+/* THE SCOREBOARD MATCH CARD */
 .match-card-elite {
     background: #fff;
-    border-radius: 4px;
+    border-radius: 8px;
     border: 1px solid #e2e8f0;
-    width: 240px;
-    margin: 15px 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    width: 250px;
+    margin: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     cursor: pointer;
-    transition: all 0.25s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 5;
+    overflow: hidden;
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        border-color: #2563eb;
+        box-shadow: 0 12px 20px -5px rgba(15, 23, 42, 0.12);
+        border-color: #0f172a;
     }
 
     .elite-meta {
         background: #f8fafc;
-        padding: 5px 12px;
-        font-size: 8px;
-        font-weight: 1000;
-        color: #94a3b8;
+        padding: 6px 12px;
+        font-size: 9px;
+        font-weight: 800;
+        color: #64748b;
         letter-spacing: 0.5px;
         text-transform: uppercase;
         border-bottom: 1px solid #f1f5f9;
         display: flex;
         justify-content: space-between;
+        align-items: center;
     }
 
     .elite-team {
-        padding: 10px 12px;
+        padding: 10px 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        height: 38px;
+        min-height: 40px;
         position: relative;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f8fafc;
+        transition: background 0.15s;
 
         &:last-child {
             border-bottom: none;
         }
 
         .elite-name {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 800;
             color: #1e293b;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            max-width: 160px;
+            max-width: 175px;
         }
 
         .elite-score {
             font-size: 11px;
-            font-weight: 1000;
-            color: #94a3b8;
+            font-weight: 900;
+            color: #475569;
             background: #f1f5f9;
-            width: 28px;
-            height: 24px;
+            min-width: 26px;
+            height: 22px;
+            padding: 0 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 2px;
+            border-radius: 4px;
         }
 
         &.winner {
             background: #f0fdf4;
 
             .elite-name {
-                color: #16a34a;
-                font-weight: 1000;
+                color: #15803d;
+                font-weight: 900;
             }
 
             .elite-score {
@@ -261,151 +306,120 @@
                 color: #fff;
             }
 
-            &::after {
-                content: '✓';
+            &::before {
+                content: '';
                 position: absolute;
-                left: -2px;
-                color: #16a34a;
-                font-size: 10px;
-                font-weight: bold;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: #16a34a;
             }
         }
     }
 }
 
-/* GEOMETRIC STAPLE CONNECTORS (Meeting in middle) */
-.match-card-elite {
-
-    // 1. Horizontal Outgoing Line
+/* BRACKET CONNECTORS */
+.side-left .match-card-elite {
     &::after {
         content: '';
         position: absolute;
+        right: -30px;
         top: 50%;
-        width: 40px;
+        width: 30px;
         height: 2px;
         background: #cbd5e1;
         z-index: 1;
     }
-
-    .side-left &::after {
-        right: -40px;
-    }
-
-    .side-right &::after {
-        left: -40px;
-    }
-
-    // 2. Vertical Bridges
-    &:not(.semi-col .match-card-elite)::before {
-        content: '';
-        position: absolute;
-        width: 2px;
-        background: #cbd5e1;
-        z-index: 1;
-    }
-
-    .side-left &:nth-child(odd):not(.semi-col &)::before {
-        right: -40px;
-        top: 50%;
-        height: 120%;
-    }
-
-    .side-left &:nth-child(even):not(.semi-col &)::before {
-        right: -40px;
-        bottom: 50%;
-        height: 110%;
-    }
-
-    .side-right &:nth-child(odd):not(.semi-col &)::before {
-        left: -40px;
-        top: 50%;
-        height: 120%;
-    }
-
-    .side-right &:nth-child(even):not(.semi-col &)::before {
-        left: -40px;
-        bottom: 50%;
-        height: 110%;
-    }
-}
-
-/* Semi-to-Final Connectors (Extended) */
-.semi-col .match-card-elite::after {
-    width: 60px !important;
-    background: #0f172a;
-    /* Stronger line for semi-finalists */
-    height: 3px;
 }
 
 .side-left .semi-col .match-card-elite::after {
-    right: -60px;
+    width: 50px !important;
+    right: -50px !important;
+    background: #0f172a;
+    height: 3px;
+}
+
+.side-right .match-card-elite {
+    &::after {
+        content: '';
+        position: absolute;
+        left: -30px;
+        top: 50%;
+        width: 30px;
+        height: 2px;
+        background: #cbd5e1;
+        z-index: 1;
+    }
 }
 
 .side-right .semi-col .match-card-elite::after {
-    left: -60px;
+    width: 50px !important;
+    left: -50px !important;
+    background: #0f172a;
+    height: 3px;
+}
+
+.bracket-linear-layout .match-card-elite {
+    &::after {
+        content: '';
+        position: absolute;
+        right: -25px;
+        top: 50%;
+        width: 25px;
+        height: 2px;
+        background: #cbd5e1;
+        z-index: 1;
+    }
+}
+
+.bracket-linear-layout .final-col .final-champion-card::after {
+    display: none;
 }
 
 /* CENTRAL FINAL */
 .bracket-elite-center {
-    width: 450px;
-    padding: 0 40px;
+    width: 380px;
     display: flex;
     justify-content: center;
     position: relative;
-
-    &::before,
-    &::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        width: 60px;
-        height: 2px;
-        background: #cbd5e1;
-        z-index: 1;
-    }
-
-    &::before {
-        left: -20px;
-    }
-
-    &::after {
-        right: -20px;
-    }
+    z-index: 10;
 }
 
 .final-champion-card {
     background: #fff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    border: 2px solid #0f172a;
     width: 100%;
-    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.2);
     cursor: pointer;
-    transition: all 0.4s;
+    transition: all 0.3s;
     overflow: hidden;
 
     &:hover {
-        transform: translateY(-8px);
+        transform: translateY(-4px);
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
     }
 
     .final-plate {
         background: #0f172a;
-        color: #fff;
-        padding: 12px;
+        color: #ccff00;
+        padding: 12px 20px;
         text-align: center;
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 1000;
-        letter-spacing: 4px;
+        letter-spacing: 3px;
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
     }
 
     .champion-body {
-        padding: 30px 20px;
+        padding: 24px 20px;
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 12px;
         position: relative;
     }
 
@@ -413,28 +427,54 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 15px 20px;
+        padding: 12px 16px;
         background: #f8fafc;
-        border-radius: 6px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+
+        .hero-badge {
+            background: #0f172a;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
 
         .hero-name {
-            font-size: 18px;
-            font-weight: 1000;
+            font-size: 13px;
+            font-weight: 900;
             color: #0f172a;
         }
 
         .hero-score {
-            font-size: 20px;
+            font-size: 15px;
             font-weight: 1000;
-            color: #94a3b8;
+            color: #475569;
+            background: #e2e8f0;
+            padding: 3px 10px;
+            border-radius: 6px;
         }
 
         &.winner {
             background: #f0fdf4;
+            border-color: #86efac;
 
-            .hero-name,
+            .hero-badge {
+                background: #16a34a;
+            }
+
+            .hero-name {
+                color: #15803d;
+            }
+
             .hero-score {
-                color: #16a34a;
+                background: #16a34a;
+                color: #fff;
             }
         }
     }
@@ -445,28 +485,32 @@
         top: 50%;
         transform: translate(-50%, -50%);
         background: #fff;
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
-        border: 2px solid #f1f5f9;
+        border: 2px solid #e2e8f0;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 10px;
         font-weight: 1000;
-        color: #cbd5e1;
+        color: #94a3b8;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        z-index: 5;
     }
 
     .final-footer {
-        padding: 15px;
-        border-top: 1px solid #f1f5f9;
+        padding: 10px 16px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
         display: flex;
         justify-content: center;
-        gap: 10px;
-        font-size: 10px;
-        font-weight: 900;
-        color: #94a3b8;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748b;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 }
 
@@ -1528,4 +1572,62 @@
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
+}
+
+.cancha-selector-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+
+    .cancha-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 14px;
+        border-radius: 20px;
+        background: #f8fafc;
+        border: 1.5px solid #cbd5e1;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+        &:hover {
+            border-color: #3b82f6;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        &.active {
+            background: #0f172a;
+            color: #ccff00;
+            border-color: #0f172a;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.15);
+
+            .pill-check {
+                background: #ccff00;
+                color: #000000;
+            }
+        }
+
+        .pill-check {
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            background: #e2e8f0;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .pill-name {
+            white-space: nowrap;
+        }
+    }
 }
