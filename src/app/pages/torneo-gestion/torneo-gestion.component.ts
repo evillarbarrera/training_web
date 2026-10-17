@@ -66,12 +66,63 @@ export class TorneoGestionComponent implements OnInit {
         formato_sets: 'Full Sets',
         poster_url: null,
         precio: 0,
+        num_canchas: 2,
+        canchas_ids: [],
         categorias: [
             { nombre: 'Iniciación', max_parejas: 12, puntos_repartir: 100 },
             { nombre: 'Intermedio', max_parejas: 16, puntos_repartir: 250 },
             { nombre: 'Open', max_parejas: 8, puntos_repartir: 500 }
         ]
     };
+
+    newTorneoCanchas: any[] = [];
+    newTorneoSelectedCanchas: number[] = [];
+
+    onNewTorneoClubChange() {
+        if (!this.newTorneo.club_id) return;
+        this.clubesService.getCanchas(this.newTorneo.club_id).subscribe({
+            next: (res: any) => {
+                this.newTorneoCanchas = res || [];
+                if (this.newTorneoCanchas.length > 0) {
+                    const count = Math.min(this.newTorneoCanchas.length, Math.max(1, Number(this.newTorneo.num_canchas) || 2));
+                    this.newTorneoSelectedCanchas = this.newTorneoCanchas.slice(0, count).map(c => c.id);
+                    this.newTorneo.num_canchas = this.newTorneoSelectedCanchas.length;
+                    this.newTorneo.canchas_ids = this.newTorneoSelectedCanchas;
+                } else {
+                    this.newTorneoSelectedCanchas = [];
+                    if (!this.newTorneo.num_canchas) this.newTorneo.num_canchas = 2;
+                    this.newTorneo.canchas_ids = [];
+                }
+            },
+            error: (err) => console.error('Error al cargar canchas del club:', err)
+        });
+    }
+
+    toggleNewTorneoCancha(canchaId: number) {
+        const idx = this.newTorneoSelectedCanchas.indexOf(canchaId);
+        if (idx > -1) {
+            if (this.newTorneoSelectedCanchas.length > 1) {
+                this.newTorneoSelectedCanchas.splice(idx, 1);
+            }
+        } else {
+            this.newTorneoSelectedCanchas.push(canchaId);
+        }
+        this.newTorneo.num_canchas = this.newTorneoSelectedCanchas.length;
+        this.newTorneo.canchas_ids = this.newTorneoSelectedCanchas;
+    }
+
+    isNewTorneoCanchaSelected(canchaId: number): boolean {
+        return this.newTorneoSelectedCanchas.includes(canchaId);
+    }
+
+    onNewTorneoNumCanchasChange() {
+        const count = Math.max(1, Number(this.newTorneo.num_canchas) || 1);
+        if (this.newTorneoCanchas.length > 0) {
+            this.newTorneoSelectedCanchas = this.newTorneoCanchas.slice(0, Math.min(this.newTorneoCanchas.length, count)).map(c => c.id);
+            this.newTorneo.canchas_ids = this.newTorneoSelectedCanchas;
+            this.newTorneo.num_canchas = this.newTorneoSelectedCanchas.length;
+        }
+    }
 
     matchDuration: number = 75; // Default match duration in minutes
 
@@ -428,6 +479,7 @@ export class TorneoGestionComponent implements OnInit {
             if (this.clubes.length > 0) {
                 const target = clubId ? this.clubes.find(c => Number(c.id) === Number(clubId)) : this.clubes[0];
                 this.newTorneo.club_id = target ? target.id : this.clubes[0].id;
+                this.onNewTorneoClubChange();
             }
         });
     }
@@ -439,7 +491,20 @@ export class TorneoGestionComponent implements OnInit {
 
 
     selectTorneo(torneo: any) {
-        this.selectedTorneo = torneo;
+        this.selectedTorneo = { ...torneo };
+
+        // Parse canchas_ids
+        let parsedCanchas: number[] = [];
+        if (torneo.canchas_ids) {
+            try {
+                parsedCanchas = typeof torneo.canchas_ids === 'string' ? JSON.parse(torneo.canchas_ids) : torneo.canchas_ids;
+            } catch (e) {
+                parsedCanchas = [];
+            }
+        }
+        this.planParams.selectedCanchasIds = Array.isArray(parsedCanchas) ? parsedCanchas : [];
+        this.selectedTorneo.num_canchas = Number(torneo.num_canchas) || (this.planParams.selectedCanchasIds.length || 2);
+
         this.selectedCategoria = null; // VISTA GLOBAL POR DEFECTO
         this.activeTab = 'list';
         this.activeDetailTab = 'resumen';
@@ -840,9 +905,14 @@ export class TorneoGestionComponent implements OnInit {
     saveTorneoFechas() {
         if (!this.selectedTorneo) return;
 
-        // 1. Update basic info (dates)
+        // 1. Update basic info (dates, canchas)
         this.selectedTorneo.fecha_inicio = this.planParams.startDate;
         this.selectedTorneo.fecha_fin = this.planParams.endDate;
+        const courtCount = this.planParams.selectedCanchasIds.length > 0
+            ? this.planParams.selectedCanchasIds.length
+            : (Number(this.selectedTorneo.num_canchas) || 1);
+        this.selectedTorneo.num_canchas = courtCount;
+        this.selectedTorneo.canchas_ids = this.planParams.selectedCanchasIds;
 
         // 2. Filter grid to only include current date range
         const gridPayload: any = {};
@@ -852,7 +922,11 @@ export class TorneoGestionComponent implements OnInit {
             }
         });
 
-        const updateTorneo$ = this.clubesService.updateTorneo(this.selectedTorneo.id, this.selectedTorneo);
+        const updateTorneo$ = this.clubesService.updateTorneo(this.selectedTorneo.id, {
+            ...this.selectedTorneo,
+            num_canchas: courtCount,
+            canchas_ids: this.planParams.selectedCanchasIds
+        });
         const updateGrid$ = this.clubesService.saveTorneoAvailability(this.selectedTorneo.id, gridPayload);
 
         // Run in parallel
@@ -1110,11 +1184,21 @@ export class TorneoGestionComponent implements OnInit {
     loadCanchasClub() {
         if (this.selectedTorneo) {
             this.clubesService.getCanchas(this.selectedTorneo.club_id).subscribe(res => {
-                this.clubCanchas = res.map((c: any) => ({ ...c, luz: c.luz || false }));
-                // Auto-select all courts by default if none selected
-                if (this.planParams.selectedCanchasIds.length === 0) {
-                    this.planParams.selectedCanchasIds = res.map((c: any) => c.id);
+                this.clubCanchas = res || [];
+                // If selectedCanchasIds is already populated and valid, keep it and sync num_canchas
+                if (this.planParams.selectedCanchasIds && this.planParams.selectedCanchasIds.length > 0) {
+                    this.selectedTorneo.num_canchas = this.planParams.selectedCanchasIds.length;
+                } else if (this.clubCanchas.length > 0) {
+                    const count = Math.min(this.clubCanchas.length, Math.max(1, Number(this.selectedTorneo.num_canchas) || this.clubCanchas.length || 2));
+                    this.planParams.selectedCanchasIds = this.clubCanchas.slice(0, count).map(c => c.id);
+                    this.selectedTorneo.num_canchas = this.planParams.selectedCanchasIds.length;
+                    this.selectedTorneo.canchas_ids = this.planParams.selectedCanchasIds;
+                } else {
+                    if (!this.selectedTorneo.num_canchas) {
+                        this.selectedTorneo.num_canchas = 2;
+                    }
                 }
+                this.calculateStats();
             });
         }
     }
@@ -1198,11 +1282,35 @@ export class TorneoGestionComponent implements OnInit {
     }
 
     toggleCanchaSelection(canchaId: number) {
-        if (this.planParams.selectedCanchasIds.includes(canchaId)) {
-            this.planParams.selectedCanchasIds = this.planParams.selectedCanchasIds.filter((id: number) => id !== canchaId);
+        const idx = this.planParams.selectedCanchasIds.indexOf(canchaId);
+        if (idx > -1) {
+            if (this.planParams.selectedCanchasIds.length > 1) {
+                this.planParams.selectedCanchasIds.splice(idx, 1);
+            }
         } else {
             this.planParams.selectedCanchasIds.push(canchaId);
         }
+        if (this.selectedTorneo) {
+            this.selectedTorneo.num_canchas = this.planParams.selectedCanchasIds.length;
+            this.selectedTorneo.canchas_ids = this.planParams.selectedCanchasIds;
+        }
+        this.calculateStats();
+    }
+
+    isCanchaSelected(canchaId: number): boolean {
+        return this.planParams.selectedCanchasIds.includes(canchaId);
+    }
+
+    onNumCanchasChange() {
+        const count = Math.max(1, Number(this.selectedTorneo?.num_canchas) || 1);
+        if (this.clubCanchas.length > 0) {
+            this.planParams.selectedCanchasIds = this.clubCanchas.slice(0, Math.min(this.clubCanchas.length, count)).map(c => c.id);
+            if (this.selectedTorneo) {
+                this.selectedTorneo.canchas_ids = this.planParams.selectedCanchasIds;
+                this.selectedTorneo.num_canchas = this.planParams.selectedCanchasIds.length;
+            }
+        }
+        this.calculateStats();
     }
 
     autoSchedule() {
@@ -1460,7 +1568,14 @@ export class TorneoGestionComponent implements OnInit {
             return;
         }
 
-        this.clubesService.createTorneoV2({ ...this.newTorneo, creator_id: this.userId }).subscribe({
+        const payload = {
+            ...this.newTorneo,
+            num_canchas: this.newTorneo.num_canchas || this.newTorneoSelectedCanchas.length || 2,
+            canchas_ids: this.newTorneoSelectedCanchas,
+            creator_id: this.userId
+        };
+
+        this.clubesService.createTorneoV2(payload).subscribe({
             next: (res) => {
                 Swal.fire({
                     title: '¡Torneo Creado!',
@@ -1501,7 +1616,9 @@ export class TorneoGestionComponent implements OnInit {
             precio: this.selectedTorneo.precio,
             formato_sets: this.selectedTorneo.formato_sets,
             descripcion: this.selectedTorneo.descripcion,
-            poster_url: this.selectedTorneo.poster_url
+            poster_url: this.selectedTorneo.poster_url,
+            num_canchas: this.selectedTorneo.num_canchas || this.planParams.selectedCanchasIds?.length || 2,
+            canchas_ids: this.planParams.selectedCanchasIds?.length > 0 ? this.planParams.selectedCanchasIds : this.selectedTorneo.canchas_ids
         };
 
         this.clubesService.updateTorneo(payload).subscribe({
@@ -2149,9 +2266,10 @@ export class TorneoGestionComponent implements OnInit {
             totalHoursAvailable += hours;
         });
 
-        // Prioritize courts with 'luz' active (selection)
-        const activeCourts = this.clubCanchas.filter(c => c.luz).length;
-        const courtCount = activeCourts || this.clubCanchas.length || 1;
+        // Prioritize selected courts or configured num_canchas
+        const courtCount = (this.planParams.selectedCanchasIds && this.planParams.selectedCanchasIds.length > 0)
+            ? this.planParams.selectedCanchasIds.length
+            : Math.max(1, Number(this.selectedTorneo?.num_canchas) || this.clubCanchas.length || 1);
         const slotCapacity = totalHoursAvailable * courtCount;
 
         this.tournamentStats = {
@@ -2161,6 +2279,7 @@ export class TorneoGestionComponent implements OnInit {
             totalPartidosEstimados: Math.round(totalMatches),
             horasNecesarias: (totalMatches * (this.matchDuration || 75)) / 60,
             horasDisponibles: slotCapacity,
+            courtCount: courtCount,
             conflictos: this.detectConflicts(),
             categorias: catsStats
         };
