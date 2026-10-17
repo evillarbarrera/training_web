@@ -28,13 +28,14 @@ jobs:
         run: npm run build:prod
 
       - name: 🚀 Sincronizar dist/ al Servidor (Ferozo)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.SFTP_SERVER || 'c2632100.ferozo.com' }}
-          username: ${{ secrets.SFTP_USERNAME || 'c2632100' }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: ${{ secrets.SFTP_PORT || 21 }}
-          protocol: ${{ secrets.SFTP_PROTOCOL || 'ftps' }}
-          local-dir: ./dist/
-          server-dir: ${{ secrets.SFTP_REMOTE_DIR || '/public_html/' }}
-          dangerous-clean-slate: false
+        run: |
+          sudo apt-get update && sudo apt-get install -y lftp
+          lftp -u "${{ secrets.SFTP_USERNAME || 'c2632100' }},${{ secrets.SFTP_PASSWORD }}" -p 21 ${{ secrets.SFTP_SERVER || 'c2632100.ferozo.com' }} << 'EOF'
+          set ftp:ssl-allow yes
+          set ftp:ssl-protect-data no
+          set ssl:verify-certificate no
+          set net:timeout 60
+          set net:max-retries 3
+          mirror -R --verbose ./dist/ /public_html/
+          quit
+          EOF
