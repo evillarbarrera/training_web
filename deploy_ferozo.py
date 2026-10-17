@@ -117,6 +117,15 @@ def main():
 
         for file in sorted(files):
             local_file = Path(root) / file
+            local_size = local_file.stat().st_size
+            try:
+                remote_size = ftps.size(file)
+                if remote_size == local_size:
+                    print(f"  ⏭️  {file} (sin cambios, omitido)")
+                    continue
+            except Exception:
+                pass
+
             with open(local_file, "rb") as fp:
                 ftps.storbinary(f"STOR {file}", fp)
                 uploaded += 1
