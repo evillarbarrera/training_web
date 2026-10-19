@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 export interface GuideMenuItem {
   id: string;
@@ -284,15 +285,52 @@ export class ClubGuideModalComponent implements OnInit {
   constructor(private router: Router) {}
 
   ngOnInit(): void {
-    this.dontShowAgain = localStorage.getItem('padelblox_club_guide_seen') === 'true';
+    const localSeen = localStorage.getItem('padelblox_club_guide_seen') === 'true';
+    let userSeen = false;
+    try {
+      const u = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      userSeen = u?.club_guide_seen == 1 || u?.club_guide_seen === true;
+    } catch (e) {}
+
+    this.dontShowAgain = localSeen || userSeen;
+    if (this.dontShowAgain) {
+      localStorage.setItem('padelblox_club_guide_seen', 'true');
+    }
     this.loadStepStatus();
+  }
+
+  savePreferenceToServer(seen: boolean): void {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    const token = localStorage.getItem('token');
+    const authHeader = token ? `Bearer ${token}` : '';
+
+    fetch(`${environment.apiUrl}/user/save_guide_preference.php`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+        'X-Authorization': authHeader
+      },
+      body: JSON.stringify({ user_id: userId, seen: seen ? 1 : 0 })
+    }).catch(err => console.warn('Could not save guide preference to server', err));
+
+    try {
+      const u = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (u && typeof u === 'object') {
+        u.club_guide_seen = seen ? 1 : 0;
+        localStorage.setItem('currentUser', JSON.stringify(u));
+      }
+    } catch (e) {}
   }
 
   toggleDontShowAgain(): void {
     if (this.dontShowAgain) {
       localStorage.setItem('padelblox_club_guide_seen', 'true');
+      this.savePreferenceToServer(true);
     } else {
       localStorage.removeItem('padelblox_club_guide_seen');
+      this.savePreferenceToServer(false);
     }
   }
 
@@ -352,6 +390,7 @@ export class ClubGuideModalComponent implements OnInit {
   closeModal(): void {
     if (this.dontShowAgain) {
       localStorage.setItem('padelblox_club_guide_seen', 'true');
+      this.savePreferenceToServer(true);
     }
     this.close.emit();
   }
@@ -359,6 +398,7 @@ export class ClubGuideModalComponent implements OnInit {
   markAllAsSeen(): void {
     this.dontShowAgain = true;
     localStorage.setItem('padelblox_club_guide_seen', 'true');
+    this.savePreferenceToServer(true);
     this.close.emit();
   }
 }

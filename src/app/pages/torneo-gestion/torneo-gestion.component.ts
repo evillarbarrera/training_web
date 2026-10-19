@@ -507,6 +507,7 @@ export class TorneoGestionComponent implements OnInit {
 
     selectTorneo(torneo: any) {
         this.selectedTorneo = { ...torneo };
+        this.selectedTorneo.inscripciones_abiertas = Number(torneo.inscripciones_abiertas) === 1 || torneo.inscripciones_abiertas === true || torneo.inscripciones_abiertas === '1';
 
         // Parse canchas_ids
         let parsedCanchas: number[] = [];
@@ -2101,11 +2102,12 @@ export class TorneoGestionComponent implements OnInit {
     toggleInscripciones() {
         if (!this.selectedTorneo) return;
 
-        const newState = !this.selectedTorneo.inscripciones_abiertas;
+        const currentActive = Number(this.selectedTorneo.inscripciones_abiertas) === 1 || this.selectedTorneo.inscripciones_abiertas === true || this.selectedTorneo.inscripciones_abiertas === '1';
+        const newState = !currentActive;
         
         Swal.fire({
             title: newState ? '¿Abrir Inscripciones?' : '¿Cerrar Inscripciones?',
-            text: newState ? 'Los usuarios podrán ver y anotarse en este torneo.' : 'Nadie más podrá inscribirse.',
+            text: newState ? 'Los usuarios podrán ver y anotarse en este torneo desde la App Móvil.' : 'Nadie más podrá inscribirse desde la App.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, cambiar',
@@ -2118,11 +2120,19 @@ export class TorneoGestionComponent implements OnInit {
                 }).subscribe({
                     next: (res: any) => {
                         this.selectedTorneo.inscripciones_abiertas = newState;
-                        Swal.fire('¡Actualizado!', res.message, 'success');
+                        const inList = this.torneos?.find((t: any) => t.id === this.selectedTorneo.id);
+                        if (inList) inList.inscripciones_abiertas = newState ? 1 : 0;
+
+                        Swal.fire({
+                            title: '¡Actualizado!',
+                            text: res.message || (newState ? 'Inscripciones abiertas correctamente' : 'Inscripciones cerradas'),
+                            icon: 'success',
+                            confirmButtonText: 'Entendido'
+                        });
                         this.cdr.detectChanges();
                     },
                     error: (err: any) => {
-                        Swal.fire('Error', 'No se pudo cambiar el estado.', 'error');
+                        Swal.fire('Error', 'No se pudo cambiar el estado de inscripciones.', 'error');
                     }
                 });
             }
