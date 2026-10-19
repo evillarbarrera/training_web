@@ -38,7 +38,10 @@
                     <div class="p-left">
                         <div class="avatar-box">
                             <div class="avatar-shimmer" *ngIf="!alumnoNombre"></div>
-                            <img [src]="alumnoFoto || 'assets/images/placeholder_avatar.png'" class="avatar" alt="Alumno">
+                            <img [src]="alumnoFoto || ('https://ui-avatars.com/api/?name=' + (alumnoNombre || 'Alumno') + '&background=ccff00&color=111&bold=true&size=256')" 
+                                 (error)="onAvatarError()" 
+                                 class="avatar" 
+                                 alt="Alumno">
                             <div class="level-badge-float" *ngIf="alumnoProfile?.categoria">
                                 {{ alumnoProfile.categoria }}
                             </div>
@@ -107,64 +110,178 @@
                 </button>
             </nav>
 
-            <!-- 🚀 VIEW 1: ROADMAP (SESIONES) -->
+            <!-- 🚀 VIEW 1: ROADMAP (SESIONES Y HOJA DE RUTA) -->
             <div class="view-content fade-in" *ngIf="activeTab === 'roadmap'">
-                <div class="section-intro">
-                    <h2>Hoja de Ruta del Jugador</h2>
-                    <p>Tu evolución técnica definida por el Coach para alcanzar el siguiente nivel.</p>
-                </div>
 
-                <!-- 🧩 ROADMAP TABS: BY ALL STUDENT PACKS -->
-                <div class="sub-nav" *ngIf="roadmapPacks.length > 0">
-                    <button class="sn-btn" *ngFor="let p of roadmapPacks" [class.active]="selectedPack?.id === p.id" (click)="seleccionarPackRoadmap(p)">
-                        <span>📦 {{ p.nombre }}</span>
-                    </button>
-                    <span class="history-label" style="margin-left: auto; color: #10b981; font-size: 11px; font-weight: 800;">● PLANES ACTIVOS</span>
-                </div>
+                <!-- 🏆 HERO COCKPIT DE HOJA DE RUTA -->
+                <div class="roadmap-hero-cockpit">
+                    <div class="rh-main-info">
+                        <div class="rh-badge-category">
+                            <span class="live-dot"></span>
+                            <span>PLAN PEDAGÓGICO ACTIVO</span>
+                        </div>
+                        <div class="rh-title-row">
+                            <div class="rh-icon-box">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <div class="rh-text-col">
+                                <h2 class="rh-malla-title">{{ selectedPack?.activeMesh?.malla_nombre || selectedPack?.nombre || 'Plan de Entrenamiento' }}</h2>
+                                <div class="rh-meta-tags">
+                                    <span class="meta-pill level-pill" *ngIf="selectedPack?.activeMesh?.malla_nivel">
+                                        <i class="fas fa-signal"></i> {{ selectedPack.activeMesh.malla_nivel }}
+                                    </span>
+                                    <span class="meta-pill pack-pill" *ngIf="selectedPack?.nombre">
+                                        <i class="fas fa-box-open"></i> {{ selectedPack.nombre }}
+                                    </span>
+                                    <span class="meta-pill coach-pill" *ngIf="selectedPack?.activeMesh?.entrenador_nombre">
+                                        <i class="fas fa-user-tie"></i> {{ selectedPack.activeMesh.entrenador_nombre }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="roadmap-grid" *ngIf="historialMalla.length > 0">
-                    <div class="sesion-card professional-sheet fade-in" *ngFor="let sesion of historialMalla; let i = index" [ngClass]="sesion.estado_asistencia">
-                        <!-- Top status line -->
-                        <div class="sheet-status-bar"></div>
-                        
-                        <div class="s-header">
-                            <div class="sheet-id">S-{{ (i + 1) | number:'2.0' }}</div>
-                            <div class="status-badge-mini" [ngClass]="sesion.estado_asistencia">
-                                {{ sesion.estado_asistencia === 'proxima' ? '📅 Agendada' : (sesion.estado_asistencia === 'completada' ? '✅ OK' : '⏳ Pendiente') }}
+                    <!-- Cockpit Stats & Progress -->
+                    <div class="rh-progress-card">
+                        <div class="rp-stats-row">
+                            <div class="rp-stat">
+                                <span class="rp-val">{{ historialMalla.length || 0 }}</span>
+                                <span class="rp-lbl">Sesiones</span>
+                            </div>
+                            <div class="rp-divider"></div>
+                            <div class="rp-stat stat-agendada">
+                                <span class="rp-val">{{ getSesionesAgendadasCount() }}</span>
+                                <span class="rp-lbl">Agendadas</span>
+                            </div>
+                            <div class="rp-divider"></div>
+                            <div class="rp-stat stat-completada">
+                                <span class="rp-val">{{ getSesionesCompletadasCount() }}</span>
+                                <span class="rp-lbl">Listas</span>
                             </div>
                         </div>
 
-                        <div class="s-content">
-                            <div class="sheet-main-row">
-                                <h3 class="session-title">{{ sesion.titulo }}</h3>
-                                <span class="mesh-badge-mini">{{ selectedPack?.activeMesh?.malla_nombre || 'Plan Activo' }}</span>
+                        <!-- Progress Bar -->
+                        <div class="rp-bar-container">
+                            <div class="rp-bar-header">
+                                <span>Avance del Currículum</span>
+                                <b>{{ getProgresoRoadmap() }}%</b>
                             </div>
-                            
-                            <div class="objectives-list-compact" *ngIf="sesion.lista_objetivos?.length > 0">
-                                <div class="obj-item-mini" *ngFor="let obj of sesion.lista_objetivos | slice:0:2">
-                                    <span class="dot"></span>
+                            <div class="rp-track">
+                                <div class="rp-fill" [style.width.%]="getProgresoRoadmap()"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🧩 ROADMAP TABS: SELECTOR DE PLANES O MALLAS DEL ALUMNO -->
+                <div class="roadmap-plan-selector-bar" *ngIf="roadmapPacks.length > 1">
+                    <div class="selector-kicker"><i class="fas fa-list-check"></i> PLANES DEL ALUMNO:</div>
+                    <div class="plan-chips-list">
+                        <button class="plan-chip-btn" 
+                                *ngFor="let p of roadmapPacks" 
+                                [class.active]="selectedPack === p || (selectedPack?.id === p.id && selectedPack?.activeMesh?.seguimiento_id === p.activeMesh?.seguimiento_id)" 
+                                (click)="seleccionarPackRoadmap(p)">
+                            <i class="fas fa-folder-open" *ngIf="selectedPack === p || (selectedPack?.id === p.id && selectedPack?.activeMesh?.seguimiento_id === p.activeMesh?.seguimiento_id)"></i>
+                            <i class="fas fa-folder" *ngIf="selectedPack !== p && (selectedPack?.id !== p.id || selectedPack?.activeMesh?.seguimiento_id !== p.activeMesh?.seguimiento_id)"></i>
+                            <span class="chip-name">{{ p.nombre }}</span>
+                            <span class="chip-mesh" *ngIf="p.activeMesh?.malla_nombre">({{ p.activeMesh.malla_nombre }})</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 🎾 ROADMAP GRID: TARJETAS DE SESIÓN DE ALTO NIVEL UX -->
+                <div class="roadmap-timeline-grid" *ngIf="historialMalla.length > 0">
+                    <div class="roadmap-card fade-in" 
+                         *ngFor="let sesion of historialMalla; let i = index" 
+                         [ngClass]="sesion.estado_asistencia"
+                         [class.is-booked]="sesion.estado_asistencia === 'proxima'"
+                         [class.is-done]="sesion.estado_asistencia === 'completada'"
+                         [class.is-pending]="sesion.estado_asistencia === 'pendiente'">
+                         
+                        <!-- Top Accent Strip -->
+                        <div class="rc-accent-strip"></div>
+
+                        <!-- Card Header -->
+                        <div class="rc-header">
+                            <div class="rc-number-badge">
+                                <span class="rc-num-prefix">SESIÓN</span>
+                                <span class="rc-num">{{ (i + 1) | number:'2.0' }}</span>
+                            </div>
+
+                            <!-- Status Badge -->
+                            <div class="rc-status-pill" [ngClass]="sesion.estado_asistencia">
+                                <span class="pulse-dot" *ngIf="sesion.estado_asistencia === 'proxima'"></span>
+                                <i class="fas fa-calendar-check" *ngIf="sesion.estado_asistencia === 'proxima'"></i>
+                                <i class="fas fa-circle-check" *ngIf="sesion.estado_asistencia === 'completada'"></i>
+                                <i class="fas fa-clock" *ngIf="sesion.estado_asistencia === 'pendiente'"></i>
+                                <span>
+                                    {{ sesion.estado_asistencia === 'proxima' ? 'Agendada' : (sesion.estado_asistencia === 'completada' ? 'Completada' : 'Por Agendar') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="rc-body">
+                            <h3 class="rc-title" [title]="sesion.titulo">{{ sesion.titulo }}</h3>
+
+                            <!-- Objetivo Principal Highlight -->
+                            <div class="rc-objective-box" *ngIf="sesion.lista_objetivos?.length > 0">
+                                <div class="rc-obj-item" *ngFor="let obj of sesion.lista_objetivos | slice:0:2">
+                                    <i class="fas fa-bullseye"></i>
                                     <span>{{ obj }}</span>
                                 </div>
                             </div>
 
-                            <div class="session-structure-tags">
-                                <span class="str-tag" *ngIf="sesion.calentamiento" title="Calentamiento">🔥 Calent.</span>
-                                <span class="str-tag" *ngIf="sesion.parte_tecnica" title="Técnica">🎾 Técnica</span>
-                                <span class="str-tag" *ngIf="sesion.drills" title="Drills">⚡ Drills</span>
-                                <span class="str-tag" *ngIf="sesion.juego" title="Puntos/Juego">🏆 Puntos</span>
+                            <!-- Training Structure Tags -->
+                            <div class="rc-structure-tags">
+                                <span class="s-tag tag-warm" *ngIf="sesion.calentamiento" title="Calentamiento específico">
+                                    <i class="fas fa-fire"></i> Calent.
+                                </span>
+                                <span class="s-tag tag-tech" *ngIf="sesion.parte_tecnica" title="Bloque técnico">
+                                    <i class="fas fa-table-tennis-paddle-ball"></i> Técnica
+                                </span>
+                                <span class="s-tag tag-drills" *ngIf="sesion.drills" title="Ejercicios en pista">
+                                    <i class="fas fa-bolt"></i> Drills
+                                </span>
+                                <span class="s-tag tag-play" *ngIf="sesion.juego" title="Situaciones de partido">
+                                    <i class="fas fa-trophy"></i> Puntos
+                                </span>
                             </div>
                         </div>
 
-                        <div class="s-footer-compact">
-                            <div class="date-info-mini">
-                                <span class="v">{{ sesion.fecha ? (sesion.fecha | date:'dd/MM') : 'Por agendar' }}</span>
-                                <span class="v time-m" *ngIf="sesion.hora">@{{ sesion.hora | slice:0:5 }}</span>
+                        <!-- Card Footer: Operational Actions -->
+                        <div class="rc-footer">
+                            <!-- If AGENDADA: Show Date & Time Badge -->
+                            <div class="rc-schedule-chip booked" *ngIf="sesion.fecha">
+                                <i class="fas fa-calendar-day"></i>
+                                <div class="time-block">
+                                    <span class="date-txt">{{ sesion.fecha | date:'EEE, d MMM':'':'es' | titlecase }}</span>
+                                    <span class="hour-txt" *ngIf="sesion.hora">@{{ sesion.hora | slice:0:5 }} hrs</span>
+                                </div>
                             </div>
-                            
-                            <button class="btn-sheet-mini" (click)="abrirPanelDetalle(sesion)">
-                                <span>Ficha</span>
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
+
+                            <!-- If PENDIENTE: Actionable notice -->
+                            <div class="rc-schedule-chip pending" *ngIf="!sesion.fecha">
+                                <i class="fas fa-hourglass-start"></i>
+                                <span>Sin fecha agendada</span>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="rc-actions-cluster">
+                                <!-- Quick Schedule for Coach if pending -->
+                                <button class="btn-rc-agendar" 
+                                        *ngIf="!sesion.fecha && (userRole === 'entrenador' || userRole === 'admin')" 
+                                        (click)="irAAgendarSesion(sesion)"
+                                        title="Agendar esta sesión en el calendario">
+                                    <i class="fas fa-plus"></i> Agendar
+                                </button>
+
+                                <!-- Technical Dossier Sheet -->
+                                <button class="btn-rc-ficha" (click)="abrirPanelDetalle(sesion)" title="Ver ficha técnica completa">
+                                    <span>Ficha</span>
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -821,3 +938,195 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- MODAL FICHA TÉCNICA DE SESIÓN (UX WEB PATTERN) -->
+<!-- ========================================== -->
+<div class="ficha-modal-overlay" *ngIf="sesionFichaModal" (click)="cerrarFichaModal($event)">
+    <div class="ficha-modal-dialog animate-in" (click)="$event.stopPropagation()">
+        
+        <!-- HEADER (Siguiendo el estándar de modal de Padelblox) -->
+        <div class="modal-header">
+            <div class="header-left">
+                <div class="header-icon-box">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="header-title-meta">
+                    <div class="title-row">
+                        <h3>{{ sesionFichaModal.titulo }}</h3>
+                        <span class="session-id-tag">SESIÓN {{ sesionFichaModal.orden || (getSesionIndex(sesionFichaModal) + 1) | number:'2.0-0' }}</span>
+                        <span class="status-pill" [ngClass]="sesionFichaModal.estado_asistencia">
+                            {{ getEstadoLabel(sesionFichaModal.estado_asistencia, sesionFichaModal.fecha) }}
+                        </span>
+                    </div>
+                    <div class="meta-subrow">
+                        <span class="plan-meta-chip">
+                            <i class="fas fa-graduation-cap"></i> {{ selectedPack?.activeMesh?.malla_nombre || 'Plan Pedagógico' }}
+                            <span class="level-tag">({{ selectedPack?.activeMesh?.nivel || 'Intermedio' }})</span>
+                        </span>
+                        <span class="meta-sep">•</span>
+                        <span class="schedule-meta" *ngIf="sesionFichaModal.fecha">
+                            <i class="far fa-calendar-alt"></i> {{ sesionFichaModal.fecha | date:'dd/MM/yyyy' }}
+                            <strong *ngIf="sesionFichaModal.hora">@ {{ sesionFichaModal.hora | slice:0:5 }} hrs</strong>
+                        </span>
+                        <span class="schedule-meta pending" *ngIf="!sesionFichaModal.fecha">
+                            <i class="far fa-clock"></i> Pendiente de agendar
+                        </span>
+                        <ng-container *ngIf="coachNombre">
+                            <span class="meta-sep">•</span>
+                            <span class="coach-meta">
+                                <i class="fas fa-user-tie"></i> {{ coachNombre }}
+                            </span>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+            <button class="close-modal" (click)="cerrarFichaModal()" title="Cerrar ventana">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="modal-body scrollable-body">
+            
+            <!-- 1. OBJETIVOS DE APRENDIZAJE & FOCO TÉCNICO -->
+            <div class="dossier-card card-objetivos">
+                <div class="card-hdr">
+                    <div class="hdr-left">
+                        <span class="hdr-icon icon-target"><i class="fas fa-bullseye"></i></span>
+                        <div class="hdr-text">
+                            <h4>Objetivos de Aprendizaje & Foco Técnico</h4>
+                            <p>Metas formativas y competencias a consolidar durante esta sesión</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="objetivos-grid">
+                        <div class="obj-row" *ngFor="let obj of getObjetivosArray(sesionFichaModal)">
+                            <span class="obj-bullet"><i class="fas fa-check"></i></span>
+                            <span class="obj-text">{{ obj }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. ESTRUCTURA DIDÁCTICA DE PISTA (4 FASES PEDAGÓGICAS) -->
+            <div class="dossier-section-title">
+                <i class="fas fa-layer-group"></i>
+                <span>ESTRUCTURA Y PLANIFICACIÓN DE PISTA</span>
+            </div>
+
+            <div class="phases-cards-grid">
+                <!-- FASE 1: ACTIVACIÓN -->
+                <div class="phase-box box-warmup">
+                    <div class="phase-top">
+                        <div class="phase-identity">
+                            <span class="phase-idx">01</span>
+                            <div class="phase-names">
+                                <span class="phase-kicker">ACTIVACIÓN</span>
+                                <h5>🔥 Calentamiento Dinámico</h5>
+                            </div>
+                        </div>
+                        <span class="phase-duration-tag">10-15'</span>
+                    </div>
+                    <div class="phase-desc">
+                        <p>{{ getCalentamientoText(sesionFichaModal) }}</p>
+                    </div>
+                </div>
+
+                <!-- FASE 2: TÉCNICA -->
+                <div class="phase-box box-tecnica">
+                    <div class="phase-top">
+                        <div class="phase-identity">
+                            <span class="phase-idx">02</span>
+                            <div class="phase-names">
+                                <span class="phase-kicker">BIOMECÁNICA</span>
+                                <h5>🎾 Núcleo Técnico</h5>
+                            </div>
+                        </div>
+                        <span class="phase-duration-tag">20'</span>
+                    </div>
+                    <div class="phase-desc">
+                        <p>{{ getTecnicaText(sesionFichaModal) }}</p>
+                    </div>
+                </div>
+
+                <!-- FASE 3: DRILLS -->
+                <div class="phase-box box-drills">
+                    <div class="phase-top">
+                        <div class="phase-identity">
+                            <span class="phase-idx">03</span>
+                            <div class="phase-names">
+                                <span class="phase-kicker">TRANSFERENCIA</span>
+                                <h5>⚡ Drills & Repetición</h5>
+                            </div>
+                        </div>
+                        <span class="phase-duration-tag">20-25'</span>
+                    </div>
+                    <div class="phase-desc">
+                        <p>{{ getDrillsText(sesionFichaModal) }}</p>
+                    </div>
+                </div>
+
+                <!-- FASE 4: PUNTOS / JUEGO -->
+                <div class="phase-box box-juego">
+                    <div class="phase-top">
+                        <div class="phase-identity">
+                            <span class="phase-idx">04</span>
+                            <div class="phase-names">
+                                <span class="phase-kicker">COMPETICIÓN</span>
+                                <h5>🏆 Puntos Condicionados</h5>
+                            </div>
+                        </div>
+                        <span class="phase-duration-tag">15'</span>
+                    </div>
+                    <div class="phase-desc">
+                        <p>{{ getJuegoText(sesionFichaModal) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. RECURSOS COMPLEMENTARIOS (SI APLICA) -->
+            <div class="dossier-card card-recursos" *ngIf="sesionFichaModal.recursos">
+                <div class="card-hdr">
+                    <div class="hdr-left">
+                        <span class="hdr-icon icon-book"><i class="fas fa-paperclip"></i></span>
+                        <div class="hdr-text">
+                            <h4>Material Didáctico & Recursos</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <p class="recursos-text">{{ sesionFichaModal.recursos }}</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER (Siguiendo el estándar de botones de la web) -->
+        <div class="modal-footer">
+            <div class="footer-left">
+                <button type="button" class="btn-whatsapp-action" (click)="copiarResumenFicha()" title="Copiar resumen para WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Copiar para WhatsApp</span>
+                </button>
+                <button type="button" class="btn-print-action" (click)="imprimirFichaModal()" title="Imprimir ficha para pista">
+                    <i class="fas fa-print"></i>
+                    <span>Imprimir Ficha</span>
+                </button>
+            </div>
+
+            <div class="footer-right">
+                <button type="button" class="btn-agendar-action" *ngIf="!sesionFichaModal.fecha && userRole === 'entrenador'" (click)="irAAgendarDesdeFicha(sesionFichaModal)">
+                    <i class="far fa-calendar-plus"></i>
+                    <span>+ Agendar Esta Sesión</span>
+                </button>
+                <button type="button" class="btn-close-action" (click)="cerrarFichaModal()">
+                    <span>Cerrar</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+

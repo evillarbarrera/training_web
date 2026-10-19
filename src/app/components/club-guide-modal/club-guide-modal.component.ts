@@ -40,6 +40,7 @@ export class ClubGuideModalComponent implements OnInit {
   activeTab: 'pasos' | 'menus' | 'faq' = 'pasos';
   searchTerm: string = '';
   selectedCategory: string = 'all';
+  dontShowAgain: boolean = false;
 
   onboardingSteps: OnboardingStep[] = [
     {
@@ -283,7 +284,16 @@ export class ClubGuideModalComponent implements OnInit {
   constructor(private router: Router) {}
 
   ngOnInit(): void {
+    this.dontShowAgain = localStorage.getItem('padelblox_club_guide_seen') === 'true';
     this.loadStepStatus();
+  }
+
+  toggleDontShowAgain(): void {
+    if (this.dontShowAgain) {
+      localStorage.setItem('padelblox_club_guide_seen', 'true');
+    } else {
+      localStorage.removeItem('padelblox_club_guide_seen');
+    }
   }
 
   loadStepStatus(): void {
@@ -340,11 +350,15 @@ export class ClubGuideModalComponent implements OnInit {
   }
 
   closeModal(): void {
+    if (this.dontShowAgain) {
+      localStorage.setItem('padelblox_club_guide_seen', 'true');
+    }
     this.close.emit();
   }
 
   markAllAsSeen(): void {
+    this.dontShowAgain = true;
     localStorage.setItem('padelblox_club_guide_seen', 'true');
-    this.closeModal();
+    this.close.emit();
   }
 }

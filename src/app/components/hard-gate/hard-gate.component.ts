@@ -63,13 +63,15 @@ export class HardGateComponent implements OnInit {
     })
       .then(r => r.json())
       .then(res => {
-        // Bloquear si el status es inactive, blocked o past_due
-        if (res.status === 'inactive' || res.status === 'blocked' || res.status === 'past_due') {
+        // Bloquear si el status es inactive, blocked o past_due o is_blocked es true
+        if (res.status === 'inactive' || res.status === 'blocked' || res.status === 'past_due' || res.is_blocked) {
           this.isLocked = true;
           this.message = res.message || 'Tu suscripción requiere atención.';
           if (res.is_club !== undefined) {
             this.isClub = res.is_club;
           }
+        } else {
+          this.isLocked = false;
         }
         this.isLoading = false;
       })

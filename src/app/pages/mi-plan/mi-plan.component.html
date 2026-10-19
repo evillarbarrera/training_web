@@ -62,13 +62,6 @@
         <!-- Stats Widgets -->
         <div class="overview-row">
             <div class="stat-widget card-pm">
-                <div class="widget-icon" style="color: #ffb400;">📈</div>
-                <div class="widget-data">
-                    <div class="widget-val">{{ isInternational ? ('USD $' + currencyService.getUsdAmount(sub.pending_commission)) : ('$' + (sub.pending_commission | number:'1.0-0')) }}</div>
-                    <div class="widget-label">Comisión Mes (Por Cobrar)</div>
-                </div>
-            </div>
-            <div class="stat-widget card-pm">
                 <div class="widget-icon">💎</div>
                 <div class="widget-data">
                     <div class="widget-val">{{ isInternational ? ('USD $' + currencyService.getUsdAmount(sub.price_clp)) : ('$' + (sub.price_clp | number:'1.0-0')) }}</div>
@@ -135,19 +128,25 @@
                 <span class="card-label">{{ isInternational ? 'Método de Pago Internacional' : 'Tarjeta para Pago de Comisiones' }}</span>
                 <div class="payment-method-box">
                   <div class="card-brand">
-                    <i class="fab fa-cc-visa" *ngIf="!isInternational"></i>
+                    <i class="fab fa-cc-visa" *ngIf="!isInternational && (!sub?.card_brand || sub?.card_brand === 'Visa')"></i>
+                    <i class="fab fa-cc-mastercard" *ngIf="!isInternational && sub?.card_brand === 'Mastercard'" style="color: #eb001b;"></i>
+                    <i class="fab fa-cc-amex" *ngIf="!isInternational && sub?.card_brand === 'American Express'" style="color: #007bc1;"></i>
+                    <i class="fas fa-credit-card" *ngIf="!isInternational && sub?.card_brand && sub?.card_brand !== 'Visa' && sub?.card_brand !== 'Mastercard' && sub?.card_brand !== 'American Express'"></i>
                     <i class="fab fa-paypal" *ngIf="isInternational" style="color: #0070ba;"></i>
                   </div>
                   <div class="card-info">
-                    <b>{{ isInternational ? 'Suscripción vía PayPal' : 'Visa para Facturación Interna' }}</b>
-                    <span *ngIf="sub.card_last_four">Finalizada en **** {{ sub.card_last_four }}</span>
-                    <span *ngIf="!sub.card_last_four" style="color: #ff4d4d; font-weight: 700;">{{ isInternational ? 'Requiere vinculación PayPal' : 'Sin tarjeta registrada' }}</span>
+                    <b>{{ isInternational ? 'Suscripción vía PayPal' : (sub?.card_brand ? (sub.card_brand + ' para Facturación') : 'Visa / Mastercard para Facturación') }}</b>
+                    <span *ngIf="sub?.card_last_four" style="color: #10b981; font-weight: 700;">
+                      Finalizada en **** {{ sub.card_last_four }}
+                      <span *ngIf="sub?.card_holder" style="color: #64748b; font-weight: 600; font-size: 11px;">({{ sub.card_holder }})</span>
+                    </span>
+                    <span *ngIf="!sub?.card_last_four" style="color: #ff4d4d; font-weight: 700;">{{ isInternational ? 'Requiere vinculación PayPal' : 'Sin tarjeta registrada' }}</span>
                   </div>
                 </div>
 
                 <!-- Botón Mercado Pago (Solo Chile) -->
                 <button class="btn-save btn-glow full-width mt-4" (click)="cambiarTarjeta()" *ngIf="!isInternational">
-                   REGISTRAR TARJETA SEGURA 🇨🇱
+                   {{ sub?.card_last_four ? '🔄 ACTUALIZAR TARJETA SEGURA 💳' : 'REGISTRAR TARJETA SEGURA 🇨🇱' }}
                 </button>
 
                 <!-- Botón PayPal (Solo Internacional) -->

@@ -172,6 +172,45 @@
 
             <div class="m-body">
                 <div class="booking-flow">
+                    
+                    <!-- SEDE & CANCHA SELECTOR COCKPIT -->
+                    <div class="venue-court-cockpit animate-up">
+                        <div class="vc-col">
+                            <label class="vc-label"><i class="fas fa-building"></i> CLUB / SEDE:</label>
+                            <div class="select-wrapper">
+                                <i class="fas fa-map-pin select-icon"></i>
+                                <select [(ngModel)]="selectedClubId" (change)="onClubChange()" class="modern-select with-icon">
+                                    <option [ngValue]="null">-- Seleccionar Club / Sede --</option>
+                                    <option *ngFor="let cl of clubesList" [value]="cl.id">{{ cl.nombre }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="vc-col">
+                            <label class="vc-label"><i class="fas fa-table-tennis-paddle-ball"></i> CANCHA DISPONIBLE (EN ESTE HORARIO):</label>
+                            <div class="select-wrapper" [class.loading-select]="cargandoCanchas">
+                                <i class="fas fa-border-all select-icon"></i>
+                                <select [(ngModel)]="selectedCanchaId" class="modern-select with-icon highlight" [disabled]="!selectedClubId || cargandoCanchas">
+                                    <option [ngValue]="null" *ngIf="cargandoCanchas">Buscando canchas libres...</option>
+                                    <option [ngValue]="null" *ngIf="!cargandoCanchas">-- Seleccionar Cancha --</option>
+                                    <option *ngFor="let can of canchasDisponibles" [value]="can.id" [disabled]="!can.disponible">
+                                        {{ can.nombre }} {{ can.disponible ? '✅ (Libre)' : '⛔ (Ocupada)' }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="court-alert-notice danger animate-up" *ngIf="selectedClubId && !cargandoCanchas && todasCanchasOcupadas">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Atención: Todas las canchas de este club se encuentran ocupadas o reservadas en el horario {{ selectedSlot?.hour }} - {{ getHoraFin(selectedSlot?.hour) }}.</span>
+                    </div>
+
+                    <div class="court-alert-notice info animate-up" *ngIf="selectedClubId && !cargandoCanchas && canchasDisponibles.length === 0">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Este club aún no tiene pistas configuradas.</span>
+                    </div>
+
                     <div class="grid-2-cols">
                         
                         <!-- Columna Izquierda: Alumno y Modalidad -->
@@ -294,7 +333,7 @@
                                         <i class="fas fa-diagram-project select-icon"></i>
                                         <select [(ngModel)]="planificacionId" (change)="onMallaChange()" class="modern-select with-icon">
                                             <option [ngValue]="null">-- Seleccionar Malla Curricular --</option>
-                                            <option *ngFor="let m of mallasFiltradas" [value]="m.id">{{ m.nombre }} ({{ m.nivel }})</option>
+                                            <option *ngFor="let m of mallasFiltradas" [ngValue]="m.id">{{ m.nombre }} ({{ m.nivel }})</option>
                                         </select>
                                     </div>
 
@@ -302,7 +341,7 @@
                                         <i class="fas fa-book-bookmark select-icon"></i>
                                         <select [(ngModel)]="claseMallaId" (change)="onClaseChange()" class="modern-select with-icon" [disabled]="!planificacionId">
                                             <option [ngValue]="null">-- Seleccionar Clase / Sesión --</option>
-                                            <option *ngFor="let c of clasesDisponibles; let i = index" [value]="c.id">Clase {{ i + 1 }}: {{ c.titulo }}</option>
+                                            <option *ngFor="let c of clasesDisponibles; let i = index" [ngValue]="c.id">Clase {{ i + 1 }}: {{ c.titulo }}</option>
                                         </select>
                                     </div>
                                 </div>

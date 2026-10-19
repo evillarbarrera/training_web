@@ -712,6 +712,140 @@
 
 // Booking Flow Elements
 .booking-flow {
+    // Venue & Court Cockpit
+    .venue-court-cockpit {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+
+        @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .vc-col {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            .vc-label {
+                font-size: 11px;
+                font-weight: 800;
+                color: #475569;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+
+                i {
+                    color: #2563eb;
+                    font-size: 12px;
+                }
+            }
+
+            .select-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+
+                .select-icon {
+                    position: absolute;
+                    left: 12px;
+                    color: #94a3b8;
+                    font-size: 13px;
+                    pointer-events: none;
+                    z-index: 2;
+                }
+
+                .modern-select {
+                    width: 100%;
+                    background: #ffffff;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 10px 14px 10px 36px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #0f172a;
+                    outline: none;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+
+                    &:focus {
+                        border-color: #2563eb;
+                        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+                    }
+
+                    &:disabled {
+                        background: #f1f5f9;
+                        color: #94a3b8;
+                        cursor: not-allowed;
+                        border-color: #e2e8f0;
+                    }
+
+                    &.highlight {
+                        border-color: #93c5fd;
+                        background-color: #ffffff;
+
+                        &:focus {
+                            border-color: #2563eb;
+                        }
+                    }
+                }
+
+                &.loading-select {
+                    .select-icon {
+                        animation: spin 1s infinite linear;
+                    }
+                }
+            }
+        }
+    }
+
+    .court-alert-notice {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        line-height: 1.4;
+
+        i {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        &.danger {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+
+            i {
+                color: #dc2626;
+            }
+        }
+
+        &.info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+
+            i {
+                color: #3b82f6;
+            }
+        }
+    }
+
     .grid-2-cols { 
         display: grid; 
         grid-template-columns: 1.15fr 1fr; 
