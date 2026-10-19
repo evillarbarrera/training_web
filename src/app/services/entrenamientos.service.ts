@@ -158,7 +158,7 @@ export class EntrenamientoService {
     return this.http.get<any>(url, { headers: this.getHeaders() });
   }
 
-  asignarMalla(data: { jugador_id: number, malla_id: number, entrenador_id: number }): Observable<any> {
+  asignarMalla(data: { jugador_id: number, malla_id: number, entrenador_id: number, pack_id?: number }): Observable<any> {
     return this.http.post(`${this.apiUrl}/mallas/asignar_malla.php`, data, { headers: this.getHeaders() });
   }
 
@@ -170,13 +170,16 @@ export class EntrenamientoService {
     return this.http.get<any[]>(url, { headers: this.getHeaders() });
   }
 
-  getHistorialMalla(jugadorId: number, entrenadorId?: number, packId?: number): Observable<any[]> {
+  getHistorialMalla(jugadorId: number, entrenadorId?: number, packId?: number, mallaId?: number): Observable<any[]> {
     let url = `${this.apiUrl}/mallas/get_historial.php?jugador_id=${jugadorId}`;
     if (entrenadorId) {
       url += `&entrenador_id=${entrenadorId}`;
     }
     if (packId) {
       url += `&pack_id=${packId}`;
+    }
+    if (mallaId) {
+      url += `&malla_id=${mallaId}`;
     }
     return this.http.get<any[]>(url, { headers: this.getHeaders() });
   }

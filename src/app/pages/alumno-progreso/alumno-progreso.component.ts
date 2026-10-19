@@ -123,7 +123,10 @@ export class AlumnoProgresoComponent implements OnInit {
                     this.alumnoNombre = `${u.nombre || ''} ${u.apellido || ''}`.trim();
                     let foto = res.user.foto_perfil || res.user.foto || null;
                     if (foto && !foto.startsWith('http')) {
-                        foto = `https://api.padelmanager.cl/${foto}`;
+                        let clean = foto.startsWith('/') ? foto.substring(1) : foto;
+                        if (!clean.includes('/')) clean = `uploads/perfiles/${clean}`;
+                        if (!clean.startsWith('prd/') && !clean.startsWith('dev/')) clean = `prd/${clean}`;
+                        foto = `https://api.padelmanager.cl/${clean}`;
                     }
                     this.alumnoFoto = foto;
                 }

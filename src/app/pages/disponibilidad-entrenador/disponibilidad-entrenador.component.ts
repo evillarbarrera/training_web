@@ -95,9 +95,32 @@ export class DisponibilidadEntrenadorComponent implements OnInit {
     { target: '.btn-apply', title: '🪄 Aplicar Plantilla', content: '¡El toque final! Una vez tengas tu plantilla, úsala aquí para configurar todo el mes en un solo clic.' }
   ];
 
+  // 1. Click & Drag State
+  isDragging: boolean = false;
+  dragSelectMode: boolean = true;
+
+  // 2. Selector de Rango Rápido
+  rangeHoraInicio: string = '16:00';
+  rangeHoraFin: string = '21:00';
+  horasOpciones: string[] = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+
+  // 3. Duración de Bloques
+  selectedSlotDuration: number = 60; // 60 or 90
+
+  // 4. Bloqueo por Torneo / Vacaciones / Día Libre
+  diasBloqueados: Set<string> = new Set();
+
+  // 5. Vista de Calendario (Día vs Matriz Semanal)
+  calendarViewType: 'day' | 'week' = 'day';
+
   @HostListener('window:resize')
   onResize() {
     if (this.showTutorial) this.updateTutorialPosition();
+  }
+
+  @HostListener('window:mouseup')
+  onMouseUp() {
+    this.isDragging = false;
   }
 
   constructor(
@@ -166,7 +189,7 @@ export class DisponibilidadEntrenadorComponent implements OnInit {
             fecha: this.getLocalISODate(fecha),
             hora_inicio: '07:00',
             hora_fin: '22:00',
-            duracion: 60
+            duracion: this.selectedSlotDuration
         });
     }
 
@@ -260,6 +283,10 @@ onMonthChange() {
     });
   }
 
+  get selectedClub() {
+    return this.clubes.find(c => Number(c.id) === Number(this.selectedClubId));
+  }
+
   get activeClubes() {
     const usedClubIds = new Set(this.disponibilidadExistente.values());
     if (this.selectedClubId) usedClubIds.add(Number(this.selectedClubId));
@@ -269,6 +296,140 @@ onMonthChange() {
   selectClub(id: number) {
     this.selectedClubId = id;
     this.onClubChange();
+  }
+
+  setMode(mode: 'calendar' | 'template') {
+    this.viewMode = mode;
+    if (mode === 'template') {
+      if (!this.templateBlocks || Object.keys(this.templateBlocks).length === 0) {
+        this.openDefaultModal();
+      }
+    }
+  }
+
+  prevMonth() {
+    const currentIndex = this.mesesDisponibles.findIndex(m => m.label === this.selectedMonthLabel);
+    if (currentIndex > 0) {
+      this.selectedMonthLabel = this.mesesDisponibles[currentIndex - 1].label;
+      this.filtrarDiasPorMes();
+    }
+  }
+
+  nextMonth() {
+    const currentIndex = this.mesesDisponibles.findIndex(m => m.label === this.selectedMonthLabel);
+    if (currentIndex < this.mesesDisponibles.length - 1) {
+      this.selectedMonthLabel = this.mesesDisponibles[currentIndex + 1].label;
+      this.filtrarDiasPorMes();
+    }
+  }
+
+  isHoy(fecha: string): boolean {
+    return fecha === this.getLocalISODate(new Date());
+  }
+
+  isFinDeSemana(fecha: string): boolean {
+    const d = new Date(fecha + 'T00:00:00');
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  }
+
+  irAHoy() {
+    const hoy = new Date();
+    const hoyIso = this.getLocalISODate(hoy);
+    const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const mLabel = `${nombresMeses[hoy.getMonth()]} ${hoy.getFullYear()}`;
+    
+    const existeMes = this.mesesDisponibles.some(m => m.label === mLabel);
+    if (existeMes) {
+      this.selectedMonthLabel = mLabel;
+      this.filtrarDiasPorMes();
+    }
+    this.diaSeleccionado = hoyIso;
+  }
+
+  get diaSeleccionadoObj(): DiaSemana | undefined {
+    return this.dias.find(d => d.fecha === this.diaSeleccionado);
+  }
+
+  get copySourceDiaNombre(): string {
+    const dia = this.dias.find(d => d.fecha === this.copySourceFecha);
+    return dia ? dia.nombre : '';
+  }
+
+  get HorasActivasMes(): number {
+    if (!this.diasFiltrados) return 0;
+    let total = 0;
+    this.diasFiltrados.forEach(d => {
+      const bloques = this.bloquesPorDia[d.fecha];
+      if (bloques) {
+        total += bloques.filter(b => b.seleccionado).length;
+      }
+    });
+    return total;
+  }
+
+  get ReservasMes(): number {
+    if (!this.diasFiltrados) return 0;
+    let total = 0;
+    this.diasFiltrados.forEach(d => {
+      const bloques = this.bloquesPorDia[d.fecha];
+      if (bloques) {
+        total += bloques.filter(b => b.ocupado).length;
+      }
+    });
+    return total;
+  }
+
+  get diasConHorarioCount(): number {
+    if (!this.diasFiltrados) return 0;
+    return this.diasFiltrados.filter(d => {
+      const bloques = this.bloquesPorDia[d.fecha];
+      return bloques && bloques.some(b => b.seleccionado);
+    }).length;
+  }
+
+  getHorasActivasDia(fecha: string): number {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return 0;
+    return bloques.filter(b => b.seleccionado).length;
+  }
+
+  tieneReservasDia(fecha: string): boolean {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return false;
+    return bloques.some(b => b.ocupado);
+  }
+
+  getHorasTemplateDia(dayId: number): number {
+    const blocks = this.templateBlocks[dayId];
+    if (!blocks) return 0;
+    return blocks.filter(b => b.selected).length;
+  }
+
+  get cambiosPendientesCount(): number {
+    if (!this.selectedClubId) return 0;
+    let count = 0;
+    Object.values(this.bloquesPorDia).forEach(bloques => {
+      bloques.forEach(b => {
+        const key = `${b.fecha} ${b.hora_inicio}:00-${b.fecha} ${b.hora_fin}:00`;
+        const existiaId = this.disponibilidadExistente.get(key);
+        const existia = existiaId === Number(this.selectedClubId);
+        if (b.seleccionado !== existia) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }
+
+  descartarCambios() {
+    this.popupService.confirm('Descartar Cambios', '¿Deseas revertir los cambios no guardados a su estado original?')
+      .then(conf => {
+        if (conf) {
+          this.generarBloquesSemana();
+          this.cargarReservasExistentes();
+        }
+      });
   }
 
   onClubChange(): void {
@@ -390,17 +551,225 @@ onMonthChange() {
     return this.bloquesPorDia[this.diaSeleccionado] || [];
   }
 
-  toggleTodoDia(fecha: string) {
+  /* =============================
+     CLICK & DRAG (EFECTO PINCEL)
+  ============================== */
+  onBlockMouseDown(bloque: BloqueHorario, event: MouseEvent) {
+    if (bloque.ocupado || bloque.lockedByOtherClub) return;
+    event.preventDefault();
+    this.isDragging = true;
+    this.dragSelectMode = !bloque.seleccionado;
+    bloque.seleccionado = this.dragSelectMode;
+  }
+
+  onBlockMouseEnter(bloque: BloqueHorario) {
+    if (this.isDragging && !bloque.ocupado && !bloque.lockedByOtherClub) {
+      bloque.seleccionado = this.dragSelectMode;
+    }
+  }
+
+  /* =============================
+     SELECTOR DE RANGO ("DE X A Y")
+  ============================== */
+  aplicarRangoHoras(fecha: string) {
     const bloques = this.bloquesPorDia[fecha];
     if (!bloques) return;
-
-    const todosSeleccionados = bloques.every(b => b.seleccionado || b.ocupado || b.lockedByOtherClub);
-    
+    if (this.rangeHoraInicio >= this.rangeHoraFin) {
+      this.popupService.error('Rango Inválido', 'La hora de inicio debe ser anterior a la hora de fin.');
+      return;
+    }
+    let marcados = 0;
     bloques.forEach(b => {
       if (!b.ocupado && !b.lockedByOtherClub) {
-        b.seleccionado = !todosSeleccionados;
+        if (b.hora_inicio >= this.rangeHoraInicio && b.hora_fin <= this.rangeHoraFin) {
+          b.seleccionado = true;
+          marcados++;
+        }
       }
     });
+    this.popupService.success('Rango Aplicado', `Se habilitaron ${marcados} horas para el ${fecha}`);
+  }
+
+  aplicarRangoATodoElMes() {
+    if (this.rangeHoraInicio >= this.rangeHoraFin) {
+      this.popupService.error('Rango Inválido', 'La hora de inicio debe ser anterior a la hora de fin.');
+      return;
+    }
+    this.popupService.confirm('Aplicar Rango al Mes', `¿Deseas habilitar el rango ${this.rangeHoraInicio} - ${this.rangeHoraFin} en todos los días de ${this.selectedMonthLabel}?`)
+      .then(conf => {
+        if (conf) {
+          this.diasFiltrados.forEach(d => {
+            const bloques = this.bloquesPorDia[d.fecha];
+            if (bloques) {
+              bloques.forEach(b => {
+                if (!b.ocupado && !b.lockedByOtherClub) {
+                  if (b.hora_inicio >= this.rangeHoraInicio && b.hora_fin <= this.rangeHoraFin) {
+                    b.seleccionado = true;
+                  }
+                }
+              });
+            }
+          });
+          this.popupService.success('Rango Aplicado', `Rango aplicado a todo el mes de ${this.selectedMonthLabel}`);
+        }
+      });
+  }
+
+  /* =============================
+     REPLICADOR DE SEMANA COMPLETA
+  ============================== */
+  get diasSemanaActiva(): DiaSemana[] {
+    if (!this.diaSeleccionado) return [];
+    const selDate = new Date(this.diaSeleccionado + 'T00:00:00');
+    const dayOfWeek = selDate.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    
+    const monday = new Date(selDate);
+    monday.setDate(selDate.getDate() + diffToMonday);
+
+    const weekDays: DiaSemana[] = [];
+    const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const iso = this.getLocalISODate(d);
+      const found = this.dias.find(item => item.fecha === iso);
+      if (found) {
+        weekDays.push(found);
+      } else {
+        weekDays.push({
+          nombre: nombresDias[d.getDay()],
+          fecha: iso,
+          hora_inicio: '07:00',
+          hora_fin: '22:00',
+          duracion: this.selectedSlotDuration
+        });
+      }
+    }
+    return weekDays;
+  }
+
+  replicarSemanaATodoElMes() {
+    const semanaBase = this.diasSemanaActiva;
+    if (semanaBase.length === 0) return;
+
+    const patternMap = new Map<number, Map<string, boolean>>();
+    semanaBase.forEach(d => {
+      const dObj = new Date(d.fecha + 'T00:00:00');
+      const dayOfWeek = dObj.getDay();
+      const bloques = this.bloquesPorDia[d.fecha] || [];
+      const slots = new Map<string, boolean>();
+      bloques.forEach(b => slots.set(b.hora_inicio, b.seleccionado));
+      patternMap.set(dayOfWeek, slots);
+    });
+
+    const targetDays = this.diasFiltrados.filter(d => !semanaBase.some(sb => sb.fecha === d.fecha));
+
+    if (targetDays.length === 0) {
+      this.popupService.info('Sin semanas adicionales', 'No hay otras semanas en este mes para replicar.');
+      return;
+    }
+
+    this.popupService.confirm(
+      'Replicar Semana Completa',
+      `¿Deseas clonar los horarios de esta semana a las ${targetDays.length} fechas restantes de ${this.selectedMonthLabel}?`
+    ).then(conf => {
+      if (conf) {
+        targetDays.forEach(td => {
+          const tdObj = new Date(td.fecha + 'T00:00:00');
+          const dayOfWeek = tdObj.getDay();
+          const sourceSlots = patternMap.get(dayOfWeek);
+          const bloquesDestino = this.bloquesPorDia[td.fecha];
+
+          if (sourceSlots && bloquesDestino) {
+            bloquesDestino.forEach(b => {
+              if (!b.ocupado && !b.lockedByOtherClub) {
+                const sel = sourceSlots.get(b.hora_inicio);
+                if (sel !== undefined) {
+                  b.seleccionado = sel;
+                }
+              }
+            });
+          }
+        });
+        this.popupService.success('¡Semana Replicada!', `Se actualizaron ${targetDays.length} días de ${this.selectedMonthLabel}.`);
+      }
+    });
+  }
+
+  /* =============================
+     DURACIÓN DE BLOQUES (60m vs 90m)
+  ============================== */
+  cambiarDuracionBloque(nuevaDuracion: number) {
+    if (this.selectedSlotDuration === nuevaDuracion) return;
+    this.selectedSlotDuration = nuevaDuracion;
+    this.dias.forEach(d => d.duracion = nuevaDuracion);
+    this.generarBloquesSemana();
+    this.cargarReservasExistentes();
+    this.popupService.info('Formato de Clase', `Grilla ajustada a bloques de ${nuevaDuracion} minutos.`);
+  }
+
+  /* =============================
+     BLOQUEO POR TORNEO / DÍA LIBRE
+  ============================== */
+  bloquearDiaPorTorneo(fecha: string) {
+    this.popupService.confirm('Bloquear Día', '¿Marcar este día como no laborable por Torneo o Día Libre? Se cerrarán las horas libres sin alterar reservas de alumnos.')
+      .then(conf => {
+        if (conf) {
+          const bloques = this.bloquesPorDia[fecha];
+          if (bloques) {
+            bloques.forEach(b => {
+              if (!b.ocupado && !b.lockedByOtherClub) {
+                b.seleccionado = false;
+              }
+            });
+          }
+          this.diasBloqueados.add(fecha);
+          this.popupService.success('Día Bloqueado', 'Día marcado como fuera de servicio por Torneo / Libre.');
+        }
+      });
+  }
+
+  desbloquearDia(fecha: string) {
+    this.diasBloqueados.delete(fecha);
+    this.popupService.info('Día Desbloqueado', 'Ahora puedes configurar horarios para este día.');
+  }
+
+  isDiaBloqueado(fecha: string): boolean {
+    return this.diasBloqueados.has(fecha);
+  }
+
+  /* =============================
+     MATRIZ SEMANAL (7 COLUMNAS)
+  ============================== */
+  setCalendarViewType(type: 'day' | 'week') {
+    this.calendarViewType = type;
+  }
+
+  prevSemana() {
+    if (!this.diaSeleccionado) return;
+    const d = new Date(this.diaSeleccionado + 'T00:00:00');
+    d.setDate(d.getDate() - 7);
+    this.diaSeleccionado = this.getLocalISODate(d);
+  }
+
+  nextSemana() {
+    if (!this.diaSeleccionado) return;
+    const d = new Date(this.diaSeleccionado + 'T00:00:00');
+    d.setDate(d.getDate() + 7);
+    this.diaSeleccionado = this.getLocalISODate(d);
+  }
+
+  get horasMatriz(): string[] {
+    const primerDia = this.diaSeleccionado || (this.diasFiltrados[0]?.fecha);
+    const bloques = this.bloquesPorDia[primerDia] || [];
+    return bloques.map(b => b.hora_inicio);
+  }
+
+  getBloqueEnMatriz(fecha: string, hora: string): BloqueHorario | undefined {
+    const bloques = this.bloquesPorDia[fecha];
+    if (!bloques) return undefined;
+    return bloques.find(b => b.hora_inicio === hora);
   }
 
   /* --- ACCIONES RÁPIDAS DE TURNOS PARA DÍA ACTIVO --- */
@@ -471,6 +840,42 @@ onMonthChange() {
 
   deseleccionarTodosTargetFechas() {
     this.copyTargetFechas = [];
+  }
+
+  seleccionarMismoDiaSemana() {
+    if (!this.copySourceFecha) return;
+    const dObj = new Date(this.copySourceFecha + 'T00:00:00');
+    const dayOfWeek = dObj.getDay();
+
+    this.copyTargetFechas = this.diasFiltrados
+      .filter(d => {
+        if (d.fecha === this.copySourceFecha) return false;
+        const targetObj = new Date(d.fecha + 'T00:00:00');
+        return targetObj.getDay() === dayOfWeek;
+      })
+      .map(d => d.fecha);
+  }
+
+  seleccionarDiasLaborales() {
+    this.copyTargetFechas = this.diasFiltrados
+      .filter(d => {
+        if (d.fecha === this.copySourceFecha) return false;
+        const targetObj = new Date(d.fecha + 'T00:00:00');
+        const day = targetObj.getDay();
+        return day >= 1 && day <= 5;
+      })
+      .map(d => d.fecha);
+  }
+
+  seleccionarFinesDeSemana() {
+    this.copyTargetFechas = this.diasFiltrados
+      .filter(d => {
+        if (d.fecha === this.copySourceFecha) return false;
+        const targetObj = new Date(d.fecha + 'T00:00:00');
+        const day = targetObj.getDay();
+        return day === 0 || day === 6;
+      })
+      .map(d => d.fecha);
   }
 
   ejecutarCopiarDia() {

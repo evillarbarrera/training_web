@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -31,6 +31,7 @@ export class AlumnoClasesComponent implements OnInit {
     alumnoNombre: string = '';
     alumnoFoto: string = '';
     coachNombre: string = '';
+    get coachName(): string { return this.coachNombre; }
     alumnoProfile: any = null;
     packActual: any = null;
 
@@ -104,6 +105,7 @@ export class AlumnoClasesComponent implements OnInit {
     roadmapPacks: any[] = [];
     historialPacks: any[] = [];
     selectedPack: any = null;
+    sesionFichaModal: any = null;
 
     // Interactive Tutorial State
     showTutorial = false;
@@ -204,25 +206,58 @@ export class AlumnoClasesComponent implements OnInit {
         });
     }
 
+    avatarErrorAttempts: number = 0;
+
     loadAlumnoPerfil() {
         if (!this.alumnoId) return;
+        this.avatarErrorAttempts = 0;
         this.mysqlService.getPerfil(this.alumnoId).subscribe({
             next: (res: any) => {
                 if (res.user) {
                     this.alumnoNombre = res.user.nombre || 'Estudiante';
                     this.alumnoProfile = res.user;
                     let foto = res.user.foto_perfil || res.user.foto || null;
-                    if (foto && !foto.startsWith('http')) {
-                        foto = `https://api.padelmanager.cl/${foto.startsWith('/') ? foto.substring(1) : foto}`;
-                    } else if (!foto) {
-                        foto = `https://ui-avatars.com/api/?name=${encodeURIComponent(this.alumnoNombre)}&background=ccff00&color=111&bold=true`;
+                    if (foto) {
+                        if (foto.startsWith('http') || foto.startsWith('assets/')) {
+                            this.alumnoFoto = foto;
+                        } else {
+                            let clean = foto.startsWith('/') ? foto.substring(1) : foto;
+                            if (!clean.includes('/')) {
+                                clean = `uploads/perfiles/${clean}`;
+                            }
+                            if (!clean.startsWith('prd/') && !clean.startsWith('dev/')) {
+                                clean = `prd/${clean}`;
+                            }
+                            this.alumnoFoto = `https://api.padelmanager.cl/${clean}`;
+                        }
+                    } else {
+                        this.alumnoFoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(this.alumnoNombre)}&background=ccff00&color=111&bold=true&size=256`;
                     }
-                    this.alumnoFoto = foto;
                     this.packActual = res.user.pack_nombre ? { nombre: res.user.pack_nombre } : null;
                     this.cdr.detectChanges();
                 }
             }
         });
+    }
+
+    onAvatarError() {
+        this.avatarErrorAttempts++;
+        if (this.avatarErrorAttempts === 1) {
+            // Alternar entre prd y dev si el archivo está en un ambiente específico
+            if (this.alumnoFoto.includes('/prd/')) {
+                this.alumnoFoto = this.alumnoFoto.replace('/prd/', '/dev/');
+                this.cdr.detectChanges();
+                return;
+            } else if (this.alumnoFoto.includes('/dev/')) {
+                this.alumnoFoto = this.alumnoFoto.replace('/dev/', '/prd/');
+                this.cdr.detectChanges();
+                return;
+            }
+        }
+        // Fallback elegante a avatar con iniciales en estilo Padelblox
+        const name = this.alumnoNombre || 'Alumno';
+        this.alumnoFoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=ccff00&color=111&bold=true&size=256`;
+        this.cdr.detectChanges();
     }
 
     async loadMallaData() {
@@ -254,19 +289,41 @@ export class AlumnoClasesComponent implements OnInit {
                     return { ...p, id: packId, nombre: packName, type: tipo, activeMesh: mesh };
                 });
 
+                // Add any active mesh assigned to the student that wasn't in allPacks (cross-coach or catalog overrides)
+                this.mallasActivas.forEach((mesh: any) => {
+                    const exists = mappedPacks.some((p: any) => 
+                        (p.activeMesh && p.activeMesh.seguimiento_id === mesh.seguimiento_id) ||
+                        (p.activeMesh && p.activeMesh.malla_id === mesh.malla_id && p.id == mesh.pack_id)
+                    );
+                    if (!exists) {
+                        mappedPacks.unshift({
+                            id: mesh.pack_id || 0,
+                            nombre: mesh.pack_nombre || mesh.malla_nombre || 'Plan Activo',
+                            type: 'individual',
+                            activeMesh: mesh,
+                            sesiones_totales: 4,
+                            sesiones_pasadas: 0
+                        });
+                    }
+                });
+
                 // FILTER: Only Individual/Multiplayer
                 const roadmapEligible = mappedPacks.filter((p: any) => p.type !== 'grupal' && p.type !== 'pack_grupal' && p.type !== 'clase grupal');
 
-                // ACTIVE: Packs with pending sessions (reservations not yet completed)
-                this.roadmapPacks = roadmapEligible.filter((p: any) => p.sesiones_pasadas < p.sesiones_totales);
+                // Sort: Prioritize packs with active meshes, newest first
+                roadmapEligible.sort((a: any, b: any) => {
+                    const timeA = a.activeMesh?.fecha_inicio ? new Date(a.activeMesh.fecha_inicio).getTime() : 0;
+                    const timeB = b.activeMesh?.fecha_inicio ? new Date(b.activeMesh.fecha_inicio).getTime() : 0;
+                    return timeB - timeA;
+                });
 
-                // HISTORY: Packs with all sessions completed
-                this.historialPacks = roadmapEligible.filter((p: any) => p.sesiones_pasadas >= p.sesiones_totales);
+                // ROADMAP: Display all plans with an active mesh or available sessions
+                this.roadmapPacks = roadmapEligible.filter((p: any) => p.activeMesh || p.sesiones_pasadas < p.sesiones_totales);
+                this.historialPacks = roadmapEligible.filter((p: any) => !p.activeMesh && p.sesiones_pasadas >= p.sesiones_totales);
 
                 if (this.roadmapPacks.length > 0) {
                     this.seleccionarPackRoadmap(this.roadmapPacks[0]);
                 } else if (this.historialPacks.length > 0) {
-                    // Fallback to latest history if no active
                     this.seleccionarPackRoadmap(this.historialPacks[0]);
                 } else {
                     this.historialMalla = [];
@@ -282,7 +339,8 @@ export class AlumnoClasesComponent implements OnInit {
         
         if (pack.activeMesh) {
             this.isLoading = true;
-            this.entrenamientoService.getHistorialMalla(this.alumnoId, pack.activeMesh.entrenador_id, pack.id).subscribe({
+            const mallaId = Number(pack.activeMesh.malla_id || 0);
+            this.entrenamientoService.getHistorialMalla(this.alumnoId, pack.activeMesh.entrenador_id, pack.id, mallaId).subscribe({
                 next: (res: any) => {
                     this.historialMalla = Array.isArray(res) ? res : [];
                     this.isLoading = false;
@@ -295,6 +353,35 @@ export class AlumnoClasesComponent implements OnInit {
             this.isLoading = false;
             this.cdr.detectChanges();
         }
+    }
+
+    getSesionesAgendadasCount(): number {
+        return (this.historialMalla || []).filter(s => s.estado_asistencia === 'proxima' || s.fecha).length;
+    }
+
+    getSesionesCompletadasCount(): number {
+        return (this.historialMalla || []).filter(s => s.estado_asistencia === 'completada').length;
+    }
+
+    getProgresoRoadmap(): number {
+        if (!this.historialMalla || this.historialMalla.length === 0) return 0;
+        const done = this.getSesionesCompletadasCount();
+        const scheduled = this.getSesionesAgendadasCount();
+        const progress = Math.round(((done + scheduled * 0.5) / this.historialMalla.length) * 100);
+        return Math.min(100, Math.max(0, progress));
+    }
+
+    irAAgendarSesion(sesion?: any) {
+        const queryParams: any = {
+            alumnoId: this.alumnoId
+        };
+        if (this.selectedPack?.activeMesh?.malla_id) {
+            queryParams.mallaId = this.selectedPack.activeMesh.malla_id;
+        }
+        if (sesion?.id) {
+            queryParams.claseId = sesion.id;
+        }
+        this.router.navigate(['/entrenador-agendar'], { queryParams });
     }
 
     getTotalHistorialSesiones(): number {
@@ -822,87 +909,121 @@ export class AlumnoClasesComponent implements OnInit {
     }
 
     abrirPanelDetalle(sesion: any) {
-        const objs = Array.isArray(sesion.lista_objetivos) ? sesion.lista_objetivos : [sesion.lista_objetivos];
-        const objsHtml = objs.map((o: string) => `
-            <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; text-align: left;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #ccff00; margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 10px rgba(204, 255, 0, 0.4);"></span>
-                <span style="color: #475569; font-weight: 700; font-size: 14px; line-height: 1.4;">${o}</span>
-            </div>
-        `).join('');
+        this.sesionFichaModal = sesion;
+    }
 
-        const meshName = this.selectedPack?.activeMesh?.malla_nombre || 'Plan de Entrenamiento';
+    cerrarFichaModal(event?: any) {
+        if (event && event.target !== event.currentTarget) return;
+        this.sesionFichaModal = null;
+    }
 
-        let contentHtml = '';
-        if (sesion.calentamiento || sesion.parte_tecnica || sesion.drills || sesion.juego) {
-            contentHtml = `
-                <div style="margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
-                    <div style="font-size: 11px; font-weight: 950; color: #111; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; width: fit-content; margin-bottom: 15px;">PLAN DE TRABAJO</div>
-                    
-                    ${sesion.calentamiento ? `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">🔥 Calentamiento</div>
-                            <div style="font-size: 13px; color: #475569; font-weight: 600;">${sesion.calentamiento}</div>
-                        </div>` : ''}
-                    
-                    ${sesion.parte_tecnica ? `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">🎾 Parte Técnica</div>
-                            <div style="font-size: 13px; color: #475569; font-weight: 600;">${sesion.parte_tecnica}</div>
-                        </div>` : ''}
-
-                    ${sesion.drills ? `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">⚡ Drills</div>
-                            <div style="font-size: 13px; color: #475569; font-weight: 600;">${sesion.drills}</div>
-                        </div>` : ''}
-
-                    ${sesion.juego ? `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 10px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">🏆 Juego / Puntos</div>
-                            <div style="font-size: 13px; color: #475569; font-weight: 600;">${sesion.juego}</div>
-                        </div>` : ''}
-                </div>
-            `;
+    @HostListener('document:keydown.escape', ['$event'])
+    onEscapeKey(event: KeyboardEvent) {
+        if (this.sesionFichaModal) {
+            this.cerrarFichaModal();
         }
+    }
 
-        Swal.fire({
-            title: `<div style="text-align: left; font-size: 12px; font-weight: 950; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Ficha Técnica de Sesión</div>
-                    <div style="text-align: left; font-size: 24px; font-weight: 950; color: #111; line-height: 1.1; letter-spacing: -1px;">${sesion.titulo}</div>`,
-            html: `
-                <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 15px; padding: 20px; margin-top: 15px; font-family: 'Inter', sans-serif; text-align: left;">
-                    <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #e2e8f0;">
-                         <div style="font-size: 10px; font-weight: 950; color: #94a3b8; margin-bottom: 5px;">ESTRATEGIA ACTIVA</div>
-                         <div style="font-size: 14px; font-weight: 900; color: #111;">${meshName}</div>
-                    </div>
-                    
-                    <div style="font-size: 11px; font-weight: 950; color: #111; background: #ccff00; padding: 4px 10px; border-radius: 6px; width: fit-content; margin-bottom: 15px;">OBJETIVOS ACADÉMICOS</div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        ${objsHtml || '<p style="color: #94a3b8; font-style: italic;">Sin objetivos específicos definidos.</p>'}
-                    </div>
+    getObjetivosArray(sesion: any): string[] {
+        if (!sesion) return [];
+        let list: string[] = [];
+        if (Array.isArray(sesion.lista_objetivos) && sesion.lista_objetivos.length > 0) {
+            list = sesion.lista_objetivos
+                .map((o: any) => typeof o === 'string' ? o.trim() : String(o))
+                .filter((o: string) => o.length > 0);
+        } else if (sesion.objetivo && typeof sesion.objetivo === 'string') {
+            try {
+                const parsed = JSON.parse(sesion.objetivo);
+                if (Array.isArray(parsed)) {
+                    list = parsed
+                        .map((o: any) => typeof o === 'string' ? o.trim() : String(o))
+                        .filter((o: string) => o.length > 0);
+                }
+            } catch (e) {}
+            if (list.length === 0 && sesion.objetivo.trim()) {
+                list = [sesion.objetivo.trim()];
+            }
+        }
+        
+        // Filter out redundant title matches (e.g. if objetivo is literally "Clase 1" which equals titulo "Clase 1")
+        const filtered = list.filter(o => o.toLowerCase() !== (sesion.titulo || '').toLowerCase().trim());
+        if (filtered.length > 0) return filtered;
 
-                    ${contentHtml}
-                </div>
+        // Smart athletic default objectives
+        return [
+            'Dominio técnico y ajuste biomecánico del gesto de golpeo.',
+            'Lectura de trayectorias, control de bola y posicionamiento táctico en pista.',
+            'Transferencia a situaciones reales de juego y toma de decisiones.'
+        ];
+    }
 
-                <div style="display: flex; gap: 20px; margin-top: 20px; padding: 0 10px;">
-                    <div style="flex: 1; text-align: left;">
-                        <div style="font-size: 9px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">Programación</div>
-                        <div style="font-size: 13px; font-weight: 850; color: #111;">${sesion.fecha ? sesion.fecha : 'Pendiente'}</div>
-                    </div>
-                    <div style="flex: 1; text-align: left;">
-                        <div style="font-size: 9px; font-weight: 950; color: #94a3b8; text-transform: uppercase;">Horario</div>
-                        <div style="font-size: 13px; font-weight: 850; color: #111;">${sesion.hora ? sesion.hora.slice(0,5) + ' hrs' : '--:--'}</div>
-                    </div>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#111',
-            width: '450px',
-            padding: '2rem',
-            background: '#ffffff',
-            showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
-            hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' }
-        });
+    getCalentamientoText(sesion: any): string {
+        return sesion?.calentamiento || 'Activación cardiovascular, movilidad articular de tren superior e inferior, y desplazamientos en pista con bola.';
+    }
+
+    getTecnicaText(sesion: any): string {
+        return sesion?.parte_tecnica || 'Corrección de empuñadura, preparación temprana, punto de impacto delante del cuerpo y control direccional.';
+    }
+
+    getDrillsText(sesion: any): string {
+        return sesion?.drills || 'Series progresivas con canasto, patrones de juego repetitivos y trabajo bajo presión táctica.';
+    }
+
+    getJuegoText(sesion: any): string {
+        return sesion?.juego || 'Puntos condicionados con consignas tácticas para consolidar los contenidos en situación real de partido.';
+    }
+
+    getEstadoLabel(estado: string, fecha?: string): string {
+        if (estado === 'completada' || estado === 'asistio') return 'Completada';
+        if (fecha || estado === 'proxima') return 'Agendada';
+        return 'Pendiente de Agendar';
+    }
+
+    getSesionIndex(sesion: any): number {
+        if (!sesion || !this.historialMalla) return 0;
+        const idx = this.historialMalla.findIndex((s: any) => s.id === sesion.id || s.clase_malla_id === sesion.clase_malla_id);
+        return idx >= 0 ? idx : 0;
+    }
+
+    copiarResumenFicha() {
+        if (!this.sesionFichaModal) return;
+        const s = this.sesionFichaModal;
+        const meshName = this.selectedPack?.activeMesh?.malla_nombre || 'Plan Pedagógico';
+        const objs = this.getObjetivosArray(s).map(o => `  • ${o}`).join('\n');
+        
+        let msg = `🎾 *PADELBLOX - FICHA TÉCNICA DE SESIÓN*\n`;
+        msg += `📋 *${s.titulo}* (Sesión ${s.orden || (this.getSesionIndex(s) + 1)})\n`;
+        msg += `🎯 *Plan:* ${meshName} (${this.selectedPack?.activeMesh?.nivel || 'Intermedio'})\n`;
+        if (s.fecha) {
+            msg += `🗓️ *Fecha:* ${s.fecha} ${s.hora ? '@ ' + s.hora.slice(0,5) + ' hrs' : ''}\n`;
+        }
+        if (this.coachNombre) {
+            msg += `👤 *Entrenador:* ${this.coachNombre}\n`;
+        }
+        if (objs) {
+            msg += `\n🎯 *Objetivos Pedagógicos:*\n${objs}\n`;
+        }
+        msg += `\n🔥 *1. Activación (10-15\'):* ${this.getCalentamientoText(s)}\n`;
+        msg += `🎾 *2. Técnica (20\'):* ${this.getTecnicaText(s)}\n`;
+        msg += `⚡ *3. Drills & Pista (20-25\'):* ${this.getDrillsText(s)}\n`;
+        msg += `🏆 *4. Puntos Condicionados (15\'):* ${this.getJuegoText(s)}\n`;
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(msg).then(() => {
+                this.popupService.success('¡Copiado!', 'Ficha técnica copiada al portapapeles para WhatsApp.');
+            }).catch(() => {
+                this.popupService.info('Ficha Técnica', 'Resumen preparado para compartir.');
+            });
+        }
+    }
+
+    imprimirFichaModal() {
+        window.print();
+    }
+
+    irAAgendarDesdeFicha(sesion: any) {
+        this.cerrarFichaModal();
+        this.irAAgendarSesion(sesion);
     }
 
     verDetalleGolpe(label: string) {

@@ -11,6 +11,7 @@ import { PopupService } from '../../services/popup.service';
 import { MysqlService } from '../../services/mysql.service';
 import { AlumnoService } from '../../services/alumno.service';
 import { AnalyticsService } from '../../services/analytics.service';
+import { ClubesService } from '../../services/clubes.service';
 
 registerLocaleData(localeEs);
 
@@ -108,6 +109,13 @@ export class EntrenadorAgendarComponent implements OnInit {
     recurrencia: number = 1;
     tipoClaseSeleccionado: 'individual' | 'multijugador' | 'grupal' | 'evaluacion' = 'individual';
 
+    // Clubes y Canchas Disponibles
+    clubesList: any[] = [];
+    selectedClubId: number | null = null;
+    canchasDisponibles: any[] = [];
+    selectedCanchaId: number | null = null;
+    cargandoCanchas: boolean = false;
+
     packMatchesTipo(p: any, type: string): boolean {
         if (!p) return false;
         // Check multiple possible field names as well as the name/title of the pack
@@ -191,6 +199,7 @@ export class EntrenadorAgendarComponent implements OnInit {
         private alumnoService: AlumnoService,
         private mysqlService: MysqlService,
         private analyticsService: AnalyticsService,
+        private clubesService: ClubesService,
         private router: Router,
         private popupService: PopupService
     ) { 
@@ -218,6 +227,64 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.loadDisponibilidad();
         this.loadMallas();
         this.loadPacks();
+        this.loadClubes();
+    }
+
+    loadClubes(): void {
+        this.clubesService.getClubes().subscribe({
+            next: (res: any[]) => {
+                this.clubesList = (res || []).filter(c => c.activo == 1 || c.activo === null || c.activo === undefined);
+                const storedClub = localStorage.getItem('selectedClubId');
+                if (storedClub && this.clubesList.some(c => Number(c.id) === Number(storedClub))) {
+                    this.selectedClubId = Number(storedClub);
+                } else if (this.clubesList.length > 0 && !this.selectedClubId) {
+                    this.selectedClubId = Number(this.clubesList[0].id);
+                }
+            },
+            error: (err) => console.error('Error cargando clubes:', err)
+        });
+    }
+
+    onClubChange(): void {
+        this.selectedCanchaId = null;
+        this.cargarCanchasDisponibles();
+    }
+
+    cargarCanchasDisponibles(): void {
+        if (!this.selectedClubId || !this.selectedSlot) {
+            this.canchasDisponibles = [];
+            this.selectedCanchaId = null;
+            return;
+        }
+
+        this.cargandoCanchas = true;
+        const fecha = this.selectedSlot.dateStr;
+        const hIni = this.selectedSlot.hour;
+        const hFin = this.getHoraFin(hIni);
+
+        this.clubesService.getCanchasDisponibles(this.selectedClubId, fecha, hIni, hFin).subscribe({
+            next: (canchas: any[]) => {
+                this.canchasDisponibles = canchas || [];
+                this.cargandoCanchas = false;
+
+                // Preseleccionar la primera cancha disponible automáticamente
+                const freeCourt = this.canchasDisponibles.find(c => c.disponible);
+                if (freeCourt) {
+                    this.selectedCanchaId = freeCourt.id;
+                } else {
+                    this.selectedCanchaId = null;
+                }
+            },
+            error: (err) => {
+                console.error('Error cargando canchas disponibles:', err);
+                this.cargandoCanchas = false;
+                this.canchasDisponibles = [];
+            }
+        });
+    }
+
+    get todasCanchasOcupadas(): boolean {
+        return this.canchasDisponibles.length > 0 && !this.canchasDisponibles.some(c => c.disponible);
     }
 
     switchView(mode: 'day' | 'week' | 'month') {
@@ -680,6 +747,16 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.tipoClaseSeleccionado = 'individual'; // Reset to default
         this.filtroAlumnos = '';
         this.filtrarListaAlumnos();
+
+        // Inicializar Club y cargar canchas disponibles
+        if (slotData && slotData.club_id) {
+            this.selectedClubId = Number(slotData.club_id);
+        } else if (!this.selectedClubId && this.clubesList.length > 0) {
+            this.selectedClubId = Number(this.clubesList[0].id);
+        }
+        this.selectedCanchaId = null;
+        this.cargarCanchasDisponibles();
+
         this.showModal = true;
     }
 
@@ -1089,7 +1166,8 @@ export class EntrenadorAgendarComponent implements OnInit {
                     estado: 'reservado',
                     recurrencia: String(this.recurrencia || 1),
                     tipo: this.tipoClaseSeleccionado,
-                    club_id: String(this.selectedSlot.slotData?.club_id || 1),
+                    club_id: String(this.selectedClubId || this.selectedSlot.slotData?.club_id || 1),
+                    cancha_id: Number(this.selectedCanchaId || 0),
                     malla_id: String(this.planificacionId || 0),
                     clase_id: String(this.claseMallaId || 0),
                     clase_titulo: this.selectedClaseToPreview?.titulo || ''
@@ -1107,9 +1185,10 @@ export class EntrenadorAgendarComponent implements OnInit {
                     next: () => {
                         if (this.planificacionId && this.claseMallaId) {
                             this.entrenamientoService.asignarMalla({
-                                jugador_id: primerJugador.jugador_id || primerJugador.id,
-                                malla_id: this.planificacionId,
-                                entrenador_id: this.entrenadorId!
+                                jugador_id: Number(primerJugador.jugador_id || primerJugador.id),
+                                malla_id: Number(this.planificacionId),
+                                entrenador_id: Number(this.entrenadorId!),
+                                pack_id: Number(fId || 0)
                             }).subscribe(() => this.postReservaExito());
                         } else {
                             this.postReservaExito();
@@ -1150,7 +1229,8 @@ export class EntrenadorAgendarComponent implements OnInit {
             recurrencia: Number(totalSemanas),
             tipo: 'grupal',
             reserva_tipo: 'pack_grupal',
-            club_id: Number(this.selectedSlot.slotData?.club_id || 1),
+            club_id: Number(this.selectedClubId || this.selectedSlot.slotData?.club_id || 1),
+            cancha_id: Number(this.selectedCanchaId || 0),
             malla_id: Number(this.planificacionId || 0),
             clase_id: Number(this.claseMallaId || 0),
             clase_titulo: this.selectedClaseToPreview?.titulo || ''

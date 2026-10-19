@@ -125,7 +125,13 @@ export class AlumnosComponent implements OnInit {
 
           if (fotoRaw && !fotoRaw.includes('imagen_defecto')) {
             if (!fotoRaw.startsWith('http')) {
-              const cleanPath = fotoRaw.startsWith('/') ? fotoRaw.substring(1) : fotoRaw;
+              let cleanPath = fotoRaw.startsWith('/') ? fotoRaw.substring(1) : fotoRaw;
+              if (!cleanPath.includes('/')) {
+                cleanPath = `uploads/perfiles/${cleanPath}`;
+              }
+              if (!cleanPath.startsWith('prd/') && !cleanPath.startsWith('dev/')) {
+                cleanPath = `prd/${cleanPath}`;
+              }
               fotoUrl = `https://api.padelmanager.cl/${cleanPath}`;
             } else {
               fotoUrl = fotoRaw;

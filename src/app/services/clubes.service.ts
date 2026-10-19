@@ -315,6 +315,17 @@ export class ClubesService {
         );
     }
 
+    getCanchasDisponibles(clubId: number, fecha?: string, horaInicio?: string, horaFin?: string): Observable<any[]> {
+        let url = `${this.apiUrl}/clubes/get_canchas_disponibles.php?club_id=${clubId}`;
+        if (fecha) url += `&fecha=${encodeURIComponent(fecha)}`;
+        if (horaInicio) url += `&hora_inicio=${encodeURIComponent(horaInicio)}`;
+        if (horaFin) url += `&hora_fin=${encodeURIComponent(horaFin)}`;
+
+        return this.http.get<any[]>(url, {
+            headers: this.getHeaders()
+        });
+    }
+
     addCancha(canchaData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/clubes/add_cancha.php`, canchaData, {
             headers: this.getHeaders()
