@@ -126,7 +126,8 @@ export class MiPlanComponent implements OnInit {
     this.isLoading = true;
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
-    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${this.coachId}&role=${this.userRole}`, {
+    const clubId = localStorage.getItem('selectedClubId') || '';
+    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${this.coachId}&role=${this.userRole}&club_id=${clubId}`, {
       headers: {
         'Authorization': authValue,
         'X-Authorization': authValue
@@ -146,7 +147,8 @@ export class MiPlanComponent implements OnInit {
   loadPlansData() {
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
-    fetch(`${environment.apiUrl}/subscriptions/get_plans.php?role=${this.userRole}&coach_id=${this.coachId}`, {
+    const clubId = localStorage.getItem('selectedClubId') || '';
+    fetch(`${environment.apiUrl}/subscriptions/get_plans.php?role=${this.userRole}&coach_id=${this.coachId}&club_id=${clubId}`, {
       headers: {
         'Authorization': authValue,
         'X-Authorization': authValue
@@ -173,6 +175,17 @@ export class MiPlanComponent implements OnInit {
   }
 
   loadPlans() {
+    if (this.sub?.is_free_test_club) {
+      Swal.fire({
+        title: 'Club de Prueba Oficial 🎾',
+        text: 'PowerPadel cuenta con servicio 100% gratuito permanente sin cobros mensuales ni comisiones.',
+        icon: 'success',
+        confirmButtonColor: '#0f172a',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
     if (this.plans.length > 0) {
       this.mostrarSelectorDePlanes();
     } else {
@@ -702,6 +715,17 @@ export class MiPlanComponent implements OnInit {
   }
 
   vincularReal(planId: number) {
+    if (this.sub?.is_free_test_club) {
+      Swal.fire({
+        title: 'Club de Prueba Oficial 🎾',
+        text: 'PowerPadel cuenta con servicio 100% gratuito sin necesidad de pagar el plan.',
+        icon: 'success',
+        confirmButtonColor: '#0f172a',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
     if (this.isInternational) {
       this.iniciarFlujoPaypal(planId);
       return;
@@ -710,11 +734,13 @@ export class MiPlanComponent implements OnInit {
     this.isLoading = true;
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
+    const clubId = localStorage.getItem('selectedClubId') || 0;
     
     const body = {
       coach_id: this.coachId,
       user_id: this.coachId,
       plan_id: planId,
+      club_id: clubId,
       origin: window.location.origin + window.location.pathname,
       force_payment: (this.sub && this.sub.days_remaining === 0)
     };

@@ -110,8 +110,12 @@ export class SidebarComponent implements OnInit {
         const currentUser = this.authService.getCurrentUser();
         const currentUserId = this.userId || currentUser?.id;
         if (currentUserId) {
-            this.authService.refreshSession(currentUserId).subscribe(() => {
+            this.authService.refreshSession(currentUserId).subscribe((res: any) => {
                 this.availableProfiles = this.authService.getProfiles().filter(p => !['administrador'].includes(p.rol));
+                if (res?.user?.club_guide_seen == 1 || res?.user?.club_guide_seen === true) {
+                    localStorage.setItem('padelblox_club_guide_seen', 'true');
+                    this.showClubGuideModal = false;
+                }
             });
         }
 
@@ -119,10 +123,16 @@ export class SidebarComponent implements OnInit {
 
         // Check if new club administrator should see the onboarding guide
         const role = this.computedRole;
-        if ((role === 'administrador_club' || role === 'staff_club') && !localStorage.getItem('padelblox_club_guide_seen')) {
+        const localGuideSeen = localStorage.getItem('padelblox_club_guide_seen') === 'true';
+        const userGuideSeen = currentUser?.club_guide_seen == 1 || currentUser?.club_guide_seen === true;
+
+        if ((role === 'administrador_club' || role === 'staff_club') && !localGuideSeen && !userGuideSeen) {
             setTimeout(() => {
-                this.showClubGuideModal = true;
-            }, 600);
+                const isSeenNow = localStorage.getItem('padelblox_club_guide_seen') === 'true';
+                if (!isSeenNow) {
+                    this.showClubGuideModal = true;
+                }
+            }, 800);
         }
     }
 
@@ -138,7 +148,8 @@ export class SidebarComponent implements OnInit {
         }
         const token = localStorage.getItem('token');
         const authValue = token ? `Bearer ${token}` : '';
-        fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${currentUserId}&role=${role}`, {
+        const clubId = localStorage.getItem('selectedClubId') || '';
+        fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${currentUserId}&role=${role}&club_id=${clubId}`, {
             headers: {
                 'Authorization': authValue,
                 'X-Authorization': authValue
@@ -146,8 +157,10 @@ export class SidebarComponent implements OnInit {
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status === 'blocked' || res.status === 'inactive' || res.status === 'past_due') {
+            if (res.status === 'blocked' || res.status === 'inactive' || res.status === 'past_due' || res.is_blocked) {
                 this.isSubscriptionBlocked = true;
+            } else {
+                this.isSubscriptionBlocked = false;
             }
         })
         .catch(() => {});
@@ -336,7 +349,7 @@ export class SidebarComponent implements OnInit {
     }
 
     logout() {
-        localStorage.clear();
+        this.authService.logout();
         this.router.navigate(['/login']);
     }
 }

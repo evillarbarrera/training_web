@@ -64,15 +64,17 @@
             <div class="stat-widget card-pm">
                 <div class="widget-icon">💎</div>
                 <div class="widget-data">
-                    <div class="widget-val">{{ isInternational ? ('USD $' + currencyService.getUsdAmount(sub.price_clp)) : ('$' + (sub.price_clp | number:'1.0-0')) }}</div>
-                    <div class="widget-label">Costo Plan Mensual</div>
+                    <div class="widget-val" *ngIf="!sub.is_free_test_club">{{ isInternational ? ('USD $' + currencyService.getUsdAmount(sub.price_clp)) : ('$' + (sub.price_clp | number:'1.0-0')) }}</div>
+                    <div class="widget-val" *ngIf="sub.is_free_test_club" style="color: #ccff00; font-weight: 900;">$0 CLP</div>
+                    <div class="widget-label">{{ sub.is_free_test_club ? 'Costo Plan (Club de Prueba Gratuito)' : 'Costo Plan Mensual' }}</div>
                 </div>
             </div>
             <div class="stat-widget card-pm">
                 <div class="widget-icon">📅</div>
                 <div class="widget-data">
-                    <div class="widget-val">{{ sub.next_billing_date | date:'dd MMM' }}</div>
-                    <div class="widget-label">Próximo Cobro Consolidad</div>
+                    <div class="widget-val" *ngIf="!sub.is_free_test_club">{{ sub.next_billing_date | date:'dd MMM' }}</div>
+                    <div class="widget-val" *ngIf="sub.is_free_test_club" style="color: #10b981; font-weight: 900;">Exento</div>
+                    <div class="widget-label">{{ sub.is_free_test_club ? 'Servicio Gratuito Sin Cobros' : 'Próximo Cobro Consolidad' }}</div>
                 </div>
             </div>
         </div>
@@ -81,18 +83,23 @@
           
           <!-- Column 1: Plan & Trial -->
           <div class="billing-col">
-            <div class="billing-card trial-card card-pm" [class.no-trial]="sub.days_remaining === 0">
-                <span class="card-label">Días Disponibles Gratis</span>
-                <div class="countdown-row">
+            <div class="billing-card trial-card card-pm" [class.no-trial]="sub.days_remaining === 0 && !sub.is_free_test_club">
+                <span class="card-label">{{ sub.is_free_test_club ? 'Modalidad Club Oficial' : 'Días Disponibles Gratis' }}</span>
+                <div class="countdown-row" *ngIf="!sub.is_free_test_club">
                   <span class="num">{{ sub.days_remaining }}</span>
                   <span class="txt">DÍAS RESTANTES</span>
                 </div>
-                <div class="progress-box">
+                <div class="countdown-row" *ngIf="sub.is_free_test_club">
+                  <span class="num" style="color: #ccff00; font-size: 32px;">ILIMITADO</span>
+                  <span class="txt" style="color: #fff;">CLUB DE PRUEBA OFICIAL</span>
+                </div>
+                <div class="progress-box" *ngIf="!sub.is_free_test_club">
                   <div class="bar-bg">
                     <div class="bar-fill" [style.width.%]="(sub.days_remaining / 90) * 100"></div>
                   </div>
                 </div>
-                <p class="footer-note">Al terminar, se cobrará el plan + comisiones acumuladas del mes.</p>
+                <p class="footer-note" *ngIf="!sub.is_free_test_club">Al terminar, se cobrará el plan + comisiones acumuladas del mes.</p>
+                <p class="footer-note" *ngIf="sub.is_free_test_club" style="color: #94a3b8;">PowerPadel es el club de prueba oficial. Cuenta con acceso ilimitado y servicio 100% gratuito sin cobro de plan.</p>
             </div>
 
             <div class="billing-card plan-info-card card-pm">
@@ -135,19 +142,25 @@
                     <i class="fab fa-paypal" *ngIf="isInternational" style="color: #0070ba;"></i>
                   </div>
                   <div class="card-info">
-                    <b>{{ isInternational ? 'Suscripción vía PayPal' : (sub?.card_brand ? (sub.card_brand + ' para Facturación') : 'Visa / Mastercard para Facturación') }}</b>
-                    <span *ngIf="sub?.card_last_four" style="color: #10b981; font-weight: 700;">
+                    <b>{{ sub?.is_free_test_club ? 'Club de Prueba Oficial' : (isInternational ? 'Suscripción vía PayPal' : (sub?.card_brand ? (sub.card_brand + ' para Facturación') : 'Visa / Mastercard para Facturación')) }}</b>
+                    <span *ngIf="sub?.is_free_test_club" style="color: #10b981; font-weight: 700;">
+                      ✅ 100% Bonificado (No requiere tarjeta ni cobros)
+                    </span>
+                    <span *ngIf="!sub?.is_free_test_club && sub?.card_last_four" style="color: #10b981; font-weight: 700;">
                       Finalizada en **** {{ sub.card_last_four }}
                       <span *ngIf="sub?.card_holder" style="color: #64748b; font-weight: 600; font-size: 11px;">({{ sub.card_holder }})</span>
                     </span>
-                    <span *ngIf="!sub?.card_last_four" style="color: #ff4d4d; font-weight: 700;">{{ isInternational ? 'Requiere vinculación PayPal' : 'Sin tarjeta registrada' }}</span>
+                    <span *ngIf="!sub?.is_free_test_club && !sub?.card_last_four" style="color: #ff4d4d; font-weight: 700;">{{ isInternational ? 'Requiere vinculación PayPal' : 'Sin tarjeta registrada' }}</span>
                   </div>
                 </div>
 
-                <!-- Botón Mercado Pago (Solo Chile) -->
-                <button class="btn-save btn-glow full-width mt-4" (click)="cambiarTarjeta()" *ngIf="!isInternational">
+                <!-- Botón Mercado Pago (Solo Chile, si no es club de prueba gratuito) -->
+                <button class="btn-save btn-glow full-width mt-4" (click)="cambiarTarjeta()" *ngIf="!isInternational && !sub?.is_free_test_club">
                    {{ sub?.card_last_four ? '🔄 ACTUALIZAR TARJETA SEGURA 💳' : 'REGISTRAR TARJETA SEGURA 🇨🇱' }}
                 </button>
+                <div *ngIf="sub?.is_free_test_club" class="mt-4 p-3 text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; color: #10b981; font-weight: 800; font-size: 13px;">
+                  ✨ PowerPadel está exento de cobros de suscripción
+                </div>
 
                 <!-- Botón PayPal (Solo Internacional) -->
                 <div id="paypal-subscription-container" *ngIf="isInternational" class="mt-4">

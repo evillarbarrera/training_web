@@ -858,7 +858,11 @@ export class AdminDashboardComponent implements OnInit, AfterViewInit {
     }
 
     logout() {
+        const guideSeen = localStorage.getItem('padelblox_club_guide_seen');
+        const onboardingProgress = localStorage.getItem('padelblox_onboarding_progress');
         localStorage.clear();
+        if (guideSeen) localStorage.setItem('padelblox_club_guide_seen', guideSeen);
+        if (onboardingProgress) localStorage.setItem('padelblox_onboarding_progress', onboardingProgress);
         this.router.navigate(['/login']);
     }
 }

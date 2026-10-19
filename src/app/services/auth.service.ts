@@ -81,6 +81,10 @@ export class AuthService {
       localStorage.setItem('availableProfiles', JSON.stringify(user.perfiles));
     }
 
+    if (user.club_guide_seen == 1 || user.club_guide_seen === true || user.club_guide_seen === '1') {
+      localStorage.setItem('padelblox_club_guide_seen', 'true');
+    }
+
     this.currentUserSubject.next(user);
   }
 
@@ -146,10 +150,23 @@ export class AuthService {
   }
 
   logout(): void {
+    const guideSeen = localStorage.getItem('padelblox_club_guide_seen');
+    const onboardingProgress = localStorage.getItem('padelblox_onboarding_progress');
+
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userId');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('availableProfiles');
+    localStorage.removeItem('selectedClubId');
+
+    if (guideSeen) {
+      localStorage.setItem('padelblox_club_guide_seen', guideSeen);
+    }
+    if (onboardingProgress) {
+      localStorage.setItem('padelblox_onboarding_progress', onboardingProgress);
+    }
+
     this.currentUserSubject.next(null);
   }
 
@@ -170,6 +187,10 @@ export class AuthService {
           // Update available profiles
           if (freshUser.perfiles) {
             localStorage.setItem('availableProfiles', JSON.stringify(freshUser.perfiles));
+          }
+
+          if (freshUser.club_guide_seen == 1 || freshUser.club_guide_seen === true || freshUser.club_guide_seen === '1') {
+            localStorage.setItem('padelblox_club_guide_seen', 'true');
           }
 
           // Update local user data merge

@@ -55,7 +55,8 @@ export class HardGateComponent implements OnInit {
 
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
-    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${userId}&role=${this.role}`, {
+    const clubId = localStorage.getItem('selectedClubId') || '';
+    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${userId}&role=${this.role}&club_id=${clubId}`, {
       headers: {
         'Authorization': authValue,
         'X-Authorization': authValue
