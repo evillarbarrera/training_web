@@ -1688,7 +1688,11 @@
                                     {{ cat.puntos_repartir }} PTS
                                 </div>
                                 <span
-                                    style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Inscripciones</span>
+                                    [style.color]="cat.inscritos > 0 ? '#0f172a' : '#94a3b8'"
+                                    [style.fontWeight]="cat.inscritos > 0 ? '900' : '800'"
+                                    style="font-size: 11px; text-transform: uppercase;">
+                                    {{ cat.inscritos || 0 }} {{ (cat.inscritos === 1) ? 'Inscrito' : 'Inscritos' }}
+                                </span>
                             </div>
                         </div>
 
@@ -1699,120 +1703,177 @@
                         </button>
                     </div>
 
-                    <!-- INSCRIPCIONES (CONSOLIDATED VIEW) -->
-                    <div class="inscripciones-section"
-                        style="background: #fff; border-radius: 0px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);">
+                    <!-- INSCRIPCIONES (CONSOLIDATED VIEW - MODERN PRO UX) -->
+                    <div class="inscripciones-section-modern">
 
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                            <div>
-                                <h3
-                                    style="margin: 0; font-weight: 900; text-transform: uppercase; font-size: 15px; letter-spacing: 1px; color: #0f172a;">
+                        <div class="ins-header-bar">
+                            <div class="ins-header-title-box">
+                                <div class="ins-eyebrow">
+                                    <i class="fas fa-users"></i>
+                                    <span>Gestión de Participantes</span>
+                                </div>
+                                <h3 class="ins-main-title">
                                     <span *ngIf="!selectedCategoria">Todas las Inscripciones del Torneo</span>
-                                    <span *ngIf="selectedCategoria">Parejas Inscritas en <span
-                                            style="color: #2563eb;">{{ selectedCategoria.nombre }}</span></span>
+                                    <span *ngIf="selectedCategoria">
+                                        Parejas Inscritas en <span class="cat-highlight">{{ selectedCategoria.nombre }}</span>
+                                    </span>
                                 </h3>
-                                <div
-                                    style="font-size: 12px; color: #64748b; font-weight: 700; margin-top: 5px; display: flex; align-items: center; gap: 10px;">
-                                    <span>{{ inscripciones.length }} parejas inscritas en total</span>
-                                    <button *ngIf="selectedCategoria" class="btn-text-action"
+                                <div class="ins-subtitle-stats">
+                                    <span class="ins-count-badge">
+                                        <span class="dot"></span>
+                                        {{ inscripciones.length }} {{ inscripciones.length === 1 ? 'pareja inscrita' : 'parejas inscritas' }} en total
+                                    </span>
+                                    <span *ngIf="selectedCategoria && selectedCategoria.max_parejas" style="color: #94a3b8;">•</span>
+                                    <span *ngIf="selectedCategoria && selectedCategoria.max_parejas">
+                                        Cupos: <strong>{{ inscripciones.length }}</strong> / {{ selectedCategoria.max_parejas }}
+                                    </span>
+                                    <button *ngIf="selectedCategoria" class="btn-edit-limit"
                                         (click)="editCategoriaCapacidad(selectedCategoria)"
-                                        style="padding: 2px 8px; font-size: 10px;">
-                                        <i class="fas fa-edit"></i> Cambiar Límite
+                                        title="Cambiar límite máximo de parejas">
+                                        <i class="fas fa-sliders-h"></i> Cambiar Límite
                                     </button>
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                                <button *ngIf="!selectedCategoria" class="btn-outline"
-                                    (click)="activeDetailTab = 'resumen'" style="font-size: 11px;">VER RESUMEN POR CAT.</button>
+
+                            <div class="ins-header-actions">
+                                <!-- QUICK SEARCH INPUT -->
+                                <div class="ins-search-input-wrap" *ngIf="inscripciones.length > 0">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" [(ngModel)]="searchInscripcionText"
+                                        placeholder="Buscar jugador o ID...">
+                                    <button *ngIf="searchInscripcionText" class="btn-clear-search"
+                                        (click)="searchInscripcionText = ''" title="Limpiar búsqueda">✕</button>
+                                </div>
+
+                                <button *ngIf="!selectedCategoria" class="btn-action-outline"
+                                    (click)="activeDetailTab = 'resumen'">
+                                    <i class="fas fa-chart-pie"></i> Ver Resumen por Cat.
+                                </button>
                                 
                                 <ng-container *ngIf="selectedCategoria">
-                                    <button class="btn-primary" (click)="anadirParejaManual()"
-                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #0f172a; color: #fff; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
-                                        + Añadir Pareja
+                                    <button class="btn-action-primary" (click)="anadirParejaManual()">
+                                        <i class="fas fa-user-plus"></i> Añadir Pareja
                                     </button>
 
                                     <!-- BOTÓN GENERAR CUADRO DIRECTO (Para eliminación directa) -->
                                     <button *ngIf="selectedTorneo.tipo === 'Eliminación Directa'"
-                                        class="btn-primary" (click)="generarCuadroDirecto()"
-                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #ccff00; color: #000; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(204,255,0,0.3);">
-                                        ⚡ Generar Cuadro Eliminatorio
+                                        class="btn-action-accent" (click)="generarCuadroDirecto()">
+                                        <i class="fas fa-bolt"></i> Generar Cuadro Eliminatorio
                                     </button>
 
                                     <!-- BOTONES PARA GRUPOS + PLAYOFFS -->
                                     <button *ngIf="selectedTorneo.tipo !== 'Eliminación Directa'"
-                                        class="btn-primary" (click)="generarGrupos()"
-                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; background: #0f172a; color: #ccff00; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
-                                        ⚡ Generar Grupos
+                                        class="btn-action-primary" style="background: #0f172a; color: #ccff00;" (click)="generarGrupos()">
+                                        <i class="fas fa-bolt"></i> Generar Grupos
                                     </button>
                                     <button *ngIf="selectedTorneo.tipo !== 'Eliminación Directa'"
-                                        class="btn-outline" (click)="cerrarGrupos()"
-                                        style="font-size: 11px; padding: 10px 18px; border-radius: 6px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid #0f172a; color: #0f172a;">
-                                        🏆 Cerrar Grupos y Generar Cuadro
+                                        class="btn-action-outline" (click)="cerrarGrupos()">
+                                        <i class="fas fa-trophy"></i> Cerrar Grupos y Cuadro
                                     </button>
                                 </ng-container>
                             </div>
                         </div>
 
-                        <div class="inscripciones-list"
-                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: #e2e8f0; border: 1px solid #e2e8f0;">
-                            <div class="ins-card" *ngFor="let ins of inscripciones"
-                                style="background: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
-                                <div>
-                                    <div
-                                        style="font-weight: 900; color: #0f172a; font-size: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase;">
-                                        <span *ngIf="ins.es_semilla"
-                                            style="background: #ccff00; color: #000; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 4px; border: 1px solid #b8e600; display: inline-flex; align-items: center; gap: 3px;"
-                                            title="Cabeza de Serie Oficial">
-                                            👑 CS #{{ ins.nro_siembra }}
-                                        </span>
-                                        <span *ngIf="!ins.es_semilla" style="font-size: 12px; opacity: 0.5;">●</span>
-                                        {{ ins.nombre_jugador_1 }} / {{ ins.nombre_jugador_2 }}
+                        <!-- LIST OF PARTICIPANTS (FULL WIDTH DATA ROWS) -->
+                        <div class="ins-list-stack" *ngIf="filteredInscripciones.length > 0">
+                            <div class="ins-row-card" *ngFor="let ins of filteredInscripciones; let i = index"
+                                [class.is-seed-active]="ins.es_semilla">
+                                
+                                <!-- LEFT: AVATAR / SEED & PAIR INFO -->
+                                <div class="ins-col-left">
+                                    <!-- SEED OR INDEX BADGE -->
+                                    <div *ngIf="ins.es_semilla" class="ins-avatar-badge seed-avatar"
+                                        title="Cabeza de Serie Oficial #{{ ins.nro_siembra }}">
+                                        <i class="fas fa-crown crown-icon"></i>
+                                        <span class="seed-num">CS #{{ ins.nro_siembra }}</span>
                                     </div>
-                                    <div
-                                        style="font-size: 11px; color: #94a3b8; font-weight: 800; margin-top: 6px; display: flex; gap: 15px; text-transform: uppercase;">
-                                        <span *ngIf="!selectedCategoria"
-                                            [style.color]="getCategoryColor(ins.categoria_nombre)"
-                                            style="border-right: 1px solid #eee; padding-right: 10px;">{{
-                                            ins.categoria_nombre }}</span>
-                                        <span>ID: #{{ ins.id }}</span>
-                                        <span>📅 {{ ins.fecha_inscripcion | date:'dd/MM/yyyy' }}</span>
+                                    <div *ngIf="!ins.es_semilla" class="ins-avatar-badge" title="Pareja #{{ i + 1 }}">
+                                        #{{ i + 1 }}
+                                    </div>
+
+                                    <!-- NAMES & METADATA -->
+                                    <div class="ins-info-block">
+                                        <div class="ins-names-row">
+                                            <span class="player-name">{{ ins.nombre_jugador_1 || 'Jugador 1' }}</span>
+                                            <span class="player-divider">/</span>
+                                            <span class="player-name">{{ ins.nombre_jugador_2 || 'Jugador 2' }}</span>
+                                        </div>
+
+                                        <div class="ins-meta-row">
+                                            <span *ngIf="!selectedCategoria && ins.categoria_nombre" class="meta-pill cat-pill"
+                                                [style.background]="getCategoryColor(ins.categoria_nombre) + '15'"
+                                                [style.color]="getCategoryColor(ins.categoria_nombre)"
+                                                [style.borderColor]="getCategoryColor(ins.categoria_nombre) + '40'">
+                                                <i class="fas fa-layer-group"></i> {{ ins.categoria_nombre }}
+                                            </span>
+                                            <span class="meta-pill id-pill">
+                                                <i class="fas fa-hashtag"></i> ID: {{ ins.id }}
+                                            </span>
+                                            <span class="meta-pill date-pill">
+                                                <i class="far fa-calendar-alt"></i> {{ (ins.fecha_inscripcion || ins.created_at) | date:'dd/MM/yyyy' }}
+                                            </span>
+                                            <span *ngIf="ins.es_semilla" class="meta-pill"
+                                                style="background: #f7fee7; color: #3f6212; border: 1px solid #d9f99d;">
+                                                <i class="fas fa-crown"></i> Siembra #{{ ins.nro_siembra }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <button (click)="toggleSemilla(ins)"
-                                        [style.background]="ins.es_semilla ? '#ccff00' : '#f8fafc'"
-                                        [style.color]="ins.es_semilla ? '#000' : '#475569'"
-                                        [style.borderColor]="ins.es_semilla ? '#b8e600' : '#e2e8f0'"
-                                        style="padding: 6px 12px; border: 1px solid; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+
+                                <!-- RIGHT: SEED BUTTON, VALIDATED BADGE, DELETE -->
+                                <div class="ins-col-right">
+                                    <!-- TOGGLE CABEZA DE SERIE -->
+                                    <button type="button" class="btn-seed-toggle"
+                                        [class.is-seeded]="ins.es_semilla"
+                                        [class.not-seeded]="!ins.es_semilla"
+                                        (click)="toggleSemilla(ins)"
                                         title="Click para asignar o editar Cabeza de Serie">
+                                        <i class="fas fa-crown"></i>
                                         <span>{{ ins.es_semilla ? '👑 CS #' + ins.nro_siembra : '+ Cabeza de Serie' }}</span>
                                     </button>
-                                    <div [style.background]="ins.validado ? '#0f172a' : '#f1f5f9'"
-                                        [style.color]="ins.validado ? '#fff' : '#64748b'"
-                                        style="padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">
-                                        {{ ins.validado ? '✓ Validada' : '⏳ Pendiente' }}
-                                    </div>
-                                    <button class="btn-mini-danger" (click)="eliminarPareja(ins.id)"
-                                        style="background: transparent; border: none; font-size: 16px; cursor: pointer; padding: 5px; opacity: 0.3; transition: all 0.2s;">🗑️</button>
+
+                                    <!-- TOGGLE VALIDADA / PENDIENTE -->
+                                    <button type="button" class="btn-status-toggle"
+                                        [class.status-validated]="ins.validado"
+                                        [class.status-pending]="!ins.validado"
+                                        (click)="validarInscripcion(ins)"
+                                        title="Click para cambiar estado de validación">
+                                        <i class="fas" [ngClass]="ins.validado ? 'fa-check-circle' : 'fa-clock'"></i>
+                                        <span>{{ ins.validado ? '✓ Validada' : '⏳ Pendiente' }}</span>
+                                    </button>
+
+                                    <!-- DELETE ACTION -->
+                                    <button type="button" class="btn-action-trash"
+                                        (click)="eliminarPareja(ins.id)"
+                                        title="Eliminar inscripción del torneo">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div *ngIf="inscripciones.length === 0"
-                            style="padding: 80px 40px; text-align: center; color: #94a3b8; background: #fff; grid-column: 1 / -1;">
-                            <div style="font-size: 32px; margin-bottom: 20px; filter: grayscale(1); opacity: 0.2;">🎾
-                            </div>
-                            <h4
-                                style="margin: 0; font-weight: 900; color: #0f172a; text-transform: uppercase; font-size: 13px; letter-spacing: 1px;">
-                                Bandeja de Entrada Vacía</h4>
-                            <p
-                                style="margin: 10px 0 0; font-weight: 700; font-size: 11px; text-transform: uppercase; color: #94a3b8;">
-                                Sin inscripciones activas actualmente.</p>
+                        <!-- EMPTY STATE: NO SEARCH MATCHES -->
+                        <div class="ins-empty-container" *ngIf="inscripciones.length > 0 && filteredInscripciones.length === 0">
+                            <div class="empty-icon">🔍</div>
+                            <h4>Sin resultados</h4>
+                            <p>No se encontraron parejas que coincidan con "{{ searchInscripcionText }}".</p>
+                            <button class="btn-empty-action" (click)="searchInscripcionText = ''">
+                                Limpiar búsqueda
+                            </button>
+                        </div>
+
+                        <!-- EMPTY STATE: NO INSCRIPTIONS -->
+                        <div class="ins-empty-container" *ngIf="inscripciones.length === 0">
+                            <div class="empty-icon">🎾</div>
+                            <h4>Bandeja de Entrada Vacía</h4>
+                            <p>Aún no hay inscripciones registradas en esta vista.</p>
+                            <button *ngIf="selectedCategoria" class="btn-empty-action" (click)="anadirParejaManual()">
+                                <i class="fas fa-user-plus"></i> Añadir Primera Pareja
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
         </section>
     </main>
 

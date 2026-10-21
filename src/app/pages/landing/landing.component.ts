@@ -33,16 +33,31 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
   currencySymbol = '$';
   currencyCode = 'CLP';
 
+  // Hero Audience Tri-Path Switcher ('club' | 'entrenador' | 'jugador')
+  heroAudience: 'club' | 'entrenador' | 'jugador' = 'club';
+
+  setHeroAudience(audience: 'club' | 'entrenador' | 'jugador'): void {
+    this.heroAudience = audience;
+  }
+
   // Contact Modal
   showContactModal = false;
   contactForm = {
     nombre: '',
     email: '',
     telefono: '',
-    academia: ''
+    academia: '',
+    numeroCanchas: '3 a 5 canchas',
+    tipoInteres: 'Demo Club de Pádel'
   };
   isSendingContact = false;
   contactSuccess = false;
+
+  openContactModal(tipo: string = 'Demo Club de Pádel'): void {
+    this.contactForm.tipoInteres = tipo;
+    this.contactSuccess = false;
+    this.showContactModal = true;
+  }
 
   // Plans Data
   plans = [
@@ -310,12 +325,13 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  openContactModal(): void {
-    this.router.navigate(['/register']);
-  }
 
   irARegister(): void {
     this.router.navigate(['/register']);
+  }
+
+  irAPrecios(): void {
+    this.router.navigate(['/precios']);
   }
 
   closeContactModal(): void {
@@ -342,7 +358,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
         next: (res: any) => {
           this.isSendingContact = false;
           this.contactSuccess = true;
-          this.contactForm = { nombre: '', email: '', telefono: '', academia: '' };
+          this.contactForm = { nombre: '', email: '', telefono: '', academia: '', numeroCanchas: '3 a 5 canchas', tipoInteres: 'Demo Club de Pádel' };
           setTimeout(() => {
             this.closeContactModal();
           }, 3000);
