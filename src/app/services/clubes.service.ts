@@ -654,8 +654,14 @@ export class ClubesService {
         });
     }
 
-    getInscripciones(categoriaId: number): Observable<any[]> {
-        return this.http.get<any[]>(`${this.apiUrl}/torneos/get_inscripciones.php?categoria_id=${categoriaId}`, {
+    getInscripciones(categoriaId?: number, torneoId?: number): Observable<any[]> {
+        let url = `${this.apiUrl}/torneos/get_inscripciones.php?`;
+        if (categoriaId) {
+            url += `categoria_id=${categoriaId}`;
+        } else if (torneoId) {
+            url += `torneo_id=${torneoId}`;
+        }
+        return this.http.get<any[]>(url, {
             headers: this.getHeaders()
         });
     }

@@ -1,15 +1,15 @@
 <!-- Dashboard Principal -->
 <div class="dashboard-container" [class.not-authenticated]="!isAuthenticated">
   <!-- Si no está autenticado: Mostrar landing -->
-  
 
-  <!-- CONTACT MODAL -->
+  <!-- CONTACT MODAL (B2B DEMO CALL) -->
   <div class="contact-modal-overlay" *ngIf="showContactModal" (click)="closeContactModal()">
     <div class="contact-modal" (click)="$event.stopPropagation()">
       <button class="close-btn" (click)="closeContactModal()">✕</button>
       <div class="modal-header">
-        <h3>Agendar Capacitación</h3>
-        <p>Déjanos tus datos y te contactaremos para coordinar una reunión.</p>
+        <div class="modal-badge">⚡ DEMO PERSONALIZADA</div>
+        <h3>Solicitar Demostración Guiada (15 Min)</h3>
+        <p>Descubre cómo PadelBlox automatiza reservas, cobros y torneos en tu club. Sin compromiso ni costo.</p>
       </div>
       
       <div class="modal-body" *ngIf="!contactSuccess">
@@ -19,28 +19,42 @@
             <input type="text" [(ngModel)]="contactForm.nombre" name="nombre" required placeholder="Ej: Juan Pérez" class="form-control">
           </div>
           <div class="form-group">
+            <label>WhatsApp / Teléfono * <span class="label-hint">(Para coordinar horario de reunión)</span></label>
+            <input type="text" [(ngModel)]="contactForm.telefono" name="telefono" required placeholder="+56 9 1234 5678" class="form-control">
+          </div>
+          <div class="form-group">
             <label>Correo Electrónico *</label>
-            <input type="email" [(ngModel)]="contactForm.email" name="email" required placeholder="Ej: juan@club.com" class="form-control">
+            <input type="email" [(ngModel)]="contactForm.email" name="email" required placeholder="juan@club.com" class="form-control">
           </div>
-          <div class="form-group">
-            <label>Teléfono (Opcional)</label>
-            <input type="text" [(ngModel)]="contactForm.telefono" name="telefono" placeholder="+56 9 1234 5678" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Nombre del Club o Academia (Opcional)</label>
-            <input type="text" [(ngModel)]="contactForm.academia" name="academia" placeholder="Padel Club VIP" class="form-control">
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label>Club o Academia</label>
+              <input type="text" [(ngModel)]="contactForm.academia" name="academia" placeholder="Padel Center" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Número de Canchas</label>
+              <select [(ngModel)]="contactForm.numeroCanchas" name="numeroCanchas" class="form-control form-select">
+                <option value="1 a 2 canchas">1 a 2 canchas</option>
+                <option value="3 a 5 canchas">3 a 5 canchas</option>
+                <option value="6 o más canchas">6 o más canchas</option>
+                <option value="Academia / Solo Clases">Academia / Solo Clases</option>
+              </select>
+            </div>
           </div>
           <button type="submit" class="submit-btn" [disabled]="!f.valid || isSendingContact">
-            <span *ngIf="!isSendingContact">Enviar Solicitud</span>
-            <span *ngIf="isSendingContact">Enviando...</span>
+            <span *ngIf="!isSendingContact">Agendar Demo en Vivo (Respuesta en &lt; 2h) →</span>
+            <span *ngIf="isSendingContact">Enviando solicitud...</span>
           </button>
+          <div class="modal-trust-footnote">
+            🔒 0% Spam · Datos protegidos · Sin contratos forzosos · 90 días de prueba sin costo
+          </div>
         </form>
       </div>
       
       <div class="modal-success" *ngIf="contactSuccess">
         <div class="success-icon">✓</div>
-        <h4>¡Solicitud Enviada!</h4>
-        <p>Hemos recibido tus datos correctamente. Te contactaremos a la brevedad.</p>
+        <h4>¡Solicitud Recibida con Éxito!</h4>
+        <p>Un especialista de PadelBlox te contactará por WhatsApp para coordinar la demo en el horario que más te acomode.</p>
       </div>
     </div>
   </div>
@@ -49,9 +63,9 @@
   <div class="top-announcement-bar">
     <div class="container">
       <div class="top-info">
-        <span class="badge-promo">NUEVO ⌚ SMARTWATCH & TORNEOS</span>
-        <span>Marcador en vivo en tu reloj + Ligas y Torneos Americanos automáticos</span>
-        <button (click)="openContactModal()" class="btn-text-link">Probar 90 días gratis →</button>
+        <span class="badge-promo">OFERTA LANZAMIENTO 🚀</span>
+        <span>Prueba PadelBlox <strong>90 días 100% GRATIS</strong> en tu Club o Academia</span>
+        <button (click)="openContactModal('Demo 90 Días Gratis')" class="btn-text-link">Solicitar demo sin costo →</button>
       </div>
     </div>
   </div>
@@ -75,7 +89,7 @@
       </div>
       <div class="auth-buttons">
         <button class="btn-login" (click)="irALogin()">Iniciar Sesión</button>
-        <button class="btn-register" (click)="openContactModal()">Prueba Gratis</button>
+        <button class="btn-register" (click)="openContactModal('Prueba Gratis Navbar')">Prueba Gratis</button>
       </div>
 
       <!-- Mobile Hamburger Toggle Button -->
@@ -121,7 +135,7 @@
 
       <div class="drawer-action-buttons">
         <button class="btn-drawer-login" (click)="closeMobileMenu(); irALogin()">Iniciar Sesión</button>
-        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal()">Prueba Gratis (90 Días)</button>
+        <button class="btn-drawer-register" (click)="closeMobileMenu(); openContactModal('Prueba Gratis Drawer')">Prueba Gratis (90 Días)</button>
       </div>
 
       <div class="drawer-app-links">
@@ -135,17 +149,165 @@
     <div class="mobile-drawer-backdrop" *ngIf="mobileMenuOpen" (click)="closeMobileMenu()"></div>
   </nav>
 
-  <!-- HERO SECTION -->
+  <!-- HERO SECTION WITH DUAL-PATH AUDIENCE SWITCHER -->
   <header class="nike-hero">
     <div class="hero-background">
       <img src="assets/images/padel-bg.png" class="bg-image" alt="Software de gestión de clubes y pistas de pádel PadelBlox">
       <div class="overlay-gradient"></div>
     </div>
-    <!-- (Remnants removed) -->
 
     <div class="container hero-container">
-      <div class="hero-content">
-        <!-- Visual (Phone) - Now on Left -->
+      <!-- AUDIENCE TRI-PATH SWITCHER -->
+      <div class="hero-audience-switch-container">
+        <div class="audience-segmented-control">
+          <button class="seg-btn" [class.active]="heroAudience === 'club'" (click)="setHeroAudience('club')">
+            <span class="seg-icon">🏢</span> Soy Club de Pádel
+          </button>
+          <button class="seg-btn" [class.active]="heroAudience === 'entrenador'" (click)="setHeroAudience('entrenador')">
+            <span class="seg-icon">⚡</span> Soy Entrenador / Coach
+          </button>
+          <button class="seg-btn" [class.active]="heroAudience === 'jugador'" (click)="setHeroAudience('jugador')">
+            <span class="seg-icon">🎾</span> Soy Jugador / Alumno
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW 1: B2B CLUBES Y ACADEMIAS -->
+      <div class="hero-content hero-content-b2b" *ngIf="heroAudience === 'club'">
+        <!-- Visual: Web Platform Browser Mockup with interactive tabs preview -->
+        <div class="hero-visual reveal slide-left">
+          <div class="browser-showcase-card">
+            <div class="browser-bar">
+              <div class="browser-dots">
+                <span class="dot-red"></span>
+                <span class="dot-yellow"></span>
+                <span class="dot-green"></span>
+              </div>
+              <span class="browser-url">app.padelblox.cl/panel-club</span>
+              <span class="badge-live">EN VIVO</span>
+            </div>
+            <div class="browser-screen-inner" (click)="openZoom('assets/img/web/calendario-de-reservas.png', 'Calendario de Canchas Multi-Sede')">
+              <img src="assets/img/web/calendario-de-reservas.png" alt="Calendario de reservas en vivo de pistas de pádel" class="web-hero-img">
+              <div class="click-zoom-hint">🔍 Clic para ampliar vista</div>
+            </div>
+            <!-- Floating Highlights -->
+            <div class="floating-stat-badge badge-top">
+              <span class="stat-icon">📈</span>
+              <div class="stat-text">
+                <strong>+42% Ocupación</strong>
+                <small>Horarios valle y pico optimizados</small>
+              </div>
+            </div>
+            <div class="floating-stat-badge badge-bottom">
+              <span class="stat-icon">💳</span>
+              <div class="stat-text">
+                <strong>0% Comisiones Ocultas</strong>
+                <small>Tarifa plana sin recortes a tu caja</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copy: B2B Value Proposition -->
+        <div class="hero-text-content reveal slide-right">
+          <span class="badge-new badge-b2b">🏢 SOFTWARE LÍDER PARA CLUBES & ACADEMIAS</span>
+          <h1 class="hero-title">
+            LLENA TUS PISTAS Y AUTOMATIZA TU CLUB <br><span class="highlight">SIN COMISIONES POR RESERVA</span>
+          </h1>
+          <p class="hero-desc">
+            Centraliza los turnos en tiempo real, erradica los no-shows con cobros automáticos, organiza torneos americanos en 3 clics y dile adiós al caos de coordinar por WhatsApp.
+          </p>
+
+          <div class="cta-group">
+            <button class="btn-primary-large btn-volt" (click)="openContactModal('Demo Hero Clubes')">
+              <span class="btn-text">AGENDAR DEMO EN VIVO (15 MIN) →</span>
+            </button>
+            <button class="btn-secondary-large" (click)="irAPrecios()">
+              <span class="btn-text">VER PLANES & 90 DÍAS GRATIS</span>
+            </button>
+          </div>
+
+          <!-- Trust Badges Row -->
+          <div class="hero-trust-badges">
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>0% Comisión</strong> por arriendo
+            </span>
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>Migración asistida</strong> en 24h
+            </span>
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>3 Meses gratis</strong> sin tarjeta
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: ENTRENADORES Y COACHES -->
+      <div class="hero-content hero-content-coach" *ngIf="heroAudience === 'entrenador'">
+        <!-- Visual: Ficha Alumno & Radar de Habilidades -->
+        <div class="hero-visual reveal slide-left">
+          <div class="phone-mockup iphone-17">
+            <div class="phone-frame">
+              <div class="dynamic-island"></div>
+              <div class="phone-screen">
+                <div class="screen-header">
+                  <span class="time">9:41</span>
+                  <div class="status-icons">
+                    <span class="icon-wifi">📶</span>
+                    <span class="icon-battery">🔋</span>
+                  </div>
+                </div>
+                <div class="phone-slider-wrapper">
+                  <img src="assets/img/Celular/progreso-entrenamiento.png" alt="Radar de Habilidades y Evaluación Técnica de Alumnos" class="app-screen-img slider-img active">
+                </div>
+              </div>
+            </div>
+            <div class="phone-buttons">
+              <div class="btn-action"></div>
+              <div class="btn-volume-up"></div>
+              <div class="btn-volume-down"></div>
+              <div class="btn-power"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copy: Coach Value Proposition -->
+        <div class="hero-text-content reveal slide-right">
+          <span class="badge-new badge-coach">⚡ SOFTWARE PARA ENTRENADORES & COACHES</span>
+          <h1 class="hero-title">
+            GESTIONA TUS ALUMNOS, VENDE PACKS <br><span class="highlight">Y ELIMINA LA MOROSIDAD</span>
+          </h1>
+          <p class="hero-desc">
+            Deja de perseguir transferencias a fin de mes y coordinar horarios por WhatsApp. Tus alumnos compran packs de clases y reservan sus cupos directo en su app, mientras tú profesionalizas tus clases con evaluaciones técnicas, radar de habilidades y pizarra digital.
+          </p>
+
+          <div class="cta-group">
+            <button class="btn-primary-large btn-volt" (click)="openContactModal('Demo Hero Entrenadores')">
+              <span class="btn-text">PROBAR 90 DÍAS GRATIS (SIN TARJETA) →</span>
+            </button>
+            <button class="btn-secondary-large" (click)="irAPrecios()">
+              <span class="btn-text">VER PLANES DE COACHES</span>
+            </button>
+          </div>
+
+          <!-- Trust Badges Row -->
+          <div class="hero-trust-badges">
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>3 Meses gratis</strong> sin tarjeta
+            </span>
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>Radar de habilidades</strong> con IA
+            </span>
+            <span class="trust-badge-item">
+              <span class="badge-icon-check">✓</span> <strong>Control de packs</strong> automático
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: B2C JUGADORES Y ALUMNOS -->
+      <div class="hero-content hero-content-b2c" *ngIf="heroAudience === 'jugador'">
+        <!-- Visual (Phone & Watch) -->
         <div class="hero-visual reveal slide-left">
           <div class="phone-mockup iphone-17">
             <div class="phone-frame">
@@ -174,9 +336,8 @@
           </div>
         </div>
 
-        <!-- Text Content - Now on Right -->
-        <div class="hero-text-content reveal slide-right"
-          style="position: relative; min-height: 450px; display: flex; flex-direction: column; justify-content: center;">
+        <!-- Text Content: B2C Player Focus -->
+        <div class="hero-text-content reveal slide-right" style="position: relative; min-height: 450px; display: flex; flex-direction: column; justify-content: center;">
           <div class="slides-wrapper">
             <div *ngFor="let slide of slides; let i = index" class="slide-item" [class.active]="currentSlide === i">
               <span class="badge-new">{{ slide.badge }}</span>
@@ -191,12 +352,12 @@
             <button class="btn-primary-large" (click)="irARegister()">
               <span class="btn-text">REGÍSTRATE GRATIS</span>
             </button>
-            <button class="btn-secondary-large" (click)="openContactModal()">
-              <span class="btn-text">PROBAR 90 DÍAS GRATIS</span>
+            <button class="btn-secondary-large" (click)="openContactModal('Contacto Jugador')">
+              <span class="btn-text">SOLICITAR ACCESO CLUB</span>
             </button>
           </div>
 
-          <div class="slider-controls" style="display: flex; gap: 10px; margin-bottom: 30px;">
+          <div class="slider-controls" style="display: flex; gap: 10px; margin-bottom: 25px;">
             <div *ngFor="let dot of slides; let i = index" class="slider-dot" [class.active]="currentSlide === i"
               (click)="setSlide(i)"
               style="width: 30px; height: 4px; border-radius: 2px; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.2);">
@@ -205,35 +366,66 @@
             </div>
           </div>
 
-          <!-- APP STORES -->
-          <div class="app-buttons" style="display: flex; gap: 15px; flex-wrap: wrap;">
-            <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="btn-store btn-apple" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
-              <span class="icon" style="font-size: 1.5rem;"></span>
-              <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
-                <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Descárgalo en</span>
-                <span class="large" style="font-size: 0.9rem; font-weight: 800;">App Store</span>
-              </div>
-            </a>
-            
-            <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="btn-store btn-google" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
-              <span class="icon" style="font-size: 1.4rem; color: #ccff00; display: flex; align-items: center;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3.609 1.814C3.25 2.19 3 2.766 3 3.518v16.964c0 .752.25 1.328.609 1.704l.088.082 9.53-9.53v-.226l-9.53-9.53-.088.082z" fill="#00E676"/>
-                  <path d="M16.41 15.932l-3.183-3.184v-.226l3.184-3.184.072.042 3.768 2.14c1.077.61 1.077 1.613 0 2.224l-3.769 2.146-.072.042z" fill="#FFD600"/>
-                  <path d="M16.482 15.89l-3.255-3.255-9.618 9.618c.356.376.945.42 1.614.042l11.259-6.405" fill="#FF3D00"/>
-                  <path d="M16.482 8.788L5.223 2.383c-.669-.378-1.258-.334-1.614.042l9.618 9.618 3.255-3.255z" fill="#00B0FF"/>
-                </svg>
-              </span>
-              <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
-                <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Disponible en</span>
-                <span class="large" style="font-size: 0.9rem; font-weight: 800;">Google Play</span>
-              </div>
-            </a>
+          <!-- APP STORES + QR CODE -->
+          <div class="player-download-row">
+            <div class="app-buttons" style="display: flex; gap: 15px; flex-wrap: wrap;">
+              <a href="https://apps.apple.com/cl/app/padelblox-chile/id6759664729" target="_blank" rel="noopener noreferrer" class="btn-store btn-apple" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
+                <span class="icon" style="font-size: 1.5rem;"></span>
+                <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
+                  <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Descárgalo en</span>
+                  <span class="large" style="font-size: 0.9rem; font-weight: 800;">App Store</span>
+                </div>
+              </a>
+              
+              <a href="https://play.google.com/store/apps/details?id=cl.padelacademy.app&pcampaignid=web_share" target="_blank" rel="noopener noreferrer" class="btn-store btn-google" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; color: white; text-decoration: none; transition: 0.3s;">
+                <span class="icon" style="font-size: 1.4rem; color: #ccff00; display: flex; align-items: center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.609 1.814C3.25 2.19 3 2.766 3 3.518v16.964c0 .752.25 1.328.609 1.704l.088.082 9.53-9.53v-.226l-9.53-9.53-.088.082z" fill="#00E676"/>
+                    <path d="M16.41 15.932l-3.183-3.184v-.226l3.184-3.184.072.042 3.768 2.14c1.077.61 1.077 1.613 0 2.224l-3.769 2.146-.072.042z" fill="#FFD600"/>
+                    <path d="M16.482 15.89l-3.255-3.255-9.618 9.618c.356.376.945.42 1.614.042l11.259-6.405" fill="#FF3D00"/>
+                    <path d="M16.482 8.788L5.223 2.383c-.669-.378-1.258-.334-1.614.042l9.618 9.618 3.255-3.255z" fill="#00B0FF"/>
+                  </svg>
+                </span>
+                <div class="text" style="display: flex; flex-direction: column; line-height: 1.2;">
+                  <span class="small" style="font-size: 0.65rem; opacity: 0.6;">Disponible en</span>
+                  <span class="large" style="font-size: 0.9rem; font-weight: 800;">Google Play</span>
+                </div>
+              </a>
+            </div>
+
+            <div class="qr-download-pill">
+              <span class="qr-icon">📱</span>
+              <span class="qr-text">Escanea o descarga para iOS & Android</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </header>
+
+  <!-- 📊 QUANTITATIVE IMPACT METRICS BAR (Immediate Social Proof) -->
+  <section class="impact-metrics-bar">
+    <div class="container">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <span class="metric-number">+45</span>
+          <span class="metric-label">Pistas & Canchas Conectadas</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-number">+25.000</span>
+          <span class="metric-label">Horas de Juego Coordinadas</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-number">0%</span>
+          <span class="metric-label">Comisión por Reserva (Tarifa Plana)</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-number">4.9 / 5 ⭐️</span>
+          <span class="metric-label">Calificación de Clubes y Coaches</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- 🤝 TRUSTED PARTNERS SECTION (Social Proof) -->
   <section class="partners-section reveal fade-in" style="padding: 40px 0; background: #070707; border-bottom: 1px solid rgba(255,255,255,0.03);">
@@ -561,47 +753,56 @@
   <!-- TESTIMONIALS SECTION -->
   <section id="testimonials" class="nike-testimonials reveal fade-in">
     <div class="container">
-      <div class="section-header">
-        <span class="overline">COMUNIDAD</span>
-        <h2>LO QUE DICEN NUESTROS <span class="text-gradient">PARTNERS</span></h2>
+      <div class="section-header text-center" style="margin-bottom: 50px;">
+        <span class="overline">CASOS DE ÉXITO & TESTIMONIOS</span>
+        <h2>CLUBES Y ACADEMIAS QUE <span class="text-gradient">ESCALAN CON PADELBLOX</span></h2>
+        <p style="color: #888; max-width: 650px; margin: 15px auto 0; font-size: 1.05rem;">
+          Historias reales de administradores, directores deportivos y organizadores que transformaron su operación.
+        </p>
       </div>
 
       <div class="testimonials-scroller">
-        <div class="testimonial-card reveal slide-up" style="--d: 0.1s">
+        <!-- Testimonio 1: Club B2B -->
+        <div class="testimonial-card highlight reveal slide-up" style="--d: 0.1s">
+          <div class="quote-header-badge">🏢 CLUB DE PÁDEL (8 CANCHAS)</div>
           <div class="quote-icon">❝</div>
-          <p class="quote">"Esta plataforma cambió totalmente mi forma de entrenar. Ahora puedo ver exactamente dónde
-            necesito mejorar."</p>
+          <p class="quote">"PadelBlox transformó la rentabilidad de nuestras 8 canchas. Automatizamos el cobro anticipado de arriendos, eliminamos los no-shows al 100% y los torneos americanos del fin de semana se organizan solos en 5 minutos."</p>
           <div class="author">
-            <div class="avatar">JC</div>
+            <div class="avatar b2b-avatar">RS</div>
             <div class="info">
-              <h5>Juan Carlos</h5>
-              <span>Jugador Amateur</span>
+              <h5>Rodrigo San Martín</h5>
+              <span>Gerente General · Club Padel Center</span>
+              <div class="verified-tag">✓ Club Verificado · +35% Ocupación</div>
             </div>
           </div>
         </div>
 
-        <div class="testimonial-card highlight reveal slide-up" style="--d: 0.2s">
+        <!-- Testimonio 2: Academia / Head Coach -->
+        <div class="testimonial-card reveal slide-up" style="--d: 0.2s">
+          <div class="quote-header-badge">⚡ ACADEMIA DEPORTIVA</div>
           <div class="quote-icon">❝</div>
-          <p class="quote">"Imprescindible para cualquier entrenador. Gestiono a todos mis alumnos sin perder tiempo
-            administrativo."</p>
+          <p class="quote">"Nuestros más de 80 alumnos compran sus packs y reservan sus entrenamientos directamente en la app. Ahorro más de 12 horas administrativas a la semana que antes perdía respondiendo mensajes de WhatsApp."</p>
           <div class="author">
-            <div class="avatar">ML</div>
+            <div class="avatar b2b-avatar">NR</div>
             <div class="info">
-              <h5>Martina López</h5>
-              <span>Entrenadora Pro</span>
+              <h5>Nicolás Ruiz</h5>
+              <span>Director Deportivo · Academia Nico Ruiz</span>
+              <div class="verified-tag">✓ 0 Morosidad en Cobros</div>
             </div>
           </div>
         </div>
 
+        <!-- Testimonio 3: Torneos & Ligas -->
         <div class="testimonial-card reveal slide-up" style="--d: 0.3s">
+          <div class="quote-header-badge">🏆 TORNEOS & COMPETICIÓN</div>
           <div class="quote-icon">❝</div>
-          <p class="quote">"La facilidad para encontrar clases e integrarse a grupos es excelente. He subido mi nivel
-            compitiendo más."</p>
+          <p class="quote">"El fixture automático y el marcador en vivo sincronizado con Smartwatch y la pantalla de TV del bar revolucionaron los torneos. La experiencia de los jugadores es de nivel profesional y las inscripciones subieron un 40%."</p>
           <div class="author">
-            <div class="avatar">DG</div>
+            <div class="avatar b2b-avatar">CV</div>
             <div class="info">
-              <h5>Diego García</h5>
-              <span>Competidor</span>
+              <h5>Camila Vega</h5>
+              <span>Coordinadora de Torneos · Elite Padel Tour</span>
+              <div class="verified-tag">✓ +40% Convocatoria de Jugadores</div>
             </div>
           </div>
         </div>
@@ -634,14 +835,44 @@
       </div>
   </section>
 
+  <!-- 🛡️ MIGRATION & ZERO RISK BANNER -->
+  <section class="migration-guarantee-section reveal fade-in">
+    <div class="container">
+      <div class="migration-box">
+        <div class="migration-content">
+          <span class="badge-new">🚀 MIGRACIÓN ASISTIDA EN 24H</span>
+          <h3>¿Usas planillas Excel o vienes de otro software?</h3>
+          <p>
+            Migramos tu base de clientes, tarifas y configuración de pistas <strong>100% gratis en menos de 24 horas</strong> sin interrumpir tus arriendos ni perder reservas activas.
+          </p>
+          <div class="migration-perks">
+            <span>✓ Importación asistida por especialistas</span>
+            <span>✓ 0% Comisión por reserva</span>
+            <span>✓ Capacitación incluida para tu equipo</span>
+          </div>
+        </div>
+        <div class="migration-action">
+          <button class="btn-primary-large btn-volt" (click)="openContactModal('Migración Asistida')">
+            SOLICITAR MIGRACIÓN GRATIS →
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CALL TO ACTION -->
   <section class="nike-cta reveal slide-up">
-    <div class="cta-content">
-      <h2>¿LISTO PARA <span class="text-white">EMPEZAR?</span></h2>
-      <p>Únete hoy a la comunidad de pádel más influyente y comienza tu transformación.</p>
-      <button class="btn-primary-large" (click)="irARegister()">
-        CREAR CUENTA AHORA (90 DÍAS GRATIS)
-      </button>
+    <div class="cta-content container">
+      <h2>¿LISTO PARA <span class="text-white">TRANSFORMAR TU CLUB?</span></h2>
+      <p>Comienza hoy tus 90 días de prueba gratuita. Sin contratos de permanencia ni tarjeta de crédito requerida.</p>
+      <div class="final-cta-buttons">
+        <button class="btn-cta-black" (click)="openContactModal('Demo CTA Final')">
+          AGENDAR DEMO EN VIVO (15 MIN) →
+        </button>
+        <button class="btn-cta-outline" (click)="irARegister()">
+          CREAR CUENTA (90 DÍAS GRATIS)
+        </button>
+      </div>
     </div>
   </section>
 

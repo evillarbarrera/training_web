@@ -22,6 +22,22 @@ export class TorneoGestionComponent implements OnInit {
     categorias: any[] = [];
     selectedCategoria: any = null;
     inscripciones: any[] = [];
+    searchInscripcionText: string = '';
+
+    get filteredInscripciones(): any[] {
+        if (!this.inscripciones) return [];
+        if (!this.searchInscripcionText || !this.searchInscripcionText.trim()) {
+            return this.inscripciones;
+        }
+        const term = this.searchInscripcionText.toLowerCase().trim();
+        return this.inscripciones.filter(ins => {
+            const j1 = (ins.nombre_jugador_1 || '').toLowerCase();
+            const j2 = (ins.nombre_jugador_2 || '').toLowerCase();
+            const cat = (ins.categoria_nombre || '').toLowerCase();
+            const id = (ins.id || '').toString();
+            return j1.includes(term) || j2.includes(term) || cat.includes(term) || id.includes(term);
+        });
+    }
     allUsers: any[] = [];
     playoffMatches: any[] = [];
     groupMatches: any[] = [];
@@ -1266,12 +1282,28 @@ export class TorneoGestionComponent implements OnInit {
     loadCategorias(torneoId: number) {
         this.clubesService.getCategoriasTorneo(torneoId).subscribe(res => {
             this.categorias = res;
-            // Removed auto-selection of the first category to keep "Global View" active by default
             this.calculateStats(); 
+            if (!this.selectedCategoria) {
+                this.loadTodasInscripciones(torneoId);
+            }
+        });
+    }
+
+    loadTodasInscripciones(torneoId: number) {
+        this.clubesService.getInscripciones(undefined, torneoId).subscribe(res => {
+            this.inscripciones = res;
         });
     }
 
     selectCategoria(cat: any) {
+        // Si se hace clic en la categoría ya seleccionada, deseleccionar para volver a la Vista Global
+        if (this.selectedCategoria && this.selectedCategoria.id === cat.id) {
+            this.selectedCategoria = null;
+            if (this.selectedTorneo) {
+                this.loadTodasInscripciones(this.selectedTorneo.id);
+            }
+            return;
+        }
         this.selectedCategoria = cat;
         this.loadInscripciones(cat.id);
         this.loadGroupData(cat.id);
@@ -2078,7 +2110,14 @@ export class TorneoGestionComponent implements OnInit {
                     icon: 'success',
                     confirmButtonColor: '#0f172a'
                 });
-                this.loadInscripciones(this.selectedCategoria.id);
+                if (this.selectedCategoria) {
+                    this.loadInscripciones(this.selectedCategoria.id);
+                } else if (this.selectedTorneo) {
+                    this.loadTodasInscripciones(this.selectedTorneo.id);
+                }
+                if (this.selectedTorneo) {
+                    this.loadCategorias(this.selectedTorneo.id);
+                }
                 // Reset form
                 this.manualInscripcion = {
                     jugador1_id: 0, jugador1_nombre: '', jugador1_seleccionado: false,
@@ -2659,7 +2698,14 @@ export class TorneoGestionComponent implements OnInit {
                             icon: 'success',
                             confirmButtonColor: '#0f172a'
                         });
-                        if (this.selectedCategoria) this.loadInscripciones(this.selectedCategoria.id);
+                        if (this.selectedCategoria) {
+                            this.loadInscripciones(this.selectedCategoria.id);
+                        } else if (this.selectedTorneo) {
+                            this.loadTodasInscripciones(this.selectedTorneo.id);
+                        }
+                        if (this.selectedTorneo) {
+                            this.loadCategorias(this.selectedTorneo.id);
+                        }
                     },
                     error: (err) => {
                         Swal.fire({
