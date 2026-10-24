@@ -230,9 +230,17 @@ export class TorneoAmericanoComponent implements OnInit {
             if (this.selectedTorneo) {
                 const updated = this.torneos.find(t => t.id === this.selectedTorneo.id);
                 if (updated) {
-                    this.selectedTorneo = { ...updated };
+                    this.selectTorneo(updated);
                 } else {
                     this.selectedTorneo = null;
+                }
+            } else {
+                if (this.activeTab === 'list') {
+                    const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
+                    if (firstOpen) this.selectTorneo(firstOpen);
+                } else if (this.activeTab === 'history') {
+                    const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
+                    if (firstClosed) this.selectTorneo(firstClosed);
                 }
             }
         });
@@ -547,8 +555,45 @@ export class TorneoAmericanoComponent implements OnInit {
         });
     }
 
+    isTorneoAbierto(t: any): boolean {
+        if (!t) return false;
+        const est = (t.estado || '').toLowerCase().trim();
+        return est === 'abierto';
+    }
+
+    isTorneoCerrado(t: any): boolean {
+        if (!t) return false;
+        const est = (t.estado || '').toLowerCase().trim();
+        return est === 'cerrado' || est === 'finalizado' || est === 'cancelado' || (est !== 'abierto' && est !== '');
+    }
+
     get isCerrado(): boolean {
-        return this.selectedTorneo?.estado === 'Cerrado';
+        if (!this.selectedTorneo) return false;
+        if (this.activeTab === 'history') return true;
+        return this.isTorneoCerrado(this.selectedTorneo);
+    }
+
+    switchTab(tab: 'create' | 'list' | 'history') {
+        this.activeTab = tab;
+        if (tab === 'list') {
+            if (!this.selectedTorneo || this.isCerrado) {
+                const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
+                if (firstOpen) {
+                    this.selectTorneo(firstOpen);
+                } else {
+                    this.selectedTorneo = null;
+                }
+            }
+        } else if (tab === 'history') {
+            if (!this.selectedTorneo || !this.isCerrado) {
+                const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
+                if (firstClosed) {
+                    this.selectTorneo(firstClosed);
+                } else {
+                    this.selectedTorneo = null;
+                }
+            }
+        }
     }
 
     get isGrupos(): boolean {
@@ -566,7 +611,7 @@ export class TorneoAmericanoComponent implements OnInit {
         };
         this.originalTorneoFecha = torneo.fecha;
         this.originalTorneoHora = torneo.hora_inicio;
-        this.activeDetailTab = 'inscription';
+        this.activeDetailTab = this.isCerrado ? 'ranking' : 'inscription';
         this.loadParticipantes(torneo.id);
         this.loadMatches(torneo.id);
 
@@ -973,11 +1018,11 @@ export class TorneoAmericanoComponent implements OnInit {
     }
 
     hasActiveTournaments(): boolean {
-        return this.torneos.some(t => t.estado === 'Abierto');
+        return this.torneos.some(t => this.isTorneoAbierto(t));
     }
 
     hasHistoryTournaments(): boolean {
-        return this.torneos.some(t => t.estado !== 'Abierto');
+        return this.torneos.some(t => this.isTorneoCerrado(t));
     }
 
     hasRank(rank: number): boolean {
