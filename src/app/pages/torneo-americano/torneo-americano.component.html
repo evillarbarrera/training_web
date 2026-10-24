@@ -286,6 +286,12 @@
                                         🏁 Cerrar Americano
                                     </button>
                                 </div>
+                                <div class="header-actions" *ngIf="isCerrado" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                    <button class="btn-copy-torneo" (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: #ffffff; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.2s ease;">
+                                        📋 Copiar Americano (con Inscritos)
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- TAB: EDITAR -->
@@ -366,13 +372,28 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div *ngIf="isCerrado" class="empty-state">
-                                    El torneo está cerrado, no se puede editar.
+                                <div *ngIf="isCerrado" class="empty-state" style="padding: 35px 20px; text-align: center;">
+                                    <p style="font-size: 1.05rem; color: #475569; margin-bottom: 16px;">🏁 Este torneo está cerrado y finalizado.</p>
+                                    <button class="btn-copy-torneo" (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: #ffffff; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: all 0.2s ease;">
+                                        📋 Crear Nueva Edición Copiando Inscritos
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- TAB: INSCRIPCION -->
                             <div class="tab-content" *ngIf="activeDetailTab === 'inscription'">
+                                <div *ngIf="isCerrado" style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <strong style="color: #166534; font-size: 0.95rem;">📋 Torneo Cerrado ({{ participantes.length }} parejas inscritas)</strong>
+                                        <p style="margin: 4px 0 0; font-size: 0.85rem; color: #15803d;">Puedes duplicar este torneo para una nueva fecha manteniendo las mismas parejas sin fixture ni resultados.</p>
+                                    </div>
+                                    <button (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: white; border: none; padding: 9px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.88rem; box-shadow: 0 2px 8px rgba(16,185,129,0.25); white-space: nowrap;">
+                                        📋 Copiar Americano
+                                    </button>
+                                </div>
+
                                 <div class="management-section" *ngIf="!isCerrado">
                                     <h3>Inscripción de Parejas</h3>
 

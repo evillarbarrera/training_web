@@ -372,6 +372,12 @@ export class ClubesService {
         });
     }
 
+    duplicateAmericano(data: any): Observable<any> {
+        return this.http.post(`${this.apiUrl}/torneos/duplicate_americano.php`, data, {
+            headers: this.getHeaders()
+        });
+    }
+
     updateAmericano(torneoData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/torneos/update_americano.php`, torneoData, {
             headers: this.getHeaders()
