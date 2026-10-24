@@ -30,13 +30,13 @@
 
             <!-- TAB NAVIGATION -->
             <div class="main-tabs-nav">
-                <button class="tab-btn" [class.active]="activeTab === 'list'" (click)="activeTab = 'list'">
+                <button class="tab-btn" [class.active]="activeTab === 'list'" (click)="switchTab('list')">
                     <span class="icon">🏆</span> Ver Mis Torneos
                 </button>
-                <button class="tab-btn" [class.active]="activeTab === 'create'" (click)="activeTab = 'create'">
+                <button class="tab-btn" [class.active]="activeTab === 'create'" (click)="switchTab('create')">
                     <span class="icon">➕</span> Crear Nuevo Torneo
                 </button>
-                <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+                <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="switchTab('history')">
                     <span class="icon">📜</span> Historial
                 </button>
             </div>
@@ -188,7 +188,7 @@
                     <!-- TORNEOS ACTIVOS MENU (Horizontal) -->
                     <div class="main-tabs-nav scroll-x">
                         <ng-container *ngFor="let t of torneos">
-                            <button *ngIf="t.estado === 'Abierto'" class="tab-btn big-tab"
+                            <button *ngIf="isTorneoAbierto(t)" class="tab-btn big-tab"
                                 [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
                                 <div class="btn-content">
                                     <div class="frc" style="justify-content: space-between; width: 100%;">
@@ -215,7 +215,7 @@
                 <div class="view-container" *ngIf="activeTab === 'history'">
                     <div class="main-tabs-nav scroll-x">
                         <ng-container *ngFor="let t of torneos">
-                            <button *ngIf="t.estado !== 'Abierto'" class="tab-btn big-tab"
+                            <button *ngIf="isTorneoCerrado(t)" class="tab-btn big-tab"
                                 [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
                                 <div class="btn-content">
                                     <div class="frc" style="justify-content: space-between; width: 100%;">
