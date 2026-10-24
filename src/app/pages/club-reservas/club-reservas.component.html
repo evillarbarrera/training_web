@@ -221,16 +221,31 @@
         <!-- PopUp de Reserva Modernizado -->
         <div class="modal-overlay" *ngIf="showAddForm">
             <div class="premium-modal animate-in">
-                <!-- Header Compacto -->
+                <!-- Header Moderno con Meta y Estado -->
                 <div class="modal-header">
-                    <h3>
-                        <i class="fas" [ngClass]="newReserva.id ? 'fa-edit' : 'fa-plus-circle'"></i>
-                        {{ newReserva.id ? 'Editar Arriendo' : 'Nuevo Arriendo' }}
-                        <span class="type-badge" [style.color]="selectedCategoryMeta.colorHex" [style.background]="selectedCategoryMeta.bgHex">
-                            {{ selectedCategoryMeta.icono }} {{ getCanchaName(newReserva.cancha_id) }}
-                        </span>
-                    </h3>
-                    <button class="close-modal" (click)="showAddForm = false">
+                    <div class="header-left">
+                        <div class="header-icon-box" [class.edit-mode]="newReserva.id">
+                            <i class="fas" [ngClass]="newReserva.id ? 'fa-edit' : 'fa-calendar-plus'"></i>
+                        </div>
+                        <div class="header-title-meta">
+                            <div class="title-row">
+                                <h3>{{ newReserva.id ? 'Editar Arriendo' : 'Nuevo Arriendo' }}</h3>
+                                <span class="reserva-id-tag" *ngIf="newReserva.id">#{{ newReserva.id }}</span>
+                                <span class="status-pill" [class.paid]="newReserva.pagado == 1" [class.debt]="newReserva.pagado != 1" *ngIf="newReserva.id && newReserva.estado !== 'Bloqueada'">
+                                    {{ newReserva.pagado == 1 ? '✅ Pagado' : '⏳ Pendiente' }}
+                                </span>
+                            </div>
+                            <div class="cancha-meta-row">
+                                <span class="type-badge" [style.color]="selectedCategoryMeta.colorHex" [style.background]="selectedCategoryMeta.bgHex">
+                                    {{ selectedCategoryMeta.icono }} {{ getCanchaName(newReserva.cancha_id) }}
+                                </span>
+                                <span class="cancha-subinfo" *ngIf="selectedCanchaInModal">
+                                    {{ selectedCanchaInModal.tipo || 'Estándar' }} • {{ selectedCanchaInModal.superficie || 'Cristal' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="close-modal" (click)="showAddForm = false" title="Cerrar ventana">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -256,32 +271,43 @@
                     <!-- Selector de tipo de reserva -->
                     <div class="type-selector-pill">
                         <button type="button" [class.active]="newReserva.estado === 'Confirmada'" (click)="newReserva.estado = 'Confirmada'">
-                            <i class="fas fa-users"></i> {{ isCourtResource ? 'Jugadores' : 'Arriendo Clientes' }}
+                            <i class="fas fa-users"></i>
+                            <span>{{ isCourtResource ? 'Arriendo Normal' : 'Arriendo Clientes' }}</span>
                         </button>
                         <button type="button" [class.active]="newReserva.estado === 'Entrenamiento'" [class.active-trainer]="newReserva.estado === 'Entrenamiento'" (click)="newReserva.estado = 'Entrenamiento'">
-                            <i class="fas fa-graduation-cap"></i> {{ isCourtResource ? 'Entrenamiento' : 'Clase / Taller' }}
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>{{ isCourtResource ? 'Entrenamiento' : 'Clase / Taller' }}</span>
                         </button>
                         <button type="button" [class.active]="newReserva.estado === 'Bloqueada'" [class.active-block]="newReserva.estado === 'Bloqueada'" (click)="newReserva.estado = 'Bloqueada'">
-                            <i class="fas fa-lock"></i> Bloqueo / Mantenimiento
+                            <i class="fas fa-lock"></i>
+                            <span>Bloqueo / Mantenimiento</span>
                         </button>
                     </div>
 
-                    <!-- Info principal reservas confirmadas / entrenamiento -->
+                    <!-- Horario y Fecha Cockpit -->
                     <div class="main-info-banner" *ngIf="newReserva.estado === 'Confirmada' || newReserva.estado === 'Entrenamiento'">
                         <div class="info-item">
-                            <label>Fecha</label>
-                            <input type="date" [(ngModel)]="newReserva.fecha" class="input-inline">
+                            <label><i class="fas fa-calendar-day"></i> Fecha de Juego</label>
+                            <div class="input-date-wrap">
+                                <input type="date" [(ngModel)]="newReserva.fecha" class="input-inline">
+                            </div>
                         </div>
                         <div class="info-item">
-                            <label>Hora Inicio</label>
-                            <select [(ngModel)]="newReserva.hora_inicio" (ngModelChange)="onHoraInicioOrDuracionChange()" class="select-inline">
-                                <option *ngFor="let slot of timeSlots" [value]="slot">{{slot}}</option>
-                            </select>
+                            <label><i class="fas fa-clock"></i> Horario de Reserva</label>
+                            <div class="time-slot-wrap">
+                                <select [(ngModel)]="newReserva.hora_inicio" (ngModelChange)="onHoraInicioOrDuracionChange()" class="select-inline">
+                                    <option *ngFor="let slot of timeSlots" [value]="slot">{{slot}} hrs</option>
+                                </select>
+                                <span class="time-range-badge" *ngIf="newReserva.hora_fin">
+                                    Hasta {{ newReserva.hora_fin }}
+                                </span>
+                            </div>
                         </div>
                         <div class="info-item">
-                            <label>Duración</label>
+                            <label><i class="fas fa-stopwatch"></i> Duración de Turno</label>
                             <div class="mini-options">
                                 <button *ngFor="let d of [60, 90, 120]" 
+                                        type="button"
                                         [class.active]="newReserva.duracion == d"
                                         (click)="newReserva.duracion = d; onHoraInicioOrDuracionChange()">
                                     {{d}}'
@@ -293,155 +319,206 @@
                     <!-- Sección Jugadores / Arrendatarios -->
                     <div class="reservation-content" *ngIf="newReserva.estado === 'Confirmada' || newReserva.estado === 'Entrenamiento'">
                         
-                        <!-- Método de Pago -->
-                        <div class="payment-logic-box">
-                            <div class="payment-header">
-                                <label>Configuración de Cobro</label>
-                                <div class="switch-container">
-                                    <button type="button" [class.active]="newReserva.metodo_pago !== 'proporcional'" (click)="setPaymentMethod('total')">Total Sede</button>
-                                    <button type="button" [class.active]="newReserva.metodo_pago === 'proporcional'" (click)="setPaymentMethod('proporcional')">Por Persona</button>
+                        <!-- Panel de Configuración de Cobro y Precios -->
+                        <div class="payment-cockpit-card">
+                            <div class="cockpit-top-row">
+                                <div class="cockpit-col-split">
+                                    <label class="cockpit-label"><i class="fas fa-sliders-h"></i> Modalidad de Cobro</label>
+                                    <div class="switch-container modern-switch">
+                                        <button type="button" [class.active]="newReserva.metodo_pago !== 'proporcional'" (click)="setPaymentMethod('total')">
+                                            <i class="fas fa-building"></i> Total Sede
+                                        </button>
+                                        <button type="button" [class.active]="newReserva.metodo_pago === 'proporcional'" (click)="setPaymentMethod('proporcional')">
+                                            <i class="fas fa-user-friends"></i> Por Persona (4)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="cockpit-col-method">
+                                    <label class="cockpit-label"><i class="fas fa-money-bill-wave"></i> Medio de Cobro</label>
+                                    <div class="payment-method-pills">
+                                        <button type="button" 
+                                                (click)="newReserva.metodo_pago = 'Efectivo'"
+                                                [class.active]="newReserva.metodo_pago === 'Efectivo' || newReserva.metodo_pago === 'total'"
+                                                class="btn-method-pill efectivo">
+                                            💵 Efectivo
+                                        </button>
+                                        <button type="button" 
+                                                (click)="newReserva.metodo_pago = 'Tarjeta'"
+                                                [class.active]="newReserva.metodo_pago === 'Tarjeta'"
+                                                class="btn-method-pill tarjeta">
+                                            💳 Tarjeta
+                                        </button>
+                                        <button type="button" 
+                                                (click)="newReserva.metodo_pago = 'Transferencia'"
+                                                [class.active]="newReserva.metodo_pago === 'Transferencia'"
+                                                class="btn-method-pill transferencia">
+                                            🏦 Transferencia
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Selector de Medio de Pago (Efectivo / Tarjeta / Transferencia) -->
-                            <div class="payment-method-strip" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
-                                <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Medio de Pago del Cobro:</label>
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <button type="button" 
-                                            (click)="newReserva.metodo_pago = 'Efectivo'"
-                                            style="padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; border: 1.5px solid; transition: all 0.2s;"
-                                            [style.background]="newReserva.metodo_pago === 'Efectivo' || newReserva.metodo_pago === 'total' ? '#dcfce7' : '#ffffff'"
-                                            [style.color]="newReserva.metodo_pago === 'Efectivo' || newReserva.metodo_pago === 'total' ? '#15803d' : '#64748b'"
-                                            [style.border-color]="newReserva.metodo_pago === 'Efectivo' || newReserva.metodo_pago === 'total' ? '#16a34a' : '#cbd5e1'">
-                                        💵 Efectivo
-                                    </button>
-                                    <button type="button" 
-                                            (click)="newReserva.metodo_pago = 'Tarjeta'"
-                                            style="padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; border: 1.5px solid; transition: all 0.2s;"
-                                            [style.background]="newReserva.metodo_pago === 'Tarjeta' ? '#dbeafe' : '#ffffff'"
-                                            [style.color]="newReserva.metodo_pago === 'Tarjeta' ? '#1e40af' : '#64748b'"
-                                            [style.border-color]="newReserva.metodo_pago === 'Tarjeta' ? '#2563eb' : '#cbd5e1'">
-                                        💳 Tarjeta
-                                    </button>
-                                    <button type="button" 
-                                            (click)="newReserva.metodo_pago = 'Transferencia'"
-                                            style="padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; border: 1.5px solid; transition: all 0.2s;"
-                                            [style.background]="newReserva.metodo_pago === 'Transferencia' ? '#f3e8ff' : '#ffffff'"
-                                            [style.color]="newReserva.metodo_pago === 'Transferencia' ? '#6b21a8' : '#64748b'"
-                                            [style.border-color]="newReserva.metodo_pago === 'Transferencia' ? '#9333ea' : '#cbd5e1'">
-                                        🏦 Transferencia
-                                    </button>
+                            <div class="cockpit-bottom-row">
+                                <div class="price-input-cluster">
+                                    <label class="price-label">{{ isCourtResource ? 'Total Cancha' : 'Total Arriendo' }}</label>
+                                    <div class="price-input-box">
+                                        <span class="currency-prefix">$</span>
+                                        <input type="number" 
+                                               [(ngModel)]="newReserva.precio" 
+                                               (ngModelChange)="onPrecioInputChange($event)" 
+                                               (keydown)="preventDotKey($event)" 
+                                               step="1" 
+                                               min="0" 
+                                               class="input-price-field"
+                                               placeholder="0">
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="price-summary" [class.proporcional]="newReserva.metodo_pago === 'proporcional'" style="margin-top: 10px;">
-                                <div class="price-total">
-                                    <label>{{ isCourtResource ? 'Total Cancha' : 'Total Arriendo' }}</label>
-                                    <input type="number" [(ngModel)]="newReserva.precio" (ngModelChange)="onPrecioInputChange($event)" (keydown)="preventDotKey($event)" step="1" min="0" class="input-flat">
+
+                                <div class="price-each-pill" *ngIf="newReserva.metodo_pago === 'proporcional'">
+                                    <div class="each-icon"><i class="fas fa-users"></i></div>
+                                    <div class="each-text">
+                                        <span class="each-title">Cada jugador paga</span>
+                                        <strong class="each-amount">${{ montoPorPersona | number }}</strong>
+                                    </div>
                                 </div>
-                                <div class="price-each" *ngIf="newReserva.metodo_pago === 'proporcional'">
-                                    <label>Cada uno paga</label>
-                                    <span class="each-val">${{ montoPorPersona }}</span>
+
+                                <div class="global-pay-cluster" *ngIf="newReserva.metodo_pago !== 'proporcional' && !newReserva.liga_partido_id">
+                                    <label class="price-label">Estado de Cobro</label>
+                                    <div class="global-pay-toggle-bar">
+                                        <button type="button" 
+                                                class="pay-toggle-btn paid" 
+                                                [class.active]="newReserva.pagado == 1"
+                                                (click)="setPagoGlobal(1)">
+                                            <i class="fas fa-check-circle"></i> PAGADO
+                                        </button>
+                                        <button type="button" 
+                                                class="pay-toggle-btn debt" 
+                                                [class.active]="newReserva.pagado == 0"
+                                                (click)="setPagoGlobal(0)">
+                                            <i class="fas fa-exclamation-circle"></i> DEBE (Pendiente)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="liga-paid-banner" *ngIf="newReserva.liga_partido_id">
+                                    <i class="fas fa-trophy"></i> Pagado (Inscripción de Liga)
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Adicionales: Tarro de Pelotas (Solo visible en canchas o lanzapelotas) -->
-                        <div class="ball-addon-box" *ngIf="isCourtResource || selectedCanchaInModal?.categoria === 'maquina_lanzapelotas'" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 18px; margin-top: 15px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <label style="font-size: 11px; font-weight: 900; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
-                                    🎾 Agregar Tarro de Pelotas
-                                </label>
-                                <span style="font-size: 12px; font-weight: 900; color: #10b981;" *ngIf="selectedBallProduct">
+                        <!-- Adicionales: Tarro de Pelotas (Solo al editar una reserva existente) -->
+                        <div class="ball-addon-card" *ngIf="newReserva.id && (isCourtResource || selectedCanchaInModal?.categoria === 'maquina_lanzapelotas')">
+                            <div class="ball-addon-header">
+                                <div class="ball-addon-title">
+                                    <span class="ball-emoji">🎾</span>
+                                    <div>
+                                        <strong>Agregar Tarro de Pelotas</strong>
+                                        <span class="subtext">Opcional para el arriendo</span>
+                                    </div>
+                                </div>
+                                <span class="ball-total-badge" *ngIf="selectedBallProduct">
                                     Total: ${{ selectedBallProduct.precio_venta | number }}
                                 </span>
                             </div>
 
-                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <!-- Selector del Tarro -->
-                                <select [(ngModel)]="selectedBallProductId" (change)="onBallProductChange()" class="select-inline" style="flex: 1; min-width: 200px; font-size: 12px; font-weight: 700; background: #fff; padding: 8px 12px; border-radius: 10px; border: 1px solid #cbd5e1;">
-                                    <option [value]="null">-- Seleccionar Tarro de Pelotas --</option>
-                                    <option *ngFor="let p of ballProducts" [value]="p.id">
-                                        {{ p.nombre }} (${{ p.precio_venta | number }})
-                                    </option>
-                                </select>
+                            <div class="ball-addon-controls">
+                                <div class="select-ball-wrap">
+                                    <select [(ngModel)]="selectedBallProductId" (change)="onBallProductChange()" class="select-ball-input">
+                                        <option [value]="null">-- Seleccionar Tarro de Pelotas --</option>
+                                        <option *ngFor="let p of ballProducts" [value]="p.id">
+                                            {{ p.nombre }} (${{ p.precio_venta | number }})
+                                        </option>
+                                    </select>
+                                </div>
 
-                                <!-- Botón Dividir entre 4 -->
                                 <button type="button" 
                                         (click)="splitBallBetween4 = !splitBallBetween4; onSplitBallChange()" 
-                                        style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; padding: 8px 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; user-select: none;"
-                                        [style.background]="splitBallBetween4 ? '#0f172a' : '#ffffff'"
-                                        [style.color]="splitBallBetween4 ? '#ccff00' : '#475569'"
-                                        [style.border]="splitBallBetween4 ? '1.5px solid #0f172a' : '1.5px solid #cbd5e1'">
-                                    <i class="fas" [ngClass]="splitBallBetween4 ? 'fa-check-square' : 'fa-square'" [style.color]="splitBallBetween4 ? '#ccff00' : '#94a3b8'"></i>
+                                        class="btn-split-ball"
+                                        [class.active]="splitBallBetween4">
+                                    <i class="fas" [ngClass]="splitBallBetween4 ? 'fa-check-circle' : 'fa-circle'"></i>
                                     <span>Dividir entre 4</span>
-                                    <span *ngIf="selectedBallProduct && splitBallBetween4" style="font-weight: 900;" [style.color]="splitBallBetween4 ? '#10b981' : '#64748b'">
+                                    <span *ngIf="selectedBallProduct && splitBallBetween4" class="split-val">
                                         (${{ ballPriceEach | number }} c/u)
                                     </span>
                                 </button>
 
-                                <!-- Botón Agregar Pelotas -->
                                 <button type="button" 
                                         (click)="addTarroPelotasToReserva()" 
                                         [disabled]="!selectedBallProductId"
-                                        style="background: #0f172a; color: #ccff00; border: none; border-radius: 10px; padding: 8px 14px; font-size: 11px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px;"
-                                        [style.opacity]="selectedBallProductId ? '1' : '0.5'">
-                                    <i class="fas fa-plus-circle"></i> Agregar Pelotas
+                                        class="btn-add-ball"
+                                        [class.disabled]="!selectedBallProductId">
+                                    <i class="fas fa-plus"></i> Cargar Pelotas
                                 </button>
 
-                                <!-- Botón Quitar Pelotas -->
                                 <button type="button" 
                                         *ngIf="hasSplitBallConsumos || pendingTarroPelotas"
                                         (click)="quitarDivisionPelotas()" 
-                                        style="background: #fee2e2; color: #ef4444; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 8px 14px; font-size: 11px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;"
+                                        class="btn-remove-ball"
                                         title="Eliminar pelotas cargadas a los jugadores">
-                                    <i class="fas fa-trash-alt"></i> Quitar Pelotas
+                                    <i class="fas fa-trash-alt"></i> Quitar
                                 </button>
                             </div>
                         </div>
 
                         <!-- Grilla de Jugadores / Arrendatarios -->
-                        <div class="players-section-grid">
-                            <div class="player-card-box" *ngFor="let i of [1,2,3,4]">
-                                <div class="player-header-row">
-                                    <div class="frc gap-10">
-                                        <label>{{ isCourtResource ? ('Jugador ' + i) : (i === 1 ? 'Titular / Arrendatario' : 'Acompañante ' + i) }} {{ i === 1 ? '(Principal)' : '' }}</label>
-                                        <!-- CARRO DE COMPRA POR JUGADOR -->
-                                        <button class="btn-consumo-trigger" 
-                                                *ngIf="newReserva.id"
-                                                (click)="openConsumo(newReserva, i)"
-                                                [class.has-consumo]="getJugadorTotalConsumo(i) > 0"
-                                                title="Agregar Consumo">
-                                            <i class="fas fa-shopping-cart"></i>
-                                            <span class="c-badge" *ngIf="getJugadorTotalConsumo(i) > 0">${{getJugadorTotalConsumo(i)}}</span>
-                                        </button>
-                                    </div>
-                                    <div class="payment-badge-toggle" 
-                                         *ngIf="newReserva.metodo_pago === 'proporcional' && (slotHasPlayer(i) || newReserva.pagos['p'+i])"
-                                         [class.paid]="newReserva.pagos['p'+i]"
-                                         [class.debt]="!newReserva.pagos['p'+i]"
-                                         (click)="togglePlayerPayment(i)">
-                                         <i class="fas" [ngClass]="newReserva.pagos['p'+i] ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
-                                         <span>{{ newReserva.pagos['p'+i] ? 'PAGADO' : 'DEBE' }}</span>
-                                    </div>
-                                </div>
-                                <div class="input-wrapper">
-                                    <input type="text" 
-                                           [(ngModel)]="newReserva['nombre_externo' + (i === 1 ? '' : i)]" 
-                                           [placeholder]="isCourtResource ? 'Buscar o invitado...' : (i === 1 ? 'Nombre del arrendatario...' : 'Nombre de acompañante...')"
-                                           (input)="activePlayerSlot=i; searchUsers()"
-                                           (focus)="activePlayerSlot=i; searchUsers()">
-                                    <span class="category-tag" *ngIf="newReserva['categoria' + i]">Cat. {{ newReserva['categoria' + i] }}</span>
-                                </div>
+                        <div class="players-section-wrapper">
+                            <div class="section-title-row">
+                                <label class="section-heading"><i class="fas fa-user-friends"></i> Jugadores / Arrendatarios</label>
+                                <span class="section-subtext">Busca por nombre/usuario o escribe un invitado libre</span>
+                            </div>
 
-                                <!-- Sugerencias de búsqueda -->
-                                <div class="search-drop" *ngIf="activePlayerSlot === i && filteredUsers.length > 0">
-                                    <div class="drop-item" *ngFor="let u of filteredUsers" (click)="selectUser(u)">
-                                        <div class="u-info">
-                                            <span class="u-name">{{u.nombre}}</span>
-                                            <span class="u-cat" [class.has-cat]="u.categoria">{{ u.categoria || 'Sin Categoría' }}</span>
+                            <div class="players-section-grid">
+                                <div class="player-card-box" *ngFor="let i of [1,2,3,4]" [class.is-principal]="i === 1">
+                                    <div class="player-header-row">
+                                        <div class="player-title-badge">
+                                            <i class="fas" [ngClass]="i === 1 ? 'fa-crown' : 'fa-user'"></i>
+                                            <span>{{ isCourtResource ? ('Jugador ' + i) : (i === 1 ? 'Titular / Arrendatario' : 'Acompañante ' + i) }}</span>
+                                            <span class="badge-titular" *ngIf="i === 1">Titular</span>
                                         </div>
-                                        <small>{{u.usuario}}</small>
+
+                                        <div class="header-tools">
+                                            <!-- CARRO DE COMPRA POR JUGADOR -->
+                                            <button class="btn-consumo-trigger" 
+                                                    *ngIf="newReserva.id"
+                                                    (click)="openConsumo(newReserva, i)"
+                                                    [class.has-consumo]="getJugadorTotalConsumo(i) > 0"
+                                                    title="Agregar Consumo de Kiosko / Bar">
+                                                <i class="fas fa-shopping-cart"></i>
+                                                <span class="c-badge" *ngIf="getJugadorTotalConsumo(i) > 0">${{getJugadorTotalConsumo(i) | number}}</span>
+                                            </button>
+
+                                            <!-- Payment Badge Toggle (Proporcional) -->
+                                            <div class="payment-badge-toggle" 
+                                                 *ngIf="newReserva.metodo_pago === 'proporcional' && (slotHasPlayer(i) || newReserva.pagos['p'+i])"
+                                                 [class.paid]="newReserva.pagos['p'+i]"
+                                                 [class.debt]="!newReserva.pagos['p'+i]"
+                                                 (click)="togglePlayerPayment(i)">
+                                                 <i class="fas" [ngClass]="newReserva.pagos['p'+i] ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+                                                 <span>{{ newReserva.pagos['p'+i] ? 'PAGADO' : 'DEBE' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-wrapper">
+                                        <i class="fas fa-search search-prefix-icon"></i>
+                                        <input type="text" 
+                                               [(ngModel)]="newReserva['nombre_externo' + (i === 1 ? '' : i)]" 
+                                               [placeholder]="isCourtResource ? (i === 1 ? 'Nombre del organizador...' : 'Nombre de jugador o invitado...') : (i === 1 ? 'Nombre del arrendatario...' : 'Nombre de acompañante...')"
+                                               (input)="activePlayerSlot=i; searchUsers()"
+                                               (focus)="activePlayerSlot=i; searchUsers()">
+                                        <span class="category-tag" *ngIf="newReserva['categoria' + i]">Cat. {{ newReserva['categoria' + i] }}</span>
+                                    </div>
+
+                                    <!-- Sugerencias de búsqueda flotantes -->
+                                    <div class="search-drop" *ngIf="activePlayerSlot === i && filteredUsers.length > 0">
+                                        <div class="drop-item" *ngFor="let u of filteredUsers" (click)="selectUser(u)">
+                                            <div class="u-info">
+                                                <span class="u-name">{{u.nombre}}</span>
+                                                <span class="u-cat" [class.has-cat]="u.categoria">{{ u.categoria || 'Sin Categoría' }}</span>
+                                            </div>
+                                            <small>{{u.usuario}}</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -449,38 +526,15 @@
 
                         <!-- Resumen de Consumo Total de la Reserva (Si existe) -->
                         <div class="reserva-consumo-summary" *ngIf="newReserva.id && getReservaTotalConsumo() > 0">
-                            <i class="fas fa-info-circle"></i>
-                            <span>Total Consumo Pendiente: <strong>${{ getReservaTotalConsumo() | number }}</strong></span>
-                        </div>
-
-                        <!-- Estado Global Solo si es Pago Total (Total Sede / Efectivo / Tarjeta / Transferencia) -->
-                        <div class="global-pay-row" *ngIf="newReserva.metodo_pago !== 'proporcional'">
-                            <label>Estado del Pago</label>
-                            <div class="global-pay-toggle-bar" *ngIf="!newReserva.liga_partido_id">
-                                <button type="button" 
-                                        class="pay-toggle-btn paid" 
-                                        [class.active]="newReserva.pagado == 1"
-                                        (click)="setPagoGlobal(1)">
-                                    <i class="fas fa-check-circle"></i> PAGADO
-                                </button>
-                                <button type="button" 
-                                        class="pay-toggle-btn debt" 
-                                        [class.active]="newReserva.pagado == 0"
-                                        (click)="setPagoGlobal(0)">
-                                    <i class="fas fa-exclamation-circle"></i> DEBE (Pendiente)
-                                </button>
-                            </div>
-                            <!-- Aviso para Partidos de Liga -->
-                            <div class="liga-paid-banner" *ngIf="newReserva.liga_partido_id" style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1.5px solid rgba(16, 185, 129, 0.3); padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-trophy"></i> Pagado (Inscripción de Liga)
-                            </div>
+                            <i class="fas fa-receipt"></i>
+                            <span>Total Consumos Kiosko / Bar: <strong>${{ getReservaTotalConsumo() | number }}</strong></span>
                         </div>
                     </div>
 
                     <!-- Sección Bloqueo Completa (Día Completo vs Rango de Horarios) -->
                     <div class="block-details" *ngIf="newReserva.estado === 'Bloqueada'">
                         <div class="block-mode-selector">
-                            <label>Modalidad de Bloqueo</label>
+                            <label><i class="fas fa-sliders-h"></i> Modalidad de Bloqueo</label>
                             <div class="switch-container">
                                 <button type="button" 
                                         [class.active]="newReserva.tipo_bloqueo === 'dia_completo'" 
@@ -497,26 +551,26 @@
 
                         <div class="main-info-banner block-banner">
                             <div class="info-item">
-                                <label>Fecha de Bloqueo</label>
+                                <label><i class="fas fa-calendar-alt"></i> Fecha de Bloqueo</label>
                                 <input type="date" [(ngModel)]="newReserva.fecha" class="input-inline">
                             </div>
 
                             <!-- Si es Día Completo -->
                             <div class="info-item" *ngIf="newReserva.tipo_bloqueo === 'dia_completo'">
-                                <label>Horario Aplicado</label>
+                                <label><i class="fas fa-hourglass-half"></i> Horario Aplicado</label>
                                 <div class="full-day-pill">07:00 a 23:59 (Todo el Día)</div>
                             </div>
 
                             <!-- Si es Rango de Horarios -->
                             <div class="info-item" *ngIf="newReserva.tipo_bloqueo === 'rango'">
-                                <label>Desde (Hora Inicio)</label>
+                                <label><i class="fas fa-sign-in-alt"></i> Desde (Hora Inicio)</label>
                                 <select [(ngModel)]="newReserva.hora_inicio" class="select-inline">
                                     <option *ngFor="let slot of timeSlots" [value]="slot">{{slot}}</option>
                                 </select>
                             </div>
 
                             <div class="info-item" *ngIf="newReserva.tipo_bloqueo === 'rango'">
-                                <label>Hasta (Hora Fin)</label>
+                                <label><i class="fas fa-sign-out-alt"></i> Hasta (Hora Fin)</label>
                                 <select [(ngModel)]="newReserva.hora_fin_bloqueo" class="select-inline">
                                     <option *ngFor="let slot of timeSlots" [value]="slot">{{slot}}</option>
                                     <option value="23:59">23:59</option>
@@ -527,38 +581,38 @@
                         <div class="alert-block">
                             <span class="icon">⚠️</span>
                             <div class="txt">
-                                <strong>Bloqueo Administrativo</strong>
-                                <p *ngIf="newReserva.tipo_bloqueo === 'dia_completo'">Esta cancha quedará inhabilitada durante todo el día (07:00 a 23:59).</p>
-                                <p *ngIf="newReserva.tipo_bloqueo === 'rango'">Esta cancha estará inhabilitada desde las {{ newReserva.hora_inicio }} hasta las {{ newReserva.hora_fin_bloqueo || '23:59' }}.</p>
+                                <strong>Bloqueo Administrativo de Cancha</strong>
+                                <p *ngIf="newReserva.tipo_bloqueo === 'dia_completo'">Esta pista quedará inhabilitada durante todo el día seleccionado (07:00 a 23:59).</p>
+                                <p *ngIf="newReserva.tipo_bloqueo === 'rango'">Esta pista estará inhabilitada desde las {{ newReserva.hora_inicio }} hasta las {{ newReserva.hora_fin_bloqueo || '23:59' }}.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="premium-footer" style="display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                <div class="premium-footer">
                     <button class="btn-delete" *ngIf="newReserva.id" (click)="eliminarReserva()">
-                        <i class="fas fa-trash"></i> Eliminar
+                        <i class="fas fa-trash-alt"></i> Eliminar Arriendo
                     </button>
-                    <div style="flex:1"></div>
+                    <div class="footer-spacer"></div>
                     <button class="btn-cancel-ghost" (click)="showAddForm = false">Cancelar</button>
                     
+                    <!-- Botón para Cobrar / Pagar si está pendiente -->
                     <button type="button" 
-                            class="btn-save-premium" 
-                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);"
+                            class="btn-pay-complete" 
+                            *ngIf="newReserva.pagado == 0 || newReserva.metodo_pago === 'proporcional'"
                             (click)="realizarPagoCompleto()" 
                             [disabled]="isSaving">
-                        <i class="fas" [ngClass]="isSaving ? 'fa-circle-notch fa-spin' : 'fa-credit-card'"></i>
-                        <span>{{ isSaving ? 'Procesando Pago...' : '💳 Realizar Pago Completo' }}</span>
+                        <i class="fas" [ngClass]="isSaving ? 'fa-circle-notch fa-spin' : 'fa-cash-register'"></i>
+                        <span>{{ isSaving ? 'Procesando...' : '💳 Registrar Pago Total' }}</span>
                     </button>
 
+                    <!-- Botón Guardar siempre accesible -->
                     <button type="button" 
-                            class="btn-save-premium" 
-                            *ngIf="newReserva.pagado == 0"
-                            style="background: #0f172a; color: #ccff00; border: none; padding: 10px 18px; border-radius: 12px; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;"
+                            class="btn-save-primary" 
                             (click)="crearReserva()" 
                             [disabled]="isSaving">
                         <i class="fas" [ngClass]="isSaving ? 'fa-circle-notch fa-spin' : 'fa-save'"></i>
-                        <span>{{ isSaving ? 'Guardando...' : (newReserva.id ? '💾 Guardar Cambios (Pendiente)' : '💾 Guardar Reserva') }}</span>
+                        <span>{{ isSaving ? 'Guardando...' : (newReserva.id ? '💾 Guardar Cambios' : '💾 Guardar Arriendo') }}</span>
                     </button>
                 </div>
 

@@ -55,7 +55,8 @@ export class HardGateComponent implements OnInit {
 
     const token = localStorage.getItem('token');
     const authValue = token ? `Bearer ${token}` : '';
-    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${userId}&role=${this.role}`, {
+    const clubId = localStorage.getItem('selectedClubId') || '';
+    fetch(`${environment.apiUrl}/subscriptions/get_subscription_status.php?user_id=${userId}&role=${this.role}&club_id=${clubId}`, {
       headers: {
         'Authorization': authValue,
         'X-Authorization': authValue
@@ -63,13 +64,15 @@ export class HardGateComponent implements OnInit {
     })
       .then(r => r.json())
       .then(res => {
-        // Bloquear si el status es inactive, blocked o past_due
-        if (res.status === 'inactive' || res.status === 'blocked' || res.status === 'past_due') {
+        // Bloquear si el status es inactive, blocked o past_due o is_blocked es true
+        if (res.status === 'inactive' || res.status === 'blocked' || res.status === 'past_due' || res.is_blocked) {
           this.isLocked = true;
           this.message = res.message || 'Tu suscripción requiere atención.';
           if (res.is_club !== undefined) {
             this.isClub = res.is_club;
           }
+        } else {
+          this.isLocked = false;
         }
         this.isLoading = false;
       })

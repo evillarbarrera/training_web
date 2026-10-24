@@ -315,6 +315,17 @@ export class ClubesService {
         );
     }
 
+    getCanchasDisponibles(clubId: number, fecha?: string, horaInicio?: string, horaFin?: string): Observable<any[]> {
+        let url = `${this.apiUrl}/clubes/get_canchas_disponibles.php?club_id=${clubId}`;
+        if (fecha) url += `&fecha=${encodeURIComponent(fecha)}`;
+        if (horaInicio) url += `&hora_inicio=${encodeURIComponent(horaInicio)}`;
+        if (horaFin) url += `&hora_fin=${encodeURIComponent(horaFin)}`;
+
+        return this.http.get<any[]>(url, {
+            headers: this.getHeaders()
+        });
+    }
+
     addCancha(canchaData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/clubes/add_cancha.php`, canchaData, {
             headers: this.getHeaders()
@@ -357,6 +368,12 @@ export class ClubesService {
     // TORNEOS
     createTorneoAmericano(torneoData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/torneos/create_americano.php`, torneoData, {
+            headers: this.getHeaders()
+        });
+    }
+
+    duplicateAmericano(data: any): Observable<any> {
+        return this.http.post(`${this.apiUrl}/torneos/duplicate_americano.php`, data, {
             headers: this.getHeaders()
         });
     }
@@ -643,8 +660,14 @@ export class ClubesService {
         });
     }
 
-    getInscripciones(categoriaId: number): Observable<any[]> {
-        return this.http.get<any[]>(`${this.apiUrl}/torneos/get_inscripciones.php?categoria_id=${categoriaId}`, {
+    getInscripciones(categoriaId?: number, torneoId?: number): Observable<any[]> {
+        let url = `${this.apiUrl}/torneos/get_inscripciones.php?`;
+        if (categoriaId) {
+            url += `categoria_id=${categoriaId}`;
+        } else if (torneoId) {
+            url += `torneo_id=${torneoId}`;
+        }
+        return this.http.get<any[]>(url, {
             headers: this.getHeaders()
         });
     }

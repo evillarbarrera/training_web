@@ -170,8 +170,13 @@ export class LoginComponent implements OnInit, AfterViewInit {
       ...user,
       rol: perfil ? perfil.rol : user.rol,
       club_id: perfil ? perfil.club_id : user.club_id,
-      club_nombre: perfil ? perfil.club_nombre : ''
+      club_nombre: perfil ? perfil.club_nombre : '',
+      club_guide_seen: user?.club_guide_seen ?? 0
     };
+
+    if (user?.club_guide_seen == 1 || user?.club_guide_seen === true || user?.club_guide_seen === '1') {
+      localStorage.setItem('padelblox_club_guide_seen', 'true');
+    }
 
     this.authService.setCurrentUser(finalUser);
     this.apiService.setCurrentUser(finalUser);

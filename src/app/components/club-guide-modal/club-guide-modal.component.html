@@ -16,7 +16,14 @@
           <p>Domina cada función y sácale el máximo provecho a la gestión digital de tu club.</p>
         </div>
       </div>
-      <button class="btn-close-modal" (click)="closeModal()" title="Cerrar Guía">✕</button>
+      <div class="header-right-actions">
+        <label class="header-dont-show-checkbox" title="Marcar para no volver a mostrar automáticamente">
+          <input type="checkbox" [(ngModel)]="dontShowAgain" (change)="toggleDontShowAgain()">
+          <span class="custom-chk"></span>
+          <span class="chk-label">No mostrar más</span>
+        </label>
+        <button class="btn-close-modal" (click)="closeModal()" title="Cerrar Guía">✕</button>
+      </div>
     </header>
 
     <!-- TABS -->
@@ -171,11 +178,16 @@
     <!-- FOOTER -->
     <footer class="guide-modal-footer">
       <div class="footer-left">
-        <span>💡 Puedes abrir esta guía cuando quieras desde el botón <strong>"Guía del Club"</strong> en el menú lateral.</span>
+        <label class="footer-dont-show-checkbox">
+          <input type="checkbox" [(ngModel)]="dontShowAgain" (change)="toggleDontShowAgain()">
+          <span class="custom-chk"></span>
+          <span class="chk-label">No volver a mostrar esta guía automáticamente</span>
+        </label>
+        <span class="footer-hint">💡 Puedes abrirla cuando quieras desde <strong>"Guía del Club"</strong> en el menú lateral.</span>
       </div>
       <div class="footer-right">
-        <button class="btn-dismiss" (click)="markAllAsSeen()">
-          Entendido, cerrar guía
+        <button class="btn-dismiss" (click)="closeModal()">
+          {{ dontShowAgain ? 'Guardar y cerrar' : 'Entendido, cerrar guía' }}
         </button>
       </div>
     </footer>

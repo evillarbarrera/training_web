@@ -441,6 +441,112 @@ export class TorneoAmericanoComponent implements OnInit {
         });
     }
 
+    copiarTorneo(torneo: any) {
+        if (!torneo) return;
+
+        const hoy = new Date().toISOString().substring(0, 10);
+        const horaSugerida = torneo.hora_inicio ? torneo.hora_inicio.substring(0, 5) : '18:00';
+        const nombreSugerido = `${torneo.nombre} (Copia)`;
+
+        Swal.fire({
+            title: '📋 Copiar Torneo Americano',
+            html: `
+                <div style="text-align: left; font-size: 0.92rem; color: #334155; line-height: 1.5;">
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #166534;">
+                        ℹ️ Se creará una nueva edición <strong>Abierta</strong> conservando la lista de <strong>parejas inscritas</strong>, pero <strong>sin fixture ni resultados</strong>.
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">📝 Nombre del Nuevo Torneo:</label>
+                        <input id="swal-copy-nombre" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${nombreSugerido}">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">📅 Nueva Fecha:</label>
+                            <input id="swal-copy-fecha" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${hoy}">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">⏰ Hora Inicio:</label>
+                            <input id="swal-copy-hora" type="time" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${horaSugerida}">
+                        </div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '✅ Copiar Americano',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            focusConfirm: false,
+            preConfirm: () => {
+                const nombreEl = document.getElementById('swal-copy-nombre') as HTMLInputElement;
+                const fechaEl = document.getElementById('swal-copy-fecha') as HTMLInputElement;
+                const horaEl = document.getElementById('swal-copy-hora') as HTMLInputElement;
+
+                const nombre = nombreEl ? nombreEl.value.trim() : '';
+                const fecha = fechaEl ? fechaEl.value : '';
+                const hora_inicio = horaEl ? horaEl.value : '';
+
+                if (!nombre) {
+                    Swal.showValidationMessage('El nombre del torneo es obligatorio');
+                    return false;
+                }
+                if (!fecha) {
+                    Swal.showValidationMessage('La fecha es obligatoria');
+                    return false;
+                }
+                if (!hora_inicio) {
+                    Swal.showValidationMessage('La hora de inicio es obligatoria');
+                    return false;
+                }
+                return { nombre, fecha, hora_inicio };
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                Swal.fire({
+                    title: 'Copiando americano...',
+                    text: 'Creando nueva edición e importando parejas inscritas...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                this.clubesService.duplicateAmericano({
+                    torneo_id: torneo.id,
+                    nombre: result.value.nombre,
+                    fecha: result.value.fecha,
+                    hora_inicio: result.value.hora_inicio,
+                    creator_id: this.userId
+                }).subscribe({
+                    next: (res: any) => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Torneo Duplicado!',
+                            text: res.mensaje || `Se creó el nuevo torneo con ${res.participantes_copiados || 0} parejas inscritas.`,
+                            confirmButtonColor: '#10b981'
+                        }).then(() => {
+                            this.loadTorneos(this.userId, this.selectedClubId);
+                            this.activeTab = 'list';
+                            if (res.id) {
+                                setTimeout(() => {
+                                    const nuevo = this.torneos.find(t => t.id === res.id);
+                                    if (nuevo) {
+                                        this.selectTorneo(nuevo);
+                                    }
+                                }, 500);
+                            }
+                        });
+                    },
+                    error: (err) => {
+                        Swal.fire('Error al copiar', err.error?.error || 'No se pudo duplicar el torneo.', 'error');
+                    }
+                });
+            }
+        });
+    }
+
     get isCerrado(): boolean {
         return this.selectedTorneo?.estado === 'Cerrado';
     }
