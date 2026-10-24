@@ -439,6 +439,11 @@ export class TorneoAmericanoComponent implements OnInit {
                         if (this.selectedTorneo) {
                             this.selectedTorneo.estado = 'Cerrado';
                         }
+                        const foundInList = this.torneos.find(t => t.id === torneoId);
+                        if (foundInList) {
+                            foundInList.estado = 'Cerrado';
+                        }
+                        this.switchTab('history');
                         this.loadTorneos(this.userId, this.selectedClubId);
                     },
                     error: (err) => {
