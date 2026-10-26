@@ -226,21 +226,29 @@ export class TorneoAmericanoComponent implements OnInit {
                 list = list.filter((t: any) => Number(t.club_id) === Number(targetClubId));
             }
             this.torneos = list;
-            // Sync selectedTorneo if it exists
-            if (this.selectedTorneo) {
-                const updated = this.torneos.find(t => t.id === this.selectedTorneo.id);
-                if (updated) {
-                    this.selectTorneo(updated);
-                } else {
-                    this.selectedTorneo = null;
+            // Sync selectedTorneo if it exists and matches current active tab
+            let matched = this.selectedTorneo ? this.torneos.find(t => t.id === this.selectedTorneo.id) : null;
+            if (matched) {
+                if (this.activeTab === 'list' && !this.isTorneoAbierto(matched)) {
+                    matched = null;
+                } else if (this.activeTab === 'history' && !this.isTorneoCerrado(matched)) {
+                    matched = null;
                 }
+            }
+
+            if (matched) {
+                this.selectTorneo(matched);
             } else {
                 if (this.activeTab === 'list') {
                     const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
                     if (firstOpen) this.selectTorneo(firstOpen);
+                    else this.selectedTorneo = null;
                 } else if (this.activeTab === 'history') {
                     const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
                     if (firstClosed) this.selectTorneo(firstClosed);
+                    else this.selectedTorneo = null;
+                } else {
+                    this.selectedTorneo = null;
                 }
             }
         });
@@ -574,14 +582,13 @@ export class TorneoAmericanoComponent implements OnInit {
 
     get isCerrado(): boolean {
         if (!this.selectedTorneo) return false;
-        if (this.activeTab === 'history') return true;
         return this.isTorneoCerrado(this.selectedTorneo);
     }
 
     switchTab(tab: 'create' | 'list' | 'history') {
         this.activeTab = tab;
         if (tab === 'list') {
-            if (!this.selectedTorneo || this.isCerrado) {
+            if (!this.selectedTorneo || !this.isTorneoAbierto(this.selectedTorneo)) {
                 const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
                 if (firstOpen) {
                     this.selectTorneo(firstOpen);
@@ -590,7 +597,7 @@ export class TorneoAmericanoComponent implements OnInit {
                 }
             }
         } else if (tab === 'history') {
-            if (!this.selectedTorneo || !this.isCerrado) {
+            if (!this.selectedTorneo || !this.isTorneoCerrado(this.selectedTorneo)) {
                 const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
                 if (firstClosed) {
                     this.selectTorneo(firstClosed);
