@@ -48,6 +48,10 @@ export class TorneoAmericanoComponent implements OnInit {
     activeRoundTab: number = 1;
     activeFaseTab: string = '';
 
+    // Historial UX State
+    historySearchTerm: string = '';
+    historyDetailMode: boolean = false;
+
     showPodiumReveal: boolean = false;
     revealStep: number = 0;
     flashActive: boolean = false;
@@ -226,11 +230,27 @@ export class TorneoAmericanoComponent implements OnInit {
                 list = list.filter((t: any) => Number(t.club_id) === Number(targetClubId));
             }
             this.torneos = list;
-            // Sync selectedTorneo if it exists
-            if (this.selectedTorneo) {
-                const updated = this.torneos.find(t => t.id === this.selectedTorneo.id);
-                if (updated) {
-                    this.selectedTorneo = { ...updated };
+            // Sync selectedTorneo if it exists and matches current active tab
+            let matched = this.selectedTorneo ? this.torneos.find(t => t.id === this.selectedTorneo.id) : null;
+            if (matched) {
+                if (this.activeTab === 'list' && !this.isTorneoAbierto(matched)) {
+                    matched = null;
+                } else if (this.activeTab === 'history' && !this.isTorneoCerrado(matched)) {
+                    matched = null;
+                }
+            }
+
+            if (matched) {
+                this.selectTorneo(matched);
+            } else {
+                if (this.activeTab === 'list') {
+                    const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
+                    if (firstOpen) this.selectTorneo(firstOpen);
+                    else this.selectedTorneo = null;
+                } else if (this.activeTab === 'history') {
+                    const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
+                    if (firstClosed) this.selectTorneo(firstClosed);
+                    else this.selectedTorneo = null;
                 } else {
                     this.selectedTorneo = null;
                 }
@@ -431,6 +451,11 @@ export class TorneoAmericanoComponent implements OnInit {
                         if (this.selectedTorneo) {
                             this.selectedTorneo.estado = 'Cerrado';
                         }
+                        const foundInList = this.torneos.find(t => t.id === torneoId);
+                        if (foundInList) {
+                            foundInList.estado = 'Cerrado';
+                        }
+                        this.switchTab('history');
                         this.loadTorneos(this.userId, this.selectedClubId);
                     },
                     error: (err) => {
@@ -441,8 +466,184 @@ export class TorneoAmericanoComponent implements OnInit {
         });
     }
 
+    copiarTorneo(torneo: any) {
+        if (!torneo) return;
+
+        const hoy = new Date().toISOString().substring(0, 10);
+        const horaSugerida = torneo.hora_inicio ? torneo.hora_inicio.substring(0, 5) : '18:00';
+        const nombreSugerido = `${torneo.nombre} (Copia)`;
+
+        Swal.fire({
+            title: '📋 Copiar Torneo Americano',
+            html: `
+                <div style="text-align: left; font-size: 0.92rem; color: #334155; line-height: 1.5;">
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #166534;">
+                        ℹ️ Se creará una nueva edición <strong>Abierta</strong> conservando la lista de <strong>parejas inscritas</strong>, pero <strong>sin fixture ni resultados</strong>.
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">📝 Nombre del Nuevo Torneo:</label>
+                        <input id="swal-copy-nombre" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${nombreSugerido}">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">📅 Nueva Fecha:</label>
+                            <input id="swal-copy-fecha" type="date" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${hoy}">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 0.85rem; color: #1e293b;">⏰ Hora Inicio:</label>
+                            <input id="swal-copy-hora" type="time" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; font-size: 0.9rem; padding: 8px 12px; height: auto;" value="${horaSugerida}">
+                        </div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '✅ Copiar Americano',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            focusConfirm: false,
+            preConfirm: () => {
+                const nombreEl = document.getElementById('swal-copy-nombre') as HTMLInputElement;
+                const fechaEl = document.getElementById('swal-copy-fecha') as HTMLInputElement;
+                const horaEl = document.getElementById('swal-copy-hora') as HTMLInputElement;
+
+                const nombre = nombreEl ? nombreEl.value.trim() : '';
+                const fecha = fechaEl ? fechaEl.value : '';
+                const hora_inicio = horaEl ? horaEl.value : '';
+
+                if (!nombre) {
+                    Swal.showValidationMessage('El nombre del torneo es obligatorio');
+                    return false;
+                }
+                if (!fecha) {
+                    Swal.showValidationMessage('La fecha es obligatoria');
+                    return false;
+                }
+                if (!hora_inicio) {
+                    Swal.showValidationMessage('La hora de inicio es obligatoria');
+                    return false;
+                }
+                return { nombre, fecha, hora_inicio };
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                Swal.fire({
+                    title: 'Copiando americano...',
+                    text: 'Creando nueva edición e importando parejas inscritas...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                this.clubesService.duplicateAmericano({
+                    torneo_id: torneo.id,
+                    nombre: result.value.nombre,
+                    fecha: result.value.fecha,
+                    hora_inicio: result.value.hora_inicio,
+                    creator_id: this.userId
+                }).subscribe({
+                    next: (res: any) => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Torneo Duplicado!',
+                            text: res.mensaje || `Se creó el nuevo torneo con ${res.participantes_copiados || 0} parejas inscritas.`,
+                            confirmButtonColor: '#10b981'
+                        }).then(() => {
+                            this.loadTorneos(this.userId, this.selectedClubId);
+                            this.activeTab = 'list';
+                            if (res.id) {
+                                setTimeout(() => {
+                                    const nuevo = this.torneos.find(t => t.id === res.id);
+                                    if (nuevo) {
+                                        this.selectTorneo(nuevo);
+                                    }
+                                }, 500);
+                            }
+                        });
+                    },
+                    error: (err) => {
+                        Swal.fire('Error al copiar', err.error?.error || 'No se pudo duplicar el torneo.', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    isTorneoCerrado(t: any): boolean {
+        if (!t) return false;
+        const est = (t.estado || '').toLowerCase().trim();
+        if (est === 'cerrado' || est === 'finalizado' || est === 'cancelado') {
+            return true;
+        }
+        // Si la fecha del torneo ya pasó respecto a la fecha actual, se considera cerrado
+        if (t.fecha) {
+            const todayStr = new Date().toISOString().substring(0, 10);
+            if (t.fecha < todayStr) {
+                return true;
+            }
+        }
+        return (est !== 'abierto' && est !== '');
+    }
+
+    isTorneoAbierto(t: any): boolean {
+        if (!t) return false;
+        return !this.isTorneoCerrado(t);
+    }
+
     get isCerrado(): boolean {
-        return this.selectedTorneo?.estado === 'Cerrado';
+        if (!this.selectedTorneo) return false;
+        return this.isTorneoCerrado(this.selectedTorneo);
+    }
+
+    get closedTorneos(): any[] {
+        if (!this.torneos) return [];
+        let list = this.torneos.filter(t => this.isTorneoCerrado(t));
+        if (this.historySearchTerm && this.historySearchTerm.trim()) {
+            const term = this.historySearchTerm.toLowerCase().trim();
+            list = list.filter(t => 
+                (t.nombre && t.nombre.toLowerCase().includes(term)) ||
+                (t.fecha && t.fecha.toLowerCase().includes(term)) ||
+                (t.categoria && t.categoria.toLowerCase().includes(term))
+            );
+        }
+        return list;
+    }
+
+    viewHistoryTournament(torneo: any) {
+        this.selectTorneo(torneo);
+        this.historyDetailMode = true;
+    }
+
+    exitHistoryDetail() {
+        this.historyDetailMode = false;
+    }
+
+    switchTab(tab: 'create' | 'list' | 'history') {
+        this.activeTab = tab;
+        if (tab === 'list') {
+            this.historyDetailMode = false;
+            if (!this.selectedTorneo || !this.isTorneoAbierto(this.selectedTorneo)) {
+                const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
+                if (firstOpen) {
+                    this.selectTorneo(firstOpen);
+                } else {
+                    this.selectedTorneo = null;
+                }
+            }
+        } else if (tab === 'history') {
+            this.historyDetailMode = false;
+            if (!this.selectedTorneo || !this.isTorneoCerrado(this.selectedTorneo)) {
+                const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
+                if (firstClosed) {
+                    this.selectTorneo(firstClosed);
+                } else {
+                    this.selectedTorneo = null;
+                }
+            }
+        }
     }
 
     get isGrupos(): boolean {
@@ -460,7 +661,7 @@ export class TorneoAmericanoComponent implements OnInit {
         };
         this.originalTorneoFecha = torneo.fecha;
         this.originalTorneoHora = torneo.hora_inicio;
-        this.activeDetailTab = 'inscription';
+        this.activeDetailTab = this.isCerrado ? 'ranking' : 'inscription';
         this.loadParticipantes(torneo.id);
         this.loadMatches(torneo.id);
 
@@ -867,11 +1068,11 @@ export class TorneoAmericanoComponent implements OnInit {
     }
 
     hasActiveTournaments(): boolean {
-        return this.torneos.some(t => t.estado === 'Abierto');
+        return this.torneos.some(t => this.isTorneoAbierto(t));
     }
 
     hasHistoryTournaments(): boolean {
-        return this.torneos.some(t => t.estado !== 'Abierto');
+        return this.torneos.some(t => this.isTorneoCerrado(t));
     }
 
     hasRank(rank: number): boolean {

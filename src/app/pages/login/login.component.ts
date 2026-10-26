@@ -135,9 +135,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
             this.authService.setCurrentUser(response);
             this.availableProfiles = filteredProfiles;
             
-            // Si el perfil principal o el primero es administrador_club, pasamos directo
-            const firstRole = filteredProfiles[0].rol.toLowerCase();
-            if (firstRole.includes('administrador_club')) {
+            // Si el perfil principal o el primero es admin (club o global), pasamos directo
+            const firstRole = (filteredProfiles[0]?.rol || '').toLowerCase();
+            if (firstRole.includes('admin') || firstRole.includes('administrador')) {
               this.finalizeLogin(response, filteredProfiles[0]);
             } else {
               this.showProfileSelector = true;

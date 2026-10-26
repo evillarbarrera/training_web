@@ -30,13 +30,13 @@
 
             <!-- TAB NAVIGATION -->
             <div class="main-tabs-nav">
-                <button class="tab-btn" [class.active]="activeTab === 'list'" (click)="activeTab = 'list'">
+                <button class="tab-btn" [class.active]="activeTab === 'list'" (click)="switchTab('list')">
                     <span class="icon">🏆</span> Ver Mis Torneos
                 </button>
-                <button class="tab-btn" [class.active]="activeTab === 'create'" (click)="activeTab = 'create'">
+                <button class="tab-btn" [class.active]="activeTab === 'create'" (click)="switchTab('create')">
                     <span class="icon">➕</span> Crear Nuevo Torneo
                 </button>
-                <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+                <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="switchTab('history')">
                     <span class="icon">📜</span> Historial
                 </button>
             </div>
@@ -188,7 +188,7 @@
                     <!-- TORNEOS ACTIVOS MENU (Horizontal) -->
                     <div class="main-tabs-nav scroll-x">
                         <ng-container *ngFor="let t of torneos">
-                            <button *ngIf="t.estado === 'Abierto'" class="tab-btn big-tab"
+                            <button *ngIf="isTorneoAbierto(t)" class="tab-btn big-tab"
                                 [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
                                 <div class="btn-content">
                                     <div class="frc" style="justify-content: space-between; width: 100%;">
@@ -211,32 +211,148 @@
                     <ng-container *ngTemplateOutlet="tournamentDetail"></ng-container>
                 </div>
 
-                <!-- VISTA: HISTORIAL (CERRADOS) -->
-                <div class="view-container" *ngIf="activeTab === 'history'">
-                    <div class="main-tabs-nav scroll-x">
-                        <ng-container *ngFor="let t of torneos">
-                            <button *ngIf="t.estado !== 'Abierto'" class="tab-btn big-tab"
-                                [class.active]="selectedTorneo?.id === t.id" (click)="selectTorneo(t)">
-                                <div class="btn-content">
-                                    <div class="frc" style="justify-content: space-between; width: 100%;">
-                                        <span class="btn-title">{{ t.nombre }}</span>
-                                        <span class="badge" [style.background]="'#fee2e2'" [style.color]="'#991b1b'"
-                                            style="font-size: 9px; padding: 2px 6px; border-radius: 10px;">
-                                            Cerrado
-                                        </span>
+                <!-- VISTA: HISTORIAL (CERRADOS) - REDISEÑO PROFESIONAL UX -->
+                <div class="view-container history-view-container" *ngIf="activeTab === 'history'">
+                    
+                    <!-- MODO 1: DASHBOARD & CATÁLOGO DE HISTORIAL (Cuando no está en detalle) -->
+                    <div class="history-dashboard animate-fade-in" *ngIf="!historyDetailMode">
+                        
+                        <!-- HEADER & CONTROLES DE HISTORIAL -->
+                        <div class="history-hero-card">
+                            <div class="history-hero-info">
+                                <div class="badge-history-title">
+                                    <span class="icon">📜</span>
+                                    <span>Archivo Oficial</span>
+                                </div>
+                                <h2 class="history-title">Historial de Torneos Americanos</h2>
+                                <p class="history-subtitle">
+                                    Revisa ediciones finalizadas, consulta los cuadros de campeones y <strong>duplica torneos</strong> con sus parejas inscritas para una nueva fecha con un solo clic.
+                                </p>
+                            </div>
+
+                            <div class="history-kpis">
+                                <div class="history-kpi-item">
+                                    <span class="kpi-num">{{ closedTorneos.length }}</span>
+                                    <span class="kpi-label">Ediciones Cerradas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BARRA DE BÚSQUEDA Y FILTRADO -->
+                        <div class="history-filter-bar">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" [(ngModel)]="historySearchTerm" 
+                                    placeholder="Buscar torneo por nombre, fecha (ej. 15/10) o categoría..." 
+                                    class="history-search-input">
+                                <button *ngIf="historySearchTerm" (click)="historySearchTerm = ''" class="clear-search-btn" title="Limpiar búsqueda">✕</button>
+                            </div>
+                            <div class="history-count-badge" *ngIf="closedTorneos.length > 0">
+                                Mostrando <strong>{{ closedTorneos.length }}</strong> torneos
+                            </div>
+                        </div>
+
+                        <!-- GRID DE TARJETAS DE TORNEOS CERRADOS -->
+                        <div class="history-cards-grid" *ngIf="closedTorneos.length > 0">
+                            <div class="history-card" *ngFor="let t of closedTorneos" [class.selected]="selectedTorneo?.id === t.id">
+                                <div class="card-status-bar">
+                                    <div class="date-badge">
+                                        <span class="icon">📅</span>
+                                        <span>{{ t.fecha | date:'dd/MM/yyyy' }}</span>
+                                        <span class="dot">•</span>
+                                        <span class="time">{{ t.hora_inicio ? t.hora_inicio.substring(0,5) : '' }} hrs</span>
                                     </div>
-                                    <span class="btn-subtitle">
-                                        {{ t.fecha | date:'dd/MM' }} | {{ t.hora_inicio }}
+                                    <span class="closed-pill">
+                                        <span class="status-indicator"></span>
+                                        Cerrado
                                     </span>
                                 </div>
-                            </button>
-                        </ng-container>
-                        <div *ngIf="!hasHistoryTournaments()" class="empty-state">No hay torneos en el historial.
+
+                                <div class="card-body">
+                                    <h3 class="tournament-name" (click)="viewHistoryTournament(t)" title="Click para ver resultados">
+                                        {{ t.nombre }}
+                                    </h3>
+
+                                    <div class="tournament-chips">
+                                        <span class="info-chip">
+                                            <span class="chip-icon">🏟️</span>
+                                            {{ t.num_canchas || 2 }} Canchas
+                                        </span>
+                                        <span class="info-chip">
+                                            <span class="chip-icon">⏱️</span>
+                                            {{ t.tiempo_por_partido || 20 }} min/partido
+                                        </span>
+                                        <span class="info-chip chip-format">
+                                            <span class="chip-icon">🏷️</span>
+                                            {{ t.tipo_torneo === 'grupos' ? 'Grupos Oro/Plata' : 'Americano Estándar' }}
+                                        </span>
+                                        <span class="info-chip" *ngIf="t.categoria">
+                                            <span class="chip-icon">🎾</span>
+                                            {{ t.categoria }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer-actions">
+                                    <button class="btn-card-action btn-copy-action" (click)="copiarTorneo(t)" title="Duplicar parejas inscritas para nueva fecha">
+                                        <span class="btn-icon">📋</span>
+                                        <span>Copiar Torneo</span>
+                                    </button>
+                                    <button class="btn-card-action btn-view-action" (click)="viewHistoryTournament(t)">
+                                        <span class="btn-icon">📊</span>
+                                        <span>Ver Podio & Resultados</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- EMPTY STATE (Si no hay torneos o búsqueda vacía) -->
+                        <div class="history-empty-card" *ngIf="closedTorneos.length === 0">
+                            <div class="empty-icon-bubble">🏆</div>
+                            <h3 class="empty-title">
+                                {{ historySearchTerm ? 'No se encontraron torneos' : 'No hay torneos en el historial' }}
+                            </h3>
+                            <p class="empty-desc">
+                                {{ historySearchTerm 
+                                    ? 'No hay resultados que coincidan con "' + historySearchTerm + '". Intenta con otro término.' 
+                                    : 'Los torneos que finalices y cierres desde "Ver Mis Torneos" se archivarán automáticamente aquí con sus podios y resultados.' }}
+                            </p>
+                            <button *ngIf="historySearchTerm" class="btn-clear-filter" (click)="historySearchTerm = ''">
+                                Mostrar todos los torneos cerrados
+                            </button>
+                            <button *ngIf="!historySearchTerm && hasActiveTournaments()" class="btn-go-active" (click)="switchTab('list')">
+                                Ver Torneos Activos
+                            </button>
+                        </div>
+
                     </div>
 
-                    <!-- DETALLE (Full Width Below) -->
-                    <ng-container *ngTemplateOutlet="tournamentDetail"></ng-container>
+                    <!-- MODO 2: DETALLE DEL TORNEO CERRADO (Cuando el usuario entra a ver un torneo) -->
+                    <div class="history-detail-wrapper animate-fade-in" *ngIf="historyDetailMode && selectedTorneo">
+                        <!-- BARRA SUPERIOR DE RETORNO Y ACCIONES -->
+                        <div class="history-detail-navbar">
+                            <button class="btn-back-history" (click)="exitHistoryDetail()">
+                                <span class="arrow">←</span>
+                                <span>Volver al Catálogo de Torneos</span>
+                            </button>
+
+                            <div class="history-detail-title-group">
+                                <span class="history-detail-pill">Edición Finalizada</span>
+                                <h2 class="history-detail-heading">{{ selectedTorneo.nombre }}</h2>
+                                <span class="history-detail-sub">{{ selectedTorneo.fecha | date:'dd/MM/yyyy' }} • {{ selectedTorneo.hora_inicio }} hrs</span>
+                            </div>
+
+                            <div class="history-detail-actions">
+                                <button class="btn-copy-torneo" (click)="copiarTorneo(selectedTorneo)">
+                                    📋 Copiar este Americano (con Inscritos)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- DETALLE (Full Width Below) -->
+                        <ng-container *ngTemplateOutlet="tournamentDetail"></ng-container>
+                    </div>
+
                 </div>
 
                 <!-- TEMPLATE REUTILIZABLE PARA EL DETALLE -->
@@ -284,6 +400,12 @@
                                     </button>
                                     <button class="btn-close-torneo" (click)="cerrarTorneo(selectedTorneo.id)">
                                         🏁 Cerrar Americano
+                                    </button>
+                                </div>
+                                <div class="header-actions" *ngIf="isCerrado" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                    <button class="btn-copy-torneo" (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: #ffffff; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.2s ease;">
+                                        📋 Copiar Americano (con Inscritos)
                                     </button>
                                 </div>
                             </div>
@@ -366,13 +488,28 @@
                                         </small>
                                     </div>
                                 </div>
-                                <div *ngIf="isCerrado" class="empty-state">
-                                    El torneo está cerrado, no se puede editar.
+                                <div *ngIf="isCerrado" class="empty-state" style="padding: 35px 20px; text-align: center;">
+                                    <p style="font-size: 1.05rem; color: #475569; margin-bottom: 16px;">🏁 Este torneo está cerrado y finalizado.</p>
+                                    <button class="btn-copy-torneo" (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: #ffffff; border: none; padding: 10px 22px; border-radius: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: all 0.2s ease;">
+                                        📋 Crear Nueva Edición Copiando Inscritos
+                                    </button>
                                 </div>
                             </div>
 
                             <!-- TAB: INSCRIPCION -->
                             <div class="tab-content" *ngIf="activeDetailTab === 'inscription'">
+                                <div *ngIf="isCerrado" style="display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 20px; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <strong style="color: #166534; font-size: 0.95rem;">📋 Torneo Cerrado ({{ participantes.length }} parejas inscritas)</strong>
+                                        <p style="margin: 4px 0 0; font-size: 0.85rem; color: #15803d;">Puedes duplicar este torneo para una nueva fecha manteniendo las mismas parejas sin fixture ni resultados.</p>
+                                    </div>
+                                    <button (click)="copiarTorneo(selectedTorneo)"
+                                        style="background: #10b981; color: white; border: none; padding: 9px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.88rem; box-shadow: 0 2px 8px rgba(16,185,129,0.25); white-space: nowrap;">
+                                        📋 Copiar Americano
+                                    </button>
+                                </div>
+
                                 <div class="management-section" *ngIf="!isCerrado">
                                     <h3>Inscripción de Parejas</h3>
 

@@ -372,6 +372,12 @@ export class ClubesService {
         });
     }
 
+    duplicateAmericano(data: any): Observable<any> {
+        return this.http.post(`${this.apiUrl}/torneos/duplicate_americano.php`, data, {
+            headers: this.getHeaders()
+        });
+    }
+
     updateAmericano(torneoData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/torneos/update_americano.php`, torneoData, {
             headers: this.getHeaders()
@@ -467,10 +473,9 @@ export class ClubesService {
         });
     }
 
-    cancelReserva(reservaId: number): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/clubes/cancel_reserva.php`, {
-            reserva_id: reservaId
-        }, {
+    cancelReserva(payloadOrId: any): Observable<any> {
+        const body = (typeof payloadOrId === 'object' && payloadOrId !== null) ? payloadOrId : { reserva_id: payloadOrId };
+        return this.http.post<any>(`${this.apiUrl}/clubes/cancel_reserva.php`, body, {
             headers: this.getHeaders()
         });
     }
