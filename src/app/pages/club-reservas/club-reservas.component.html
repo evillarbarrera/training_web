@@ -185,7 +185,7 @@
                                                 ⚠️ Solapado
                                             </span>
                                         </div>
-                                        <span class="res-payment-dot" [title]="getPaymentStatusText(res)" [ngClass]="'pay-' + getPaymentStatus(res)" *ngIf="res.estado !== 'Bloqueada'"></span>
+                                        <span class="res-payment-dot" [title]="getPaymentStatusText(res)" [ngClass]="'pay-' + getPaymentStatus(res)" *ngIf="res.estado !== 'Bloqueada' && !isAmericanoReserva(res)"></span>
                                     </div>
                                     <div class="res-card-body">
                                         <span class="res-name">
