@@ -48,6 +48,10 @@ export class TorneoAmericanoComponent implements OnInit {
     activeRoundTab: number = 1;
     activeFaseTab: string = '';
 
+    // Historial UX State
+    historySearchTerm: string = '';
+    historyDetailMode: boolean = false;
+
     showPodiumReveal: boolean = false;
     revealStep: number = 0;
     flashActive: boolean = false;
@@ -585,9 +589,33 @@ export class TorneoAmericanoComponent implements OnInit {
         return this.isTorneoCerrado(this.selectedTorneo);
     }
 
+    get closedTorneos(): any[] {
+        if (!this.torneos) return [];
+        let list = this.torneos.filter(t => this.isTorneoCerrado(t));
+        if (this.historySearchTerm && this.historySearchTerm.trim()) {
+            const term = this.historySearchTerm.toLowerCase().trim();
+            list = list.filter(t => 
+                (t.nombre && t.nombre.toLowerCase().includes(term)) ||
+                (t.fecha && t.fecha.toLowerCase().includes(term)) ||
+                (t.categoria && t.categoria.toLowerCase().includes(term))
+            );
+        }
+        return list;
+    }
+
+    viewHistoryTournament(torneo: any) {
+        this.selectTorneo(torneo);
+        this.historyDetailMode = true;
+    }
+
+    exitHistoryDetail() {
+        this.historyDetailMode = false;
+    }
+
     switchTab(tab: 'create' | 'list' | 'history') {
         this.activeTab = tab;
         if (tab === 'list') {
+            this.historyDetailMode = false;
             if (!this.selectedTorneo || !this.isTorneoAbierto(this.selectedTorneo)) {
                 const firstOpen = this.torneos.find(t => this.isTorneoAbierto(t));
                 if (firstOpen) {
@@ -597,6 +625,7 @@ export class TorneoAmericanoComponent implements OnInit {
                 }
             }
         } else if (tab === 'history') {
+            this.historyDetailMode = false;
             if (!this.selectedTorneo || !this.isTorneoCerrado(this.selectedTorneo)) {
                 const firstClosed = this.torneos.find(t => this.isTorneoCerrado(t));
                 if (firstClosed) {
