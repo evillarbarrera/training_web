@@ -572,16 +572,25 @@ export class TorneoAmericanoComponent implements OnInit {
         });
     }
 
-    isTorneoAbierto(t: any): boolean {
-        if (!t) return false;
-        const est = (t.estado || '').toLowerCase().trim();
-        return est === 'abierto';
-    }
-
     isTorneoCerrado(t: any): boolean {
         if (!t) return false;
         const est = (t.estado || '').toLowerCase().trim();
-        return est === 'cerrado' || est === 'finalizado' || est === 'cancelado' || (est !== 'abierto' && est !== '');
+        if (est === 'cerrado' || est === 'finalizado' || est === 'cancelado') {
+            return true;
+        }
+        // Si la fecha del torneo ya pasó respecto a la fecha actual, se considera cerrado
+        if (t.fecha) {
+            const todayStr = new Date().toISOString().substring(0, 10);
+            if (t.fecha < todayStr) {
+                return true;
+            }
+        }
+        return (est !== 'abierto' && est !== '');
+    }
+
+    isTorneoAbierto(t: any): boolean {
+        if (!t) return false;
+        return !this.isTorneoCerrado(t);
     }
 
     get isCerrado(): boolean {
