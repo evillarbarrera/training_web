@@ -90,7 +90,7 @@
                                                 <i class="fas fa-location-dot"></i> {{ slot.club_nombre }}
                                                 <span *ngIf="slot.cancha_nombre" class="court-chip">· {{ slot.cancha_nombre }}</span>
                                             </div>
-                                            <div class="booked-no-court-alert" *ngIf="slot.requiere_cancha" title="El club dispone de canchas pero esta reserva no tiene cancha asignada">
+                                            <div class="booked-no-court-alert" *ngIf="slot.requiere_cancha || (!slot.cancha_nombre && slot.club_nombre)" title="Esta reserva no tiene cancha asignada">
                                                 <i class="fas fa-triangle-exclamation"></i> Sin Cancha
                                             </div>
                                         </ng-container>
@@ -624,14 +624,14 @@
                                 <span>{{ selectedSlot?.slotData?.club_nombre }}</span>
                             </div>
                         </div>
-                        <div class="hero-tag court-tag" *ngIf="selectedSlot?.slotData?.cancha_nombre">
+                        <div class="hero-tag court-tag clickable" *ngIf="selectedSlot?.slotData?.cancha_nombre" (click)="toggleAssignCourtInline()" title="Cambiar pista asignada">
                             <i class="fas fa-table-tennis-paddle-ball"></i>
                             <div class="tag-meta">
-                                <small>PISTA</small>
+                                <small>PISTA ASIGNADA</small>
                                 <span>{{ selectedSlot?.slotData?.cancha_nombre }}</span>
                             </div>
                         </div>
-                        <div class="hero-tag warning-tag clickable" *ngIf="selectedSlot?.slotData?.requiere_cancha" (click)="toggleAssignCourtInline()" title="Asignar Cancha">
+                        <div class="hero-tag warning-tag clickable" *ngIf="!selectedSlot?.slotData?.cancha_nombre" (click)="toggleAssignCourtInline()" title="Asignar Cancha">
                             <i class="fas fa-triangle-exclamation"></i>
                             <div class="tag-meta">
                                 <small>CANCHA</small>
@@ -642,13 +642,13 @@
                 </div>
 
                 <!-- ALERTA DE CANCHA PENDIENTE -->
-                <div class="no-court-callout" *ngIf="selectedSlot?.slotData?.requiere_cancha">
+                <div class="no-court-callout" *ngIf="!selectedSlot?.slotData?.cancha_nombre">
                     <div class="callout-icon">
                         <i class="fas fa-triangle-exclamation"></i>
                     </div>
                     <div class="callout-body">
                         <h4>¡Reserva sin Cancha Asignada!</h4>
-                        <p>El club <strong>{{ selectedSlot?.slotData?.club_nombre || 'seleccionado' }}</strong> cuenta con reserva de canchas. Asigna una pista a esta sesión para que quede debidamente agendada.</p>
+                        <p>Esta reserva en <strong>{{ selectedSlot?.slotData?.club_nombre || 'el club' }}</strong> no tiene una pista asignada todavía. Asigna una pista para asegurar el espacio de entrenamiento.</p>
                     </div>
                     <button type="button" class="btn-assign-court-trigger" (click)="toggleAssignCourtInline()">
                         <i class="fas" [ngClass]="showAssignCourtInline ? 'fa-chevron-up' : 'fa-plus'"></i>
@@ -667,7 +667,7 @@
                             <select class="modern-court-select" [(ngModel)]="selectedCanchaId">
                                 <option [ngValue]="null" disabled>-- Elige una pista disponible --</option>
                                 <option *ngFor="let c of canchasDisponibles" [ngValue]="c.id">
-                                    {{ c.nombre }} ({{ c.tipo || 'Pádel' }})
+                                    {{ c.nombre }} ({{ c.tipo || 'Pádel' }}) {{ !c.disponible ? '(Ocupada)' : '' }}
                                 </option>
                             </select>
                         </div>
@@ -828,7 +828,7 @@
                     </div>
 
                     <!-- Court Selector in Edit Mode -->
-                    <div class="edit-court-box" *ngIf="selectedSlot?.slotData?.club_permite_canchas || (canchasDisponibles && canchasDisponibles.length > 0)">
+                    <div class="edit-court-box">
                         <label><i class="fas fa-table-tennis-paddle-ball"></i> CANCHA / PISTA ASIGNADA</label>
                         <div class="select-wrapper">
                             <select class="modern-select" [(ngModel)]="selectedCanchaId">
@@ -836,8 +836,8 @@
                                 <option *ngFor="let c of canchasDisponibles" [ngValue]="c.id">{{ c.nombre }} ({{ c.tipo || 'Pádel' }})</option>
                             </select>
                         </div>
-                        <span class="court-warning-text" *ngIf="selectedSlot?.slotData?.requiere_cancha && !selectedCanchaId">
-                            <i class="fas fa-triangle-exclamation"></i> Este club requiere cancha asignada para la sesión.
+                        <span class="court-warning-text" *ngIf="!selectedCanchaId">
+                            <i class="fas fa-triangle-exclamation"></i> Puedes seleccionar y asignar una pista disponible para esta sesión.
                         </span>
                     </div>
 

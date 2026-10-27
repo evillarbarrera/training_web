@@ -295,12 +295,12 @@ export class EntrenadorAgendarComponent implements OnInit {
                 this.canchasDisponibles = canchas || [];
                 this.cargandoCanchas = false;
 
-                // Preseleccionar la primera cancha disponible automáticamente
-                const freeCourt = this.canchasDisponibles.find(c => c.disponible);
-                if (freeCourt) {
-                    this.selectedCanchaId = freeCourt.id;
+                // Si la reserva ya tiene una cancha asignada, mantenerla; de lo contrario preseleccionar la primera libre
+                if (this.selectedSlot?.slotData?.cancha_id) {
+                    this.selectedCanchaId = Number(this.selectedSlot.slotData.cancha_id);
                 } else {
-                    this.selectedCanchaId = null;
+                    const freeCourt = this.canchasDisponibles.find(c => c.disponible);
+                    this.selectedCanchaId = freeCourt ? freeCourt.id : (this.canchasDisponibles.length > 0 ? this.canchasDisponibles[0].id : null);
                 }
             },
             error: (err) => {
@@ -771,7 +771,20 @@ export class EntrenadorAgendarComponent implements OnInit {
         if (slotData.ocupado) {
             const effectiveHour = slotData.hora_inicio_reserva || hour;
             this.selectedSlot = { date, dateStr: this.formatDate(date), hour: effectiveHour, slotData };
-            this.selectedClubId = Number(slotData.club_id || 0);
+            
+            let clubId = Number(slotData.club_id || 0);
+            if (!clubId && slotData.club_nombre && this.clubesList?.length > 0) {
+                const found = this.clubesList.find(c => c.nombre?.toLowerCase().trim() === slotData.club_nombre?.toLowerCase().trim());
+                if (found) clubId = Number(found.id);
+            }
+            if (!clubId && this.clubesList?.length > 0) {
+                clubId = Number(this.clubesList[0].id);
+            }
+            this.selectedClubId = clubId;
+            if (this.selectedClubId && !slotData.club_id) {
+                slotData.club_id = this.selectedClubId;
+            }
+
             this.selectedCanchaId = slotData.cancha_id ? Number(slotData.cancha_id) : null;
             this.showAssignCourtInline = false;
             this.isEditingDetail = false;
@@ -1341,8 +1354,17 @@ export class EntrenadorAgendarComponent implements OnInit {
 
     toggleAssignCourtInline(): void {
         this.showAssignCourtInline = !this.showAssignCourtInline;
-        if (this.showAssignCourtInline && this.selectedClubId && (!this.canchasDisponibles || this.canchasDisponibles.length === 0)) {
-            this.cargarCanchasDisponibles();
+        if (this.showAssignCourtInline) {
+            if (!this.selectedClubId && this.selectedSlot?.slotData?.club_nombre && this.clubesList?.length > 0) {
+                const found = this.clubesList.find(c => c.nombre?.toLowerCase().trim() === this.selectedSlot.slotData.club_nombre?.toLowerCase().trim());
+                if (found) this.selectedClubId = Number(found.id);
+            }
+            if (!this.selectedClubId && this.clubesList?.length > 0) {
+                this.selectedClubId = Number(this.clubesList[0].id);
+            }
+            if (this.selectedClubId && (!this.canchasDisponibles || this.canchasDisponibles.length === 0)) {
+                this.cargarCanchasDisponibles();
+            }
         }
     }
 
@@ -1369,7 +1391,30 @@ export class EntrenadorAgendarComponent implements OnInit {
 
                 this.loadDisponibilidad();
             },
-            error: (err: any) => this.handleError(err)
+            error: (err: any) => {
+                // Fallback a updateReservaTecnica si asignar_cancha.php aún no está en el servidor remoto
+                console.warn('Fallo asignarCancha, intentando actualización técnica...', err);
+                const updatedClass = this.clasesDisponibles.find(c => c.id == this.claseMallaId);
+                this.entrenamientoService.updateReservaTecnica({
+                    reserva_id: resId,
+                    malla_id: this.selectedSlot.slotData.malla_id || this.planificacionId,
+                    clase_id: this.selectedSlot.slotData.clase_id || this.claseMallaId,
+                    clase_titulo: updatedClass?.titulo || this.selectedSlot.slotData.clase_titulo || null,
+                    cancha_id: targetCanchaId
+                }).subscribe({
+                    next: () => {
+                        this.isLoading = false;
+                        this.popupService.success('Cancha Asignada', 'La cancha ha sido asignada a la reserva.');
+                        const canchaObj = this.canchasDisponibles.find(c => c.id == targetCanchaId);
+                        this.selectedSlot.slotData.cancha_id = targetCanchaId > 0 ? targetCanchaId : null;
+                        this.selectedSlot.slotData.cancha_nombre = canchaObj?.nombre || '';
+                        this.selectedSlot.slotData.requiere_cancha = false;
+                        this.showAssignCourtInline = false;
+                        this.loadDisponibilidad();
+                    },
+                    error: (fallbackErr: any) => this.handleError(fallbackErr)
+                });
+            }
         });
     }
 
