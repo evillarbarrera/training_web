@@ -248,7 +248,7 @@
                                 </div>
                                 <div class="sp-chips-wrap" *ngIf="alumnosSeleccionados.length > 0">
                                     <div class="sp-chip" *ngFor="let s of alumnosSeleccionados">
-                                        <img class="chip-avatar" [src]="s.foto_perfil || s.foto || s.jugador_foto || 'https://ui-avatars.com/api/?name=' + (s.jugador_nombre || 'Alumno') + '&background=ccff00&color=000&bold=true'" alt="Avatar">
+                                        <img class="chip-avatar" [src]="getJugadorFoto(s)" (error)="onImgError($event, s)" alt="Avatar">
                                         <span class="chip-name">{{ s.jugador_nombre }}</span>
                                         <button class="chip-del" (click)="seleccionarAlumno(s)" title="Quitar">
                                             <i class="fas fa-times"></i>
@@ -276,7 +276,7 @@
                                      [class.selected]="isAlumnoSelected(a)"
                                      (click)="seleccionarAlumno(a)">
                                     <div class="st-avatar-wrap">
-                                        <img [src]="a.foto_perfil || a.foto || a.jugador_foto || 'https://ui-avatars.com/api/?name=' + (a.jugador_nombre || 'Alumno') + '&background=f1f5f9&color=111&bold=true'" alt="Avatar">
+                                        <img [src]="getJugadorFoto(a)" (error)="onImgError($event, a)" alt="Avatar">
                                     </div>
                                     <div class="st-meta">
                                         <div class="st-meta-top">
@@ -590,7 +590,7 @@
                     <div class="hero-left">
                         <div class="avatar-wrap">
                             <ng-container *ngIf="(selectedSlot?.slotData?.capacidad_maxima || 1) <= 1 && selectedSlot?.slotData?.inscritos?.length <= 1; else groupIcon">
-                                <img class="avatar-lg" [src]="'https://ui-avatars.com/api/?name=' + (selectedSlot?.slotData?.jugador_nombre || 'Alumno') + '&background=ccff00&color=000&bold=true'" alt="Alumno">
+                                <img class="avatar-lg" [src]="getJugadorFoto(selectedSlot?.slotData)" (error)="onImgError($event, selectedSlot?.slotData)" alt="Alumno">
                             </ng-container>
                             <ng-template #groupIcon>
                                 <div class="initials-lg group-icon">
@@ -655,7 +655,7 @@
                     <div class="ps-list">
                         <div class="participant-item" *ngFor="let p of selectedSlot?.slotData?.inscritos; let i = index">
                             <span class="p-num">{{ i + 1 }}</span>
-                            <img [src]="p.foto || 'https://ui-avatars.com/api/?name=' + (p.nombre || p.jugador_nombre) + '&background=f1f5f9&color=111'" class="p-avatar">
+                            <img [src]="getJugadorFoto(p)" (error)="onImgError($event, p)" class="p-avatar" alt="Avatar">
                             <span class="p-name">{{ p.nombre || p.jugador_nombre }}</span>
                             <div class="spacer"></div>
                             <button class="btn-remove-p" (click)="quitarJugador(p)" title="Quitar de la clase">
@@ -746,7 +746,7 @@
                     <!-- Student Summary Card -->
                     <div class="student-summary-card">
                         <div class="st-avatar-box">
-                            <img class="st-avatar" [src]="'https://ui-avatars.com/api/?name=' + (selectedSlot?.slotData?.jugador_nombre || 'Alumno') + '&background=ccff00&color=000&bold=true'" alt="Alumno">
+                            <img class="st-avatar" [src]="getJugadorFoto(selectedSlot?.slotData)" (error)="onImgError($event, selectedSlot?.slotData)" alt="Alumno">
                         </div>
                         <div class="st-info">
                             <span class="st-eyebrow">ALUMNO ACTUAL</span>
