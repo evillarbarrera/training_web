@@ -12,6 +12,7 @@ import { MysqlService } from '../../services/mysql.service';
 import { AlumnoService } from '../../services/alumno.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { ClubesService } from '../../services/clubes.service';
+import { AssetService } from '../../services/asset.service';
 
 registerLocaleData(localeEs);
 
@@ -201,13 +202,39 @@ export class EntrenadorAgendarComponent implements OnInit {
         private analyticsService: AnalyticsService,
         private clubesService: ClubesService,
         private router: Router,
-        private popupService: PopupService
+        private popupService: PopupService,
+        public assetService: AssetService
     ) { 
         // Generate hours from 07:00 to 22:30 in 30 minute intervals
         for (let i = 7; i <= 22; i++) {
             const h = i.toString().padStart(2, '0');
             this.hours.push(`${h}:00`);
             this.hours.push(`${h}:30`);
+        }
+    }
+
+    getJugadorFoto(p: any): string {
+        if (!p) return 'https://ui-avatars.com/api/?name=Alumno&background=f1f5f9&color=111&bold=true';
+        const rawFoto = p.foto || p.foto_perfil || p.jugador_foto;
+        const nombre = p.nombre || p.jugador_nombre || 'Alumno';
+        
+        if (rawFoto && typeof rawFoto === 'string' && rawFoto.trim() !== '' && !rawFoto.includes('imagen_defecto') && !rawFoto.includes('placeholder')) {
+            return this.assetService.getAssetUrl(rawFoto, 'perfil');
+        }
+        
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=f1f5f9&color=111&bold=true`;
+    }
+
+    onImgError(event: any, p?: any): void {
+        if (event && event.target) {
+            const fallback = 'assets/images/placeholder_avatar.png';
+            const nombre = p ? (p.nombre || p.jugador_nombre || 'Alumno') : 'Alumno';
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=f1f5f9&color=111&bold=true`;
+            if (event.target.src !== avatarUrl && !event.target.src.includes('ui-avatars.com')) {
+                event.target.src = avatarUrl;
+            } else if (event.target.src !== fallback && !event.target.src.includes(fallback)) {
+                event.target.src = fallback;
+            }
         }
     }
 
