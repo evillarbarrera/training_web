@@ -157,7 +157,10 @@ export class SidebarComponent implements OnInit {
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status === 'blocked' || res.status === 'inactive' || res.status === 'past_due' || res.is_blocked) {
+            const isExempt = res.is_free_test_club || res.is_unlimited_coach;
+            const isDaysExpired = !isExempt && (res.days_remaining !== undefined && Number(res.days_remaining) <= 0);
+
+            if (res.status === 'blocked' || res.status === 'inactive' || res.status === 'past_due' || res.is_blocked || isDaysExpired) {
                 this.isSubscriptionBlocked = true;
             } else {
                 this.isSubscriptionBlocked = false;
