@@ -106,6 +106,7 @@ export class EntrenadorAgendarComponent implements OnInit {
     // Modal State
     showModal = false;
     showDetailModal = false;
+    showAssignCourtInline = false;
     selectedSlot: any = null;
     recurrencia: number = 1;
     tipoClaseSeleccionado: 'individual' | 'multijugador' | 'grupal' | 'evaluacion' = 'individual';
@@ -720,6 +721,10 @@ export class EntrenadorAgendarComponent implements OnInit {
             reserva_tipo: data.pack_nombre || data.tipo || data.reserva_tipo,
             club_nombre: data.club_nombre,
             club_id: data.club_id,
+            cancha_id: data.cancha_id,
+            cancha_nombre: data.cancha_nombre,
+            club_permite_canchas: data.club_permite_canchas,
+            requiere_cancha: data.requiere_cancha,
             malla_nombre: data.malla_nombre,
             malla_id: data.malla_id,
             clase_id: data.clase_id,
@@ -766,6 +771,13 @@ export class EntrenadorAgendarComponent implements OnInit {
         if (slotData.ocupado) {
             const effectiveHour = slotData.hora_inicio_reserva || hour;
             this.selectedSlot = { date, dateStr: this.formatDate(date), hour: effectiveHour, slotData };
+            this.selectedClubId = Number(slotData.club_id || 0);
+            this.selectedCanchaId = slotData.cancha_id ? Number(slotData.cancha_id) : null;
+            this.showAssignCourtInline = false;
+            this.isEditingDetail = false;
+            if (this.selectedClubId) {
+                this.cargarCanchasDisponibles();
+            }
             this.showDetailModal = true;
             return;
         }
@@ -1316,6 +1328,10 @@ export class EntrenadorAgendarComponent implements OnInit {
 
         this.planificacionId = mId;
         this.claseMallaId = cId;
+        this.selectedCanchaId = d.cancha_id ? Number(d.cancha_id) : null;
+        if (this.selectedClubId && (!this.canchasDisponibles || this.canchasDisponibles.length === 0)) {
+            this.cargarCanchasDisponibles();
+        }
         this.isEditingDetail = true;
         
         if (this.planificacionId) {
@@ -1323,22 +1339,58 @@ export class EntrenadorAgendarComponent implements OnInit {
         }
     }
 
+    toggleAssignCourtInline(): void {
+        this.showAssignCourtInline = !this.showAssignCourtInline;
+        if (this.showAssignCourtInline && this.selectedClubId && (!this.canchasDisponibles || this.canchasDisponibles.length === 0)) {
+            this.cargarCanchasDisponibles();
+        }
+    }
+
+    asignarCanchaAReserva(canchaId: any): void {
+        if (!this.selectedSlot?.slotData) return;
+        const resId = this.selectedSlot.slotData.reserva_id || this.selectedSlot.slotData.id;
+        if (!resId) return;
+
+        const targetCanchaId = canchaId ? Number(canchaId) : 0;
+        this.isLoading = true;
+        this.entrenamientoService.asignarCancha({
+            reserva_id: resId,
+            cancha_id: targetCanchaId
+        }).subscribe({
+            next: (res: any) => {
+                this.isLoading = false;
+                this.popupService.success('Cancha Asignada', res.message || 'La cancha ha sido asignada a la reserva.');
+                
+                const canchaObj = this.canchasDisponibles.find(c => c.id == targetCanchaId);
+                this.selectedSlot.slotData.cancha_id = targetCanchaId > 0 ? targetCanchaId : null;
+                this.selectedSlot.slotData.cancha_nombre = canchaObj?.nombre || res.cancha_nombre || '';
+                this.selectedSlot.slotData.requiere_cancha = targetCanchaId > 0 ? false : (this.selectedSlot.slotData.club_permite_canchas);
+                this.showAssignCourtInline = false;
+
+                this.loadDisponibilidad();
+            },
+            error: (err: any) => this.handleError(err)
+        });
+    }
+
     saveTechnicalEdit() {
         if (!this.selectedSlot?.slotData) return;
         this.isLoading = true;
 
         const updatedClass = this.clasesDisponibles.find(c => c.id == this.claseMallaId);
-        const payload = {
+        const targetCancha = this.selectedCanchaId !== null ? Number(this.selectedCanchaId) : 0;
+        const payload: any = {
             reserva_id: this.selectedSlot.slotData.reserva_id,
             malla_id: this.planificacionId,
             clase_id: this.claseMallaId,
-            clase_titulo: updatedClass?.titulo || null
+            clase_titulo: updatedClass?.titulo || null,
+            cancha_id: targetCancha
         };
 
         this.entrenamientoService.updateReservaTecnica(payload).subscribe({
             next: () => {
                 this.isLoading = false;
-                this.popupService.success('Actualizado', 'La planificación técnica ha sido actualizada.');
+                this.popupService.success('Actualizado', 'La reserva y planificación técnica han sido actualizadas.');
                 
                 // Update local state instantly for the detail view
                 if (this.selectedSlot?.slotData) {
@@ -1353,6 +1405,17 @@ export class EntrenadorAgendarComponent implements OnInit {
                     this.selectedSlot.slotData.clase_drills = updatedClass?.drills;
                     this.selectedSlot.slotData.clase_juego = updatedClass?.juego;
                     this.selectedSlot.slotData.clase_recursos = updatedClass?.recursos;
+
+                    if (targetCancha > 0) {
+                        const cObj = this.canchasDisponibles.find(c => c.id == targetCancha);
+                        this.selectedSlot.slotData.cancha_id = targetCancha;
+                        this.selectedSlot.slotData.cancha_nombre = cObj?.nombre || this.selectedSlot.slotData.cancha_nombre;
+                        this.selectedSlot.slotData.requiere_cancha = false;
+                    } else {
+                        this.selectedSlot.slotData.cancha_id = null;
+                        this.selectedSlot.slotData.cancha_nombre = '';
+                        this.selectedSlot.slotData.requiere_cancha = !!this.selectedSlot.slotData.club_permite_canchas;
+                    }
                 }
 
                 this.isEditingDetail = false;

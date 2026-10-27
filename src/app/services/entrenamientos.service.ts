@@ -217,6 +217,12 @@ export class EntrenamientoService {
     });
   }
 
+  asignarCancha(payload: { reserva_id: number; cancha_id: number }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/entrenador/asignar_cancha.php`, payload, {
+      headers: this.getHeaders()
+    });
+  }
+
   getPacksAlumno(jugadorId: number, entrenadorId?: number): Observable<any> {
     let url = `${this.apiUrl}/alumno/get_mis_packs_alumno.php?jugador_id=${jugadorId}`;
     if (entrenadorId) {
