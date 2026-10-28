@@ -25,6 +25,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
   recoverMessage = '';
   recoverError = '';
 
+  private isGoogleInitialized = false;
+
   constructor(
     private apiService: ApiService,
     private authService: AuthService,
@@ -40,39 +42,44 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   @HostListener('window:resize')
   onResize() {
-    this.initGoogleAuth();
+    this.renderGoogleButton();
   }
 
   initGoogleAuth(): void {
-    if (typeof google !== 'undefined') {
-      google.accounts.id.initialize({
-        client_id: '786145270372-e637i46g6uu1kekcr1ioqdka901acud7.apps.googleusercontent.com',
-        callback: (response: any) => this.handleGoogleLogin(response)
-      });
-
-      const btnContainer = document.getElementById("googleBtn");
-      if (btnContainer) {
-        // Clear previous button
-        btnContainer.innerHTML = '';
-
-        // Calculate available width
-        const availableWidth = btnContainer.offsetWidth;
-        const finalWidth = availableWidth > 0 ? Math.min(380, availableWidth) : 300;
-
-        google.accounts.id.renderButton(
-          btnContainer,
-          {
-            theme: "filled_blue",
-            size: "large",
-            width: finalWidth,
-            text: "continue_with",
-            shape: "pill",
-            logo_alignment: "left"
-          }
-        );
+    if (typeof google !== 'undefined' && google.accounts?.id) {
+      if (!this.isGoogleInitialized) {
+        google.accounts.id.initialize({
+          client_id: '786145270372-e637i46g6uu1kekcr1ioqdka901acud7.apps.googleusercontent.com',
+          callback: (response: any) => this.handleGoogleLogin(response)
+        });
+        this.isGoogleInitialized = true;
       }
+      this.renderGoogleButton();
     } else {
-      setTimeout(() => this.initGoogleAuth(), 1000);
+      setTimeout(() => this.initGoogleAuth(), 500);
+    }
+  }
+
+  renderGoogleButton(): void {
+    if (typeof google === 'undefined' || !google.accounts?.id) return;
+
+    const btnContainer = document.getElementById("googleBtn");
+    if (btnContainer) {
+      btnContainer.innerHTML = '';
+      const availableWidth = btnContainer.offsetWidth;
+      const finalWidth = availableWidth > 0 ? Math.min(380, availableWidth) : 300;
+
+      google.accounts.id.renderButton(
+        btnContainer,
+        {
+          theme: "filled_blue",
+          size: "large",
+          width: finalWidth,
+          text: "continue_with",
+          shape: "pill",
+          logo_alignment: "left"
+        }
+      );
     }
   }
 

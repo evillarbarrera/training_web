@@ -1,118 +1,411 @@
 <div class="admin-layout">
   <!-- Sidebar -->
-  <!-- Sidebar -->
   <app-sidebar [userId]="userId" [jugadorNombre]="jugadorNombre" [jugadorFoto]="jugadorFoto" activePage="inicio">
   </app-sidebar>
 
   <!-- Main Content Area -->
   <main class="main-content">
 
+    <!-- Skeleton Loading -->
+    <div class="dashboard-grid skeleton-view" *ngIf="isLoading">
+      <div class="skeleton-header skeleton-pulse"></div>
+      <div class="skeleton-hero skeleton-pulse"></div>
+      <div class="skeleton-kpis">
+        <div class="skeleton-kpi skeleton-pulse" *ngFor="let i of [1,2,3,4]"></div>
+      </div>
+      <div class="skeleton-columns">
+        <div class="skeleton-col skeleton-pulse"></div>
+        <div class="skeleton-col skeleton-pulse"></div>
+      </div>
+    </div>
+
     <!-- Dashboard Content -->
-    <div class="dashboard-grid" *ngIf="!isLoading">
+    <div class="dashboard-grid animate-fade-in" *ngIf="!isLoading">
 
-      <!-- Stats Row -->
-      <div class="stats-row">
-        <div class="stat-card pendientes" style="background: #111; color: white;">
-          <div class="icon-box" style="background: rgba(204, 255, 0, 0.1); color: #ccff00;">⏳</div>
-          <div class="stat-details">
-            <span class="value" style="color: #ccff00;">{{ stats.pendientes }}</span>
-            <span class="label">Clases Pendientes</span>
-          </div>
+      <!-- 1. TOP EXECUTIVE HEADER -->
+      <header class="executive-header">
+        <div class="header-left">
+          <span class="greeting-eyebrow">
+            <i class="fas fa-sparkles"></i> PORTAL DEL JUGADOR
+          </span>
+          <h1 class="welcome-title">
+            {{ greeting }}, <span class="highlight-name">{{ jugadorNombre }}</span> 👋
+          </h1>
+          <p class="welcome-subtitle">
+            Monitorea tus créditos, próximas sesiones y nivel de juego en tiempo real.
+          </p>
         </div>
 
-        <div class="stat-card disponibles" style="background: #fff; border: 2px solid #000;">
-          <div class="icon-box" style="color: #000;">✨</div>
-          <div class="stat-details">
-            <span class="value" style="color: #000;">{{ stats.disponibles }}</span>
-            <span class="label">Créditos Disponibles</span>
-          </div>
-        </div>
-
-        <div class="stat-card reservadas">
-          <div class="icon-box">📅</div>
-          <div class="stat-details">
-            <span class="value">{{ stats.reservadas }}</span>
-            <span class="label">Próximas Reservas</span>
-          </div>
-        </div>
-
-        <div class="stat-card pagadas">
-          <div class="icon-box">💳</div>
-          <div class="stat-details">
-            <span class="value">{{ stats.pagadas }}</span>
-            <span class="label">Clases Compradas</span>
-          </div>
-        </div>
-
-        <div class="stat-card grupales">
-          <div class="icon-box">👥</div>
-          <div class="stat-details">
-            <span class="value">{{ stats.grupales }}</span>
-            <span class="label">Clases Grupales</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Desglose de Packs por Entrenador -->
-      <div class="packs-breakdown" *ngIf="packsDetalle.length > 0">
-        <h3 class="section-title">Mis Packs</h3>
-        <div class="packs-list">
-          <div class="pack-item" *ngFor="let pack of packsDetalle">
-            <div class="pack-coach-info">
-              <div class="coach-avatar">
-                <img *ngIf="pack.entrenador_foto"
-                  [src]="assetService.getAssetUrl(pack.entrenador_foto, 'perfil')"
-                  alt="Coach" />
-                <span *ngIf="!pack.entrenador_foto" class="avatar-fallback">🎾</span>
-              </div>
-              <div class="pack-info">
-                <span class="pack-coach-name">{{ pack.entrenador_nombre }}</span>
-                <span class="pack-name">{{ pack.nombre }}</span>
-              </div>
+        <div class="header-right">
+          <!-- Date Widget -->
+          <div class="date-widget">
+            <div class="date-icon">
+              <i class="far fa-calendar-alt"></i>
             </div>
-            <div class="pack-stats">
-              <div class="pack-progress-bar">
-                <div class="pack-progress-fill"
-                  [style.width.%]="pack.total > 0 ? (pack.disponibles / pack.total) * 100 : 0"></div>
-              </div>
-              <span class="pack-credits">{{ pack.disponibles }} / {{ pack.total }} créditos disponibles</span>
+            <div class="date-text">
+              <span class="day-name">{{ diaSemana }}</span>
+              <span class="date-number">{{ fechaHoyFormatted }}</span>
             </div>
           </div>
-        </div>
-      </div>
 
-
-      <!-- Quick Actions Grid -->
-      <h3 class="section-title">Acciones Rápidas</h3>
-      <div class="actions-grid">
-        <div class="action-card primary highlight" (click)="irAReservarCancha()" style="background: #ccff00; color: #000; border: none; box-shadow: 0 10px 30px rgba(204, 255, 0, 0.2);">
-          <div class="card-content">
-            <span class="card-icon" style="background: rgba(0,0,0,0.05); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">🎾</span>
-            <h3 style="color: #000; font-weight: 950; margin-top: 15px;">Reservar Cancha</h3>
-            <p style="color: rgba(0,0,0,0.7); font-weight: 600;">Encuentra clubes y reserva hoy</p>
+          <!-- Status Indicator Pill -->
+          <div class="status-pill active" *ngIf="stats.disponibles > 0" (click)="irAReservas()" title="Tienes créditos para agendar">
+            <span class="pulse-dot"></span>
+            <span class="pill-label">{{ stats.disponibles }} {{ stats.disponibles === 1 ? 'crédito disponible' : 'créditos disponibles' }}</span>
           </div>
-          <span class="arrow-icon" style="color: #000; font-size: 24px;">→</span>
+
+          <div class="status-pill neutral" *ngIf="stats.disponibles === 0" (click)="irAPacks()" title="Adquiere créditos para entrenar">
+            <span class="pulse-dot grey"></span>
+            <span class="pill-label">Sin créditos • Comprar pack</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 2. HERO SPOTLIGHT: PRÓXIMA SESIÓN -->
+      <section class="session-spotlight-section">
+        <!-- CASO A: TIENE PRÓXIMA CLASE -->
+        <div class="next-session-hero" *ngIf="proximaClase">
+          <div class="hero-accent-strip"></div>
+          <div class="hero-body">
+            <div class="hero-left-col">
+              <div class="hero-badge">
+                <i class="fas fa-calendar-check"></i> TU PRÓXIMA SESIÓN
+              </div>
+              <div class="hero-time-row">
+                <h2 class="hero-date">
+                  {{ proximaClase.fecha | date:'EEEE, d MMMM':'':'es' | titlecase }}
+                </h2>
+                <div class="time-pill">
+                  <i class="far fa-clock"></i>
+                  <span>{{ proximaClase.hora_inicio ? proximaClase.hora_inicio.slice(0,5) : '--:--' }} HRS</span>
+                </div>
+              </div>
+              <div class="hero-details">
+                <span class="detail-item" *ngIf="proximaClase.entrenador">
+                  <i class="fas fa-user-tie"></i> Coach: <strong>{{ proximaClase.entrenador }}</strong>
+                </span>
+                <span class="detail-item" *ngIf="proximaClase.pack_nombre">
+                  <i class="fas fa-box-archive"></i> {{ proximaClase.pack_nombre }}
+                </span>
+              </div>
+            </div>
+
+            <div class="hero-right-col">
+              <button class="btn-hero-action primary" (click)="irACalendario()">
+                <i class="far fa-calendar-days"></i>
+                <span>Ver en mi Agenda</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="action-card primary" (click)="irAReservas()">
-          <div class="card-content">
-            <span class="card-icon">📅</span>
-            <h3>Agendar Clase</h3>
-            <p>Reserva tu próximo entrenamiento</p>
+        <!-- CASO B: NO TIENE PRÓXIMA CLASE -->
+        <div class="empty-session-hero" *ngIf="!proximaClase">
+          <div class="esh-content">
+            <div class="esh-icon-wrap">
+              🎾
+            </div>
+            <div class="esh-text">
+              <h3>No tienes sesiones agendadas para esta semana</h3>
+              <p>Revisa la disponibilidad en tiempo real para reservar una cancha o agendar tu clase con un profesor.</p>
+            </div>
           </div>
-          <span class="arrow-icon">→</span>
+          <div class="esh-actions">
+            <button class="btn-esh court" (click)="irAReservarCancha()">
+              <i class="fas fa-table-tennis-paddle-ball"></i>
+              <span>Reservar Cancha</span>
+            </button>
+            <button class="btn-esh lesson" (click)="irAReservas()">
+              <i class="fas fa-graduation-cap"></i>
+              <span>Agendar Clase</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. KPI / METRICS GRID -->
+      <section class="kpi-grid">
+        <!-- 1. Créditos Disponibles (High Priority / Actionable) -->
+        <div class="kpi-card accent-card" (click)="irAReservas()">
+          <div class="kpi-top">
+            <div class="kpi-icon-box accent">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <span class="kpi-badge-pulse">Activo</span>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value highlight">{{ stats.disponibles }}</span>
+            <span class="kpi-label">Créditos Disponibles</span>
+            <span class="kpi-desc">Listos para agendar entrenamiento</span>
+          </div>
+          <div class="kpi-action-link">
+            <span>Agendar clase</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
         </div>
 
-        <div class="action-card secondary" (click)="irACalendario()">
-          <div class="card-content">
-            <span class="card-icon">📋</span>
-            <h3>Mis Reservas</h3>
-            <p>Gestiona tus sesiones confirmadas</p>
+        <!-- 2. Próximas Reservas -->
+        <div class="kpi-card" (click)="irACalendario()">
+          <div class="kpi-top">
+            <div class="kpi-icon-box dark">
+              <i class="fas fa-calendar-day"></i>
+            </div>
           </div>
-          <span class="arrow-icon">→</span>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.reservadas }}</span>
+            <span class="kpi-label">Próximas Reservas</span>
+            <span class="kpi-desc">Sesiones en tu calendario</span>
+          </div>
+          <div class="kpi-action-link">
+            <span>Ver agenda</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
         </div>
-      </div>
+
+        <!-- 3. Clases Pendientes -->
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon-box neutral">
+              <i class="fas fa-hourglass-half"></i>
+            </div>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.pendientes }}</span>
+            <span class="kpi-label">Clases Pendientes</span>
+            <span class="kpi-desc">Por completar en tus packs</span>
+          </div>
+          <div class="kpi-action-link" (click)="irAPacks()">
+            <span>Detalle packs</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
+        </div>
+
+        <!-- 4. Clases Grupales -->
+        <div class="kpi-card" (click)="irAPartidos()">
+          <div class="kpi-top">
+            <div class="kpi-icon-box blue">
+              <i class="fas fa-users"></i>
+            </div>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.grupales }}</span>
+            <span class="kpi-label">Clases Grupales</span>
+            <span class="kpi-desc">Entrenamientos grupales cursados</span>
+          </div>
+          <div class="kpi-action-link">
+            <span>Ver partidos</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. CENTRO DE MANDO: ACCIONES RÁPIDAS -->
+      <section class="operations-hub">
+        <div class="section-header-row">
+          <h2 class="section-title">
+            <i class="fas fa-compass"></i> Centro de Mando
+          </h2>
+          <span class="section-subtitle">Acciones rápidas para tu juego diario</span>
+        </div>
+
+        <div class="actions-grid">
+          <!-- 1. Reservar Cancha -->
+          <div class="action-card highlight-glow" (click)="irAReservarCancha()">
+            <div class="action-header">
+              <div class="action-icon-circle court">
+                🎾
+              </div>
+              <span class="arrow-indicator">➔</span>
+            </div>
+            <div class="action-body">
+              <h3>Reservar Cancha</h3>
+              <p>Encuentra clubes cercanos y arrienda tu pista hoy mismo.</p>
+            </div>
+            <div class="action-footer">
+              <span>Buscar disponibilidad</span>
+            </div>
+          </div>
+
+          <!-- 2. Agendar Clase -->
+          <div class="action-card" (click)="irAReservas()">
+            <div class="action-header">
+              <div class="action-icon-circle coach">
+                🎓
+              </div>
+              <span class="arrow-indicator">➔</span>
+            </div>
+            <div class="action-body">
+              <h3>Agendar Clase</h3>
+              <p>Reserva tu próximo entrenamiento con tu profesor de confianza.</p>
+            </div>
+            <div class="action-footer">
+              <span>Elegir horario</span>
+            </div>
+          </div>
+
+          <!-- 3. Torneos & Americanos -->
+          <div class="action-card" (click)="irATorneos()">
+            <div class="action-header">
+              <div class="action-icon-circle tournament">
+                🏆
+              </div>
+              <span class="arrow-indicator">➔</span>
+            </div>
+            <div class="action-body">
+              <h3>Torneos & Americanos</h3>
+              <p>Participa en torneos oficiales y americanos organizados por tu club.</p>
+            </div>
+            <div class="action-footer">
+              <span>Ver campeonatos</span>
+            </div>
+          </div>
+
+          <!-- 4. Mis Partidos / Matchmaking -->
+          <div class="action-card" (click)="irAPartidos()">
+            <div class="action-header">
+              <div class="action-icon-circle match">
+                👥
+              </div>
+              <span class="arrow-indicator">➔</span>
+            </div>
+            <div class="action-body">
+              <h3>Mis Partidos</h3>
+              <p>Encuentra rivales de tu nivel, partidos abiertos y seguimiento.</p>
+            </div>
+            <div class="action-footer">
+              <span>Ver partidos</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. TWO-COLUMN SECTION: PACKS & PERFORMANCE -->
+      <section class="analytics-columns-grid">
+        
+        <!-- COLUMNA IZQUIERDA: GESTOR DE PACKS Y CRÉDITOS -->
+        <div class="column-panel packs-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h3><i class="fas fa-boxes-stacked"></i> Mis Packs Activos</h3>
+              <span class="panel-badge">{{ packsDetalle.length }}</span>
+            </div>
+            <button class="btn-panel-action" (click)="irAPacks()">
+              <i class="fas fa-plus"></i> Comprar Pack
+            </button>
+          </div>
+
+          <div class="panel-body">
+            <!-- LISTA DE PACKS (PAGINADA Y COMPACTA) -->
+            <div class="packs-list" *ngIf="packsDetalle.length > 0">
+              <div class="pack-card-item" *ngFor="let pack of paginatedPacks">
+                <div class="pack-top-row">
+                  <div class="coach-avatar-wrap">
+                    <img *ngIf="pack.entrenador_foto"
+                         [src]="assetService.getAssetUrl(pack.entrenador_foto, 'perfil')"
+                         alt="Entrenador" />
+                    <span *ngIf="!pack.entrenador_foto" class="coach-fallback">🎾</span>
+                  </div>
+                  <div class="pack-text-info">
+                    <h4 class="pack-name" [title]="pack.nombre">{{ pack.nombre }}</h4>
+                    <span class="coach-name"><i class="fas fa-user-tie"></i> {{ pack.entrenador_nombre }}</span>
+                  </div>
+                  <button class="btn-micro-schedule" (click)="irAReservas()">
+                    Agendar
+                  </button>
+                </div>
+
+                <!-- Barra de Progreso del Pack -->
+                <div class="pack-progress-section">
+                  <div class="progress-bar-container">
+                    <div class="progress-fill"
+                         [style.width.%]="pack.total > 0 ? (pack.disponibles / pack.total) * 100 : 0"></div>
+                  </div>
+                  <div class="progress-labels">
+                    <span class="credits-count">
+                      <strong>{{ pack.disponibles }}</strong> de {{ pack.total }} créditos disponibles
+                    </span>
+                    <span class="credits-pct">
+                      {{ pack.total > 0 ? ((pack.disponibles / pack.total) * 100 | number:'1.0-0') : 0 }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CONTROLES DE PAGINACIÓN COMPACTOS -->
+              <div class="packs-pagination" *ngIf="packsDetalle.length > packPageSize">
+                <button class="btn-page-nav" [disabled]="packCurrentPage === 1" (click)="prevPackPage()" aria-label="Página anterior">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="page-pills">
+                  <button *ngFor="let p of getPagesArray()"
+                          class="pill-number"
+                          [class.active]="packCurrentPage === p"
+                          (click)="goToPackPage(p)">
+                    {{ p }}
+                  </button>
+                </div>
+                <button class="btn-page-nav" [disabled]="packCurrentPage === totalPackPages" (click)="nextPackPage()" aria-label="Página siguiente">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- EMPTY STATE: SIN PACKS -->
+            <div class="empty-panel-state" *ngIf="packsDetalle.length === 0">
+              <div class="eps-icon">📦</div>
+              <h4>No tienes packs activos</h4>
+              <p>Adquiere un pack de clases para entrenar de forma constante con nuestros coaches y mejorar tu nivel de pádel.</p>
+              <button class="btn-empty-action" (click)="irAPacks()">
+                <i class="fas fa-shopping-cart"></i> Explorar Packs de Clases
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: RENDIMIENTO Y EVOLUCIÓN TÉCNICA -->
+        <div class="column-panel performance-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <h3><i class="fas fa-chart-line"></i> Evolución Técnica</h3>
+              <span class="rating-badge" *ngIf="promedioGeneral !== null">
+                Nivel {{ promedioGeneral }} / 10
+              </span>
+            </div>
+            <button class="btn-panel-action secondary" (click)="irAHabilidades()">
+              Detalles ➔
+            </button>
+          </div>
+
+          <div class="panel-body">
+            <!-- CONTENEDOR DEL GRÁFICO (Chart.js) -->
+            <div class="chart-container-box" *ngIf="hasEvaluaciones">
+              <div class="chart-header-stats">
+                <span class="stat-caption">Progreso de Evaluaciones de Rendimiento</span>
+              </div>
+              <div class="canvas-holder">
+                <canvas id="progressChart"></canvas>
+              </div>
+            </div>
+
+            <!-- EMPTY STATE: SIN EVALUACIONES AÚN -->
+            <div class="empty-panel-state" *ngIf="!hasEvaluaciones">
+              <div class="eps-icon">📈</div>
+              <h4>Aún no registras evaluaciones</h4>
+              <p>Tu entrenador evaluará tu técnica, táctica y condición física a medida que completes tus entrenamientos.</p>
+              <button class="btn-empty-action" (click)="irAHabilidades()">
+                <i class="fas fa-bullseye"></i> Ver Sistema de Habilidades
+              </button>
+            </div>
+
+            <!-- ENLACE AL RADAR COMPLETO -->
+            <div class="panel-footer-link" (click)="irAHabilidades()">
+              <span>Ver informe integral de habilidades y táctica</span>
+              <i class="fas fa-chevron-right"></i>
+            </div>
+          </div>
+        </div>
+
+      </section>
 
     </div>
   </main>

@@ -1,143 +1,464 @@
 <div class="admin-layout">
-  <app-sidebar [userId]="userId" activePage="partidos"></app-sidebar>
+  <app-sidebar [userId]="userId" activePage="mis-partidos"></app-sidebar>
 
   <main class="main-content">
     
-    <!-- Refined Header -->
-    <div class="compact-header">
+    <!-- Athletic Header -->
+    <header class="dashboard-header">
       <div class="header-main">
-        <div class="title-group">
+        <div class="title-wrap">
+          <div class="header-tag">
+            <span class="pulse-dot"></span>
+            CIRCUITO COMPETITIVO
+          </div>
           <h1>Mis Partidos</h1>
-          <p class="subtitle">Gestión y análisis de tu actividad en pista</p>
-        </div>
-        <div class="header-stats">
-          <div class="h-stat">
-            <span class="h-val">{{ totalJugados }}</span>
-            <span class="h-lbl">Partidos</span>
-          </div>
-          <div class="h-stat">
-            <span class="h-val">{{ victorias }}</span>
-            <span class="h-lbl">Victorias</span>
-          </div>
-          <div class="h-stat level-badge">
-            <span class="h-val">{{ categoriaMasJugada }}</span>
-            <span class="h-lbl">Padel AI Level</span>
-          </div>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button class="btn-reserva-premium" (click)="router.navigate(['/clubes-reservar'])">
-          <span>+</span> Nueva Reserva
-        </button>
-      </div>
-    </div>
-
-    <div class="main-dashboard-grid">
-      
-      <!-- List Column -->
-      <div class="list-column">
-        <div class="tab-pill-nav">
-          <button [class.active]="selectedTab === 'proximos'" (click)="selectedTab = 'proximos'">
-            <span class="icon">📅</span> Próximos
-          </button>
-          <button [class.active]="selectedTab === 'historial'" (click)="selectedTab = 'historial'">
-            <span class="icon">🎾</span> Historial
-          </button>
+          <p class="subtitle">Gestión competitiva, registro de resultados oficiales y métricas de rendimiento en pista</p>
         </div>
 
-        <div class="tab-pane" *ngIf="selectedTab === 'proximos'">
-          <div class="simple-list">
-            <div class="compact-match-item" *ngFor="let p of proximos" (click)="openMatchDetail(p)">
-              <div class="m-date-box">
-                <span class="day">{{ p.fecha | date:'dd' }}</span>
-                <span class="month">{{ p.fecha | date:'MMM' }}</span>
-              </div>
-              <div class="m-info">
-                <div class="m-club-time">
-                  <strong>{{ p.club_nombre }}</strong>
-                  <span class="time-tag">{{ p.hora_inicio?.slice(0,5) }}</span>
-                </div>
-                <div class="m-players">
-                  {{ p.jugador1_nombre }} & {{ p.jugador2_nombre || 'Invitado' }} vs 
-                  {{ p.jugador3_nombre || 'Invitado' }} & {{ p.jugador4_nombre || 'Invitado' }}
-                </div>
-              </div>
-              <div class="m-action">
-                <button class="btn-icon-sm">➜</button>
-              </div>
+        <!-- Athletic KPIs -->
+        <div class="kpi-ribbon">
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap">🎾</div>
+            <div class="kpi-info">
+              <span class="kpi-num">{{ totalJugados }}</span>
+              <span class="kpi-lbl">Jugados</span>
             </div>
           </div>
-          <div class="empty-compact" *ngIf="proximos.length === 0 && !isLoading">
-            No hay partidos pendientes. <a (click)="router.navigate(['/clubes-reservar'])">Reservar ahora</a>
-          </div>
-        </div>
 
-        <div class="tab-pane" *ngIf="selectedTab === 'historial'">
-          <div class="table-compact-wrapper">
-            <table class="compact-table">
-              <thead>
-                <tr>
-                  <th>FECHA</th>
-                  <th>CLUB</th>
-                  <th>RESULTADO</th>
-                  <th>ESTADO</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let p of jugados" (click)="openMatchDetail(p)">
-                  <td>{{ p.fecha | date:'dd/MM/yy' }}</td>
-                  <td>{{ p.club_nombre }}</td>
-                  <td><strong>{{ p.marcador || '--' }}</strong></td>
-                  <td>
-                    <span class="res-pill" [class.win]="isWinner(p)" [class.loss]="p.resultado_registrado && !isWinner(p)">
-                      {{ p.resultado_registrado ? (isWinner(p) ? 'WIN' : 'LOSS') : 'PEND' }}
-                    </span>
-                  </td>
-                  <td (click)="$event.stopPropagation()">
-                    <button class="btn-text-action" *ngIf="!p.resultado_registrado" (click)="openResultModal(p, $event)">
-                      Registrar
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="kpi-card victory-card">
+            <div class="kpi-icon-wrap">🏆</div>
+            <div class="kpi-info">
+              <span class="kpi-num">{{ victorias }}</span>
+              <span class="kpi-lbl">Victorias</span>
+            </div>
+          </div>
+
+          <div class="kpi-card winrate-card">
+            <div class="kpi-icon-wrap">⚡</div>
+            <div class="kpi-info">
+              <span class="kpi-num highlight">{{ winRatePct }}%</span>
+              <span class="kpi-lbl">Win Rate</span>
+            </div>
+          </div>
+
+          <div class="kpi-card category-card">
+            <div class="kpi-icon-wrap">🔥</div>
+            <div class="kpi-info">
+              <span class="kpi-num">{{ categoriaMasJugada }}</span>
+              <span class="kpi-lbl">Nivel Padel</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Analytics Column (Smaller) -->
-      <div class="analytics-column">
-        <div class="compact-chart-card">
-          <label>WIN RATE</label>
-          <div class="canvas-wrap">
-            <canvas id="winLossChart"></canvas>
+      <div class="header-actions">
+        <button class="btn-reserva-athletic" (click)="router.navigate(['/clubes-reservar'])">
+          <span class="icon-plus">+</span>
+          <span>Nueva Reserva</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <div class="main-dashboard-grid">
+      
+      <!-- Left Column: Matches Feed -->
+      <section class="feed-column">
+        
+        <!-- Tab Navigation & Action Bar -->
+        <div class="feed-control-bar">
+          <div class="athletic-tabs">
+            <button 
+              type="button"
+              class="tab-btn" 
+              [class.active]="selectedTab === 'proximos'" 
+              (click)="selectTab('proximos')">
+              <span class="tab-icon">📅</span>
+              <span class="tab-title">Próximos Partidos</span>
+              <span class="tab-count">{{ proximos.length }}</span>
+            </button>
+            <button 
+              type="button"
+              class="tab-btn" 
+              [class.active]="selectedTab === 'historial'" 
+              (click)="selectTab('historial')">
+              <span class="tab-icon">🏆</span>
+              <span class="tab-title">Historial & Marcadores</span>
+              <span class="tab-count">{{ jugados.length }}</span>
+            </button>
+          </div>
+
+          <!-- Pending Result Alert Banner if any -->
+          <div class="pending-alert-banner" *ngIf="pendientesResultado > 0 && selectedTab === 'historial'" (click)="setFiltro('sin_marcador')">
+            <span class="alert-badge">⚡ ACCIÓN REQUERIDA</span>
+            <span>Tienes <strong>{{ pendientesResultado }}</strong> {{ pendientesResultado === 1 ? 'partido jugado' : 'partidos jugados' }} sin resultado anotado.</span>
+            <span class="link-btn">Ver pendientes ➜</span>
           </div>
         </div>
-        <div class="compact-chart-card">
-          <label>ACTIVIDAD MENSUAL</label>
-          <div class="canvas-wrap">
+
+        <!-- Filters Bar (Only for Historial or when Clubs exist) -->
+        <div class="filters-toolbar" *ngIf="selectedTab === 'historial'">
+          <div class="filter-chips">
+            <button 
+              type="button"
+              class="chip-btn" 
+              [class.active]="filtroResultado === 'todos'"
+              (click)="setFiltro('todos')">
+              Todos
+            </button>
+            <button 
+              type="button"
+              class="chip-btn win-chip" 
+              [class.active]="filtroResultado === 'ganados'"
+              (click)="setFiltro('ganados')">
+              Victorias ({{ victorias }})
+            </button>
+            <button 
+              type="button"
+              class="chip-btn loss-chip" 
+              [class.active]="filtroResultado === 'perdidos'"
+              (click)="setFiltro('perdidos')">
+              Derrotas ({{ derrotas }})
+            </button>
+            <button 
+              type="button"
+              class="chip-btn pending-chip" 
+              [class.active]="filtroResultado === 'sin_marcador'"
+              (click)="setFiltro('sin_marcador')">
+              Por Anotar ({{ pendientesResultado }})
+            </button>
+          </div>
+
+          <!-- Club Select -->
+          <div class="club-filter" *ngIf="clubesList.length > 0">
+            <label>Club:</label>
+            <select [(ngModel)]="filterClub" (change)="updateLists()">
+              <option value="">Todos los clubes</option>
+              <option *ngFor="let c of clubesList" [value]="c.id">{{ c.nombre }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- TAB 1: PRÓXIMOS PARTIDOS -->
+        <div class="tab-panel" *ngIf="selectedTab === 'proximos'">
+          <div class="matches-compact-stack" *ngIf="proximos.length > 0">
+            <div 
+              class="match-card-row upcoming" 
+              *ngFor="let p of proximos; trackBy: trackByMatchId" 
+              (click)="openMatchDetail(p)">
+              
+              <!-- Left: Date & Club -->
+              <div class="col-meta">
+                <div class="meta-date-badge upcoming-badge">
+                  <span class="m-day">{{ p.fecha | date:'dd' }}</span>
+                  <span class="m-mon">{{ p.fecha | date:'MMM' | uppercase }}</span>
+                </div>
+                <div class="meta-club-block">
+                  <span class="m-club" [title]="p.club_nombre">{{ p.club_nombre }}</span>
+                  <div class="m-subtags">
+                    <span class="subtag-time">{{ p.hora_inicio?.slice(0,5) }} HRS</span>
+                    <span class="subtag-cat" *ngIf="p.categoria">Cat. {{ p.categoria }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Center: Teams Confrontation -->
+              <div class="col-scoreboard upcoming-grid">
+                <div class="score-line">
+                  <div class="line-team-info">
+                    <span class="team-label">P1:</span>
+                    <span class="player-names" [class.highlight]="p.usuario_id === userId || p.jugador1_nombre === jugadorNombre || p.jugador2_id === userId">
+                      {{ p.jugador1_nombre }} & {{ p.jugador2_nombre || 'Invitado' }}
+                    </span>
+                    <span class="user-pill" *ngIf="p.usuario_id === userId || p.jugador1_nombre === jugadorNombre || p.jugador2_id === userId">TÚ</span>
+                  </div>
+                </div>
+                <div class="score-line">
+                  <div class="line-team-info">
+                    <span class="team-label">P2:</span>
+                    <span class="player-names" [class.highlight]="p.jugador3_id === userId || p.jugador4_id === userId">
+                      {{ p.jugador3_nombre || 'Invitado' }} & {{ p.jugador4_nombre || 'Invitado' }}
+                    </span>
+                    <span class="user-pill" *ngIf="p.jugador3_id === userId || p.jugador4_id === userId">TÚ</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Status & Actions -->
+              <div class="col-actions" (click)="$event.stopPropagation()">
+                <div class="result-badge-wrap">
+                  <span class="badge-confirmed">🟢 PROGRAMADO</span>
+                </div>
+                <div class="btn-group-row">
+                  <button type="button" class="btn-micro-record" (click)="openResultModal(p, $event)">
+                    ⚡ Anotar
+                  </button>
+                  <button type="button" class="btn-micro-detail" (click)="openMatchDetail(p)">
+                    Detalles ➜
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Empty State Próximos -->
+          <div class="empty-athletic-card" *ngIf="proximos.length === 0 && !isLoading">
+            <div class="empty-icon">🎾</div>
+            <h3>No tienes partidos programados</h3>
+            <p>Reserva una pista con amigos o súmate a un partido abierto en tu club favorito.</p>
+            <button class="btn-empty-action" (click)="router.navigate(['/clubes-reservar'])">
+              + Reservar Nueva Pista
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 2: HISTORIAL & MARCADORES -->
+        <div class="tab-panel" *ngIf="selectedTab === 'historial'">
+          
+          <!-- Mini Results Header & Pager -->
+          <div class="results-header-bar" *ngIf="jugados.length > 0">
+            <div class="results-txt">
+              Mostrando <strong>{{ startIndex() }}-{{ endIndex() }}</strong> de <strong>{{ jugados.length }}</strong> partidos
+            </div>
+            <div class="mini-pager" *ngIf="totalPages > 1">
+              <button type="button" class="btn-mini-arrow" [disabled]="historialPage === 1" (click)="prevPage()">◀</button>
+              <span class="mini-page-num">{{ historialPage }} / {{ totalPages }}</span>
+              <button type="button" class="btn-mini-arrow" [disabled]="historialPage === totalPages" (click)="nextPage()">▶</button>
+            </div>
+          </div>
+
+          <!-- Compact Matches Stack -->
+          <div class="matches-compact-stack" *ngIf="paginatedJugados.length > 0">
+            <div 
+              class="match-card-row history" 
+              *ngFor="let p of paginatedJugados; trackBy: trackByMatchId" 
+              [class.row-win]="p.esGanador"
+              [class.row-loss]="p.resultado_registrado && !p.esGanador"
+              [class.row-pending]="!p.resultado_registrado"
+              (click)="openMatchDetail(p)">
+              
+              <!-- Left: Date & Club -->
+              <div class="col-meta">
+                <div class="meta-date-badge">
+                  <span class="m-day">{{ p.fecha | date:'dd' }}</span>
+                  <span class="m-mon">{{ p.fecha | date:'MMM' | uppercase }}</span>
+                </div>
+                <div class="meta-club-block">
+                  <span class="m-club" [title]="p.club_nombre">{{ p.club_nombre }}</span>
+                  <div class="m-subtags">
+                    <span class="subtag-cat" *ngIf="p.categoria">Cat. {{ p.categoria }}</span>
+                    <span class="subtag-time" *ngIf="p.hora_inicio">{{ p.hora_inicio?.slice(0,5) }} HRS</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Center: Teams & Sets Scoreboard -->
+              <div class="col-scoreboard">
+                <!-- Team 1 -->
+                <div class="score-line" [class.is-winner]="p.id_ganador == 1">
+                  <div class="line-team-info">
+                    <span class="user-pill" *ngIf="p.esEquipo1">TÚ</span>
+                    <span class="player-names" [class.highlight]="p.esEquipo1">
+                      {{ p.jugador1_nombre }} & {{ p.jugador2_nombre || 'Invitado' }}
+                    </span>
+                    <span class="crown-icon" *ngIf="p.id_ganador == 1">👑</span>
+                  </div>
+                  <!-- Sets boxes if registered -->
+                  <div class="line-sets" *ngIf="p.resultado_registrado && p.parsedSets?.length > 0">
+                    <span class="set-chip" *ngFor="let s of p.parsedSets; trackBy: trackByIndex">{{ s.a }}</span>
+                  </div>
+                </div>
+
+                <!-- Team 2 -->
+                <div class="score-line" [class.is-winner]="p.id_ganador == 2">
+                  <div class="line-team-info">
+                    <span class="user-pill" *ngIf="p.esEquipo2">TÚ</span>
+                    <span class="player-names" [class.highlight]="p.esEquipo2">
+                      {{ p.jugador3_nombre || 'Invitado' }} & {{ p.jugador4_nombre || 'Invitado' }}
+                    </span>
+                    <span class="crown-icon" *ngIf="p.id_ganador == 2">👑</span>
+                  </div>
+                  <!-- Sets boxes if registered -->
+                  <div class="line-sets" *ngIf="p.resultado_registrado && p.parsedSets?.length > 0">
+                    <span class="set-chip" *ngFor="let s of p.parsedSets; trackBy: trackByIndex">{{ s.b }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Result Badge & Actions -->
+              <div class="col-actions" (click)="$event.stopPropagation()">
+                <div class="result-badge-wrap">
+                  <span class="badge-win" *ngIf="p.esGanador">🏆 VICTORIA</span>
+                  <span class="badge-loss" *ngIf="p.resultado_registrado && !p.esGanador">DERROTA</span>
+                  <span class="badge-pending" *ngIf="!p.resultado_registrado">⚡ PENDIENTE</span>
+                </div>
+
+                <div class="btn-group-row">
+                  <button 
+                    type="button" 
+                    class="btn-micro-record" 
+                    *ngIf="!p.resultado_registrado" 
+                    (click)="openResultModal(p, $event)">
+                    ⚡ Anotar
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn-micro-detail" 
+                    (click)="openMatchDetail(p)">
+                    Detalles ➜
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Bottom Full Numeric Pagination Bar -->
+          <div class="pagination-bar-elite" *ngIf="totalPages > 1">
+            <button type="button" class="pager-nav-btn" [disabled]="historialPage === 1" (click)="prevPage()">
+              ◀ Anterior
+            </button>
+
+            <div class="page-pills">
+              <ng-container *ngFor="let pg of visiblePages">
+                <button 
+                  type="button" 
+                  class="pill-num" 
+                  *ngIf="pg !== '...'"
+                  [class.active]="pg === historialPage" 
+                  (click)="goToPage(pg)">
+                  {{ pg }}
+                </button>
+                <span class="pill-dots" *ngIf="pg === '...'">...</span>
+              </ng-container>
+            </div>
+
+            <button type="button" class="pager-nav-btn" [disabled]="historialPage === totalPages" (click)="nextPage()">
+              Siguiente ▶
+            </button>
+          </div>
+
+          <!-- Empty State Historial -->
+          <div class="empty-athletic-card" *ngIf="jugados.length === 0 && !isLoading">
+            <div class="empty-icon">📋</div>
+            <h3>No se encontraron partidos</h3>
+            <p>Ajusta los filtros seleccionados o registra tus primeros partidos disputados.</p>
+            <button class="btn-empty-action" (click)="setFiltro('todos'); filterClub = ''">
+              Limpiar Filtros
+            </button>
+          </div>
+        </div>
+        </section>
+
+      <!-- Right Column: Analytics & Performance Metrics -->
+      <aside class="analytics-column">
+        
+        <!-- Win Rate Card -->
+        <div class="athletic-analytics-card">
+          <div class="card-top">
+            <h4>WIN RATE COMPETITIVO</h4>
+            <span class="info-tag">HISTÓRICO</span>
+          </div>
+
+          <div class="donut-container">
+            <div class="canvas-wrap">
+              <canvas id="winLossChart"></canvas>
+            </div>
+            <div class="donut-center-metric">
+              <span class="metric-pct">{{ winRatePct }}%</span>
+              <span class="metric-sub">EFECTIVIDAD</span>
+            </div>
+          </div>
+
+          <div class="stats-split-bar">
+            <div class="split-item win">
+              <span class="val">{{ victorias }}</span>
+              <span class="lbl">Victorias</span>
+            </div>
+            <div class="split-sep"></div>
+            <div class="split-item loss">
+              <span class="val">{{ derrotas }}</span>
+              <span class="lbl">Derrotas</span>
+            </div>
+            <div class="split-sep"></div>
+            <div class="split-item total">
+              <span class="val">{{ victorias + derrotas }}</span>
+              <span class="lbl">Computados</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Activity Bar Chart Card -->
+        <div class="athletic-analytics-card">
+          <div class="card-top">
+            <h4>ACTIVIDAD MENSUAL</h4>
+            <span class="info-tag">ÚLTIMOS 6 MESES</span>
+          </div>
+          <div class="bar-canvas-wrap">
             <canvas id="activityChart"></canvas>
           </div>
         </div>
-      </div>
+
+        <!-- Athletic Pro Tip / Level Card -->
+        <div class="athletic-summary-banner">
+          <div class="banner-glow"></div>
+          <div class="banner-content">
+            <div class="banner-badge">PADELBLOX INTELLIGENCE</div>
+            <h5>{{ categoriaMasJugada }} Categoría Activa</h5>
+            <p>Mantén un ritmo de 2 a 3 partidos semanales para optimizar tu progresión de ranking y calibración de nivel AI.</p>
+          </div>
+        </div>
+
+      </aside>
 
     </div>
 
   </main>
 </div>
 
-<!-- MODALS (Stay functional but more compact) -->
-<div class="web-modal-overlay" *ngIf="showResultModal">
-  <div class="web-modal compact glass-modal">
+<!-- ============================================================ -->
+<!-- MODAL: REGISTRAR RESULTADO DE PARTIDO                        -->
+<!-- ============================================================ -->
+<div class="web-modal-overlay" *ngIf="showResultModal" (click)="showResultModal = false">
+  <div class="web-modal compact glass-modal modal-result-athletic" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Registrar Resultado</h3>
-      <button class="btn-close" (click)="showResultModal = false">×</button>
+      <div class="modal-title-wrap">
+        <span class="modal-tag">OFICIAL</span>
+        <h3>Registrar Marcador</h3>
+      </div>
+      <button type="button" class="btn-close" (click)="showResultModal = false">×</button>
     </div>
+
     <div class="modal-body p-30">
+      
+      <!-- Match Info Pill -->
+      <div class="modal-match-summary" *ngIf="selectedMatch">
+        <div class="summary-club">{{ selectedMatch.club_nombre }}</div>
+        <div class="summary-meta">
+          <span>📅 {{ selectedMatch.fecha | date:'dd MMM yyyy' }}</span>
+          <span>⏰ {{ selectedMatch.hora_inicio?.slice(0,5) }} HRS</span>
+        </div>
+      </div>
+
+      <!-- Quick Set Buttons Helper -->
+      <div class="quick-sets-helper">
+        <label>Plantillas Rápidas para Set 1:</label>
+        <div class="quick-pills">
+          <button type="button" (click)="setQuickScore(1, 6, 4)">6 - 4</button>
+          <button type="button" (click)="setQuickScore(1, 6, 3)">6 - 3</button>
+          <button type="button" (click)="setQuickScore(1, 6, 2)">6 - 2</button>
+          <button type="button" (click)="setQuickScore(1, 7, 5)">7 - 5</button>
+          <button type="button" (click)="setQuickScore(1, 7, 6)">7 - 6</button>
+          <button type="button" (click)="setQuickScore(1, 4, 6)">4 - 6</button>
+          <button type="button" (click)="setQuickScore(1, 3, 6)">3 - 6</button>
+        </div>
+      </div>
+
+      <!-- Scorecard Editor Table -->
       <div class="score-card-editor">
         <div class="score-header">
-          <div class="label-spacer"></div>
+          <div class="label-spacer">EQUIPOS</div>
           <div class="set-labels">
             <span>SET 1</span>
             <span>SET 2</span>
@@ -145,15 +466,18 @@
           </div>
         </div>
 
-        <div class="team-row">
+        <!-- Team Alpha -->
+        <div class="team-row" [class.winner-highlight]="idGanador == 1">
           <div class="team-info">
-            <span class="team-name">TÚ EQUIPO</span>
-            <span class="team-desc">Local</span>
+            <div class="team-name">
+              {{ selectedMatch?.jugador1_nombre || 'Pareja 1' }} & {{ selectedMatch?.jugador2_nombre || 'Invitado' }}
+            </div>
+            <span class="team-desc">Pareja 1 {{ isUserTeam(selectedMatch, 1) ? '(Tú)' : '' }}</span>
           </div>
           <div class="inputs">
-            <input type="number" [(ngModel)]="set1A" placeholder="0">
-            <input type="number" [(ngModel)]="set2A" placeholder="0">
-            <input type="number" [(ngModel)]="set3A" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set1A" (ngModelChange)="updateGanadorManual()" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set2A" (ngModelChange)="updateGanadorManual()" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set3A" (ngModelChange)="updateGanadorManual()" placeholder="0">
           </div>
         </div>
 
@@ -161,21 +485,31 @@
           <span>vs</span>
         </div>
 
-        <div class="team-row">
+        <!-- Team Bravo -->
+        <div class="team-row" [class.winner-highlight]="idGanador == 2">
           <div class="team-info">
-            <span class="team-name">OPONENTES</span>
-            <span class="team-desc">Visitante</span>
+            <div class="team-name">
+              {{ selectedMatch?.jugador3_nombre || 'Pareja 2' }} & {{ selectedMatch?.jugador4_nombre || 'Invitado' }}
+            </div>
+            <span class="team-desc">Pareja 2 {{ isUserTeam(selectedMatch, 2) ? '(Tú)' : '' }}</span>
           </div>
           <div class="inputs">
-            <input type="number" [(ngModel)]="set1B" placeholder="0">
-            <input type="number" [(ngModel)]="set2B" placeholder="0">
-            <input type="number" [(ngModel)]="set3B" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set1B" (ngModelChange)="updateGanadorManual()" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set2B" (ngModelChange)="updateGanadorManual()" placeholder="0">
+            <input type="number" min="0" max="7" [(ngModel)]="set3B" (ngModelChange)="updateGanadorManual()" placeholder="0">
           </div>
         </div>
       </div>
 
+      <!-- Winner Auto Banner -->
+      <div class="winner-indicator-banner" *ngIf="idGanador">
+        <span class="trophy">🏆</span>
+        <span>Ganador detectado: <strong>Pareja {{ idGanador }}</strong></span>
+      </div>
+
+      <!-- Category Selector -->
       <div class="cat-selector-premium">
-        <label>CATEGORÍA DE JUEGO</label>
+        <label>CATEGORÍA COMPETITIVA</label>
         <div class="select-wrapper">
           <select [(ngModel)]="categoria">
             <option value="1ra">1ra Categoría</option>
@@ -188,65 +522,82 @@
           <i class="chevron">▼</i>
         </div>
       </div>
+
     </div>
+
     <div class="modal-footer">
-      <button class="btn-ghost-sm" (click)="showResultModal = false">Cancelar</button>
-      <button class="btn-primary-sm" (click)="saveResult()">Guardar</button>
+      <button type="button" class="btn-ghost-sm" (click)="showResultModal = false">Cancelar</button>
+      <button type="button" class="btn-primary-sm" (click)="saveResult()">Guardar Resultado</button>
     </div>
   </div>
 </div>
 
-<div class="web-modal-overlay" *ngIf="showDetailModal">
-  <div class="web-modal glass-modal compact-detail">
+<!-- ============================================================ -->
+<!-- MODAL: DETALLE DEL PARTIDO (BROADCAST DNA)                  -->
+<!-- ============================================================ -->
+<div class="web-modal-overlay" *ngIf="showDetailModal" (click)="showDetailModal = false">
+  <div class="web-modal glass-modal compact-detail modal-detail-athletic" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Detalle del Partido</h3>
-      <button class="btn-close" (click)="showDetailModal = false">×</button>
+      <div class="modal-title-wrap">
+        <span class="modal-tag">DETALLE</span>
+        <h3>Ficha del Partido</h3>
+      </div>
+      <button type="button" class="btn-close" (click)="showDetailModal = false">×</button>
     </div>
+
     <div class="modal-body">
       <div class="match-detail-elite cyber-mode">
-        <!-- 1. Broadcast Header (The Wow Factor) -->
+        
+        <!-- Broadcast Header -->
         <div class="broadcast-header">
           <div class="mesh-bg"></div>
           <div class="header-main">
             <div class="status-pill">
-              <span class="live-dot"></span> {{ selectedMatch?.resultado_registrado ? 'MATCH RECAP' : 'LIVE PREVIEW' }}
+              <span class="live-dot"></span> 
+              {{ selectedMatch?.resultado_registrado ? 'RESULTADO OFICIAL' : 'PARTIDO PROGRAMADO' }}
             </div>
             <h2 class="club-title">{{ selectedMatch?.club_nombre }}</h2>
             <div class="broadcast-meta">
-              <span class="meta-item"><i class="icon">📅</i> {{ selectedMatch?.fecha | date:'EEE, dd MMM' }}</span>
+              <span class="meta-item"><i class="icon">📅</i> {{ selectedMatch?.fecha | date:'EEEE, dd MMMM yyyy' }}</span>
               <span class="divider">|</span>
               <span class="meta-item"><i class="icon">⏰</i> {{ selectedMatch?.hora_inicio?.slice(0,5) }} HRS</span>
             </div>
           </div>
           <div class="header-action">
-            <button class="btn-location-glow" title="Ubicación de la cancha">
-              <span class="loc-icon">📍</span>
+            <button type="button" class="btn-location-glow" title="Pista confirmada">
+              <span class="loc-icon">🎾</span>
             </button>
           </div>
         </div>
 
-        <!-- 2. Match DNA (Rosters) -->
+        <!-- Match DNA Rosters -->
         <div class="match-dna">
+          
+          <!-- Pareja Alpha -->
           <div class="dna-section">
-            <label class="section-tag">TEAM ALPHA</label>
+            <div class="section-header-tag">
+              <span class="section-tag">PAREJA ALPHA</span>
+              <span class="win-label" *ngIf="selectedMatch?.id_ganador == 1">🏆 GANADORES</span>
+            </div>
             <div class="roster-grid">
-              <div class="pro-card" [class.user-active]="selectedMatch?.jugador1_nombre === jugadorNombre">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador1_nombre === jugadorNombre || selectedMatch?.usuario_id === userId">
                 <div class="rank-badge">P1</div>
                 <div class="pro-info">
-                  <span class="name">{{ selectedMatch?.jugador1_nombre }}</span>
+                  <span class="name">{{ selectedMatch?.jugador1_nombre || 'Jugador 1' }}</span>
                   <span class="role">Drive</span>
                 </div>
               </div>
-              <div class="pro-card" [class.user-active]="selectedMatch?.jugador2_nombre === jugadorNombre">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador2_nombre === jugadorNombre || selectedMatch?.jugador2_id === userId">
                 <div class="rank-badge">P2</div>
                 <div class="pro-info">
-                  <span class="name">{{ selectedMatch?.jugador2_nombre || 'INVITADO' }}</span>
+                  <span class="name">{{ selectedMatch?.jugador2_nombre || 'Invitado' }}</span>
                   <span class="role">Revés</span>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Match Score Pulse -->
           <div class="match-pulse">
             <div class="vs-neon">VS</div>
             <div class="live-score-display" *ngIf="selectedMatch?.resultado_registrado">
@@ -254,37 +605,52 @@
             </div>
           </div>
 
+          <!-- Pareja Bravo -->
           <div class="dna-section">
-            <label class="section-tag">TEAM BRAVO</label>
+            <div class="section-header-tag">
+              <span class="section-tag">PAREJA BRAVO</span>
+              <span class="win-label" *ngIf="selectedMatch?.id_ganador == 2">🏆 GANADORES</span>
+            </div>
             <div class="roster-grid">
-              <div class="pro-card" [class.user-active]="selectedMatch?.jugador3_nombre === jugadorNombre">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador3_nombre === jugadorNombre || selectedMatch?.jugador3_id === userId">
                 <div class="rank-badge">P3</div>
                 <div class="pro-info">
-                  <span class="name">{{ selectedMatch?.jugador3_nombre || 'INVITADO' }}</span>
+                  <span class="name">{{ selectedMatch?.jugador3_nombre || 'Invitado' }}</span>
                   <span class="role">Drive</span>
                 </div>
               </div>
-              <div class="pro-card" [class.user-active]="selectedMatch?.jugador4_nombre === jugadorNombre">
+              <div class="pro-card" [class.user-active]="selectedMatch?.jugador4_nombre === jugadorNombre || selectedMatch?.jugador4_id === userId">
                 <div class="rank-badge">P4</div>
                 <div class="pro-info">
-                  <span class="name">{{ selectedMatch?.jugador4_nombre || 'INVITADO' }}</span>
+                  <span class="name">{{ selectedMatch?.jugador4_nombre || 'Invitado' }}</span>
                   <span class="role">Revés</span>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
 
-        <!-- 3. Intelligence Footer -->
+        <!-- Intelligence Footer -->
         <div class="intel-footer">
           <div class="intel-pill">
-            <span class="label">LEVEL</span>
-            <span class="value">{{ selectedMatch?.categoria || 'PRO' }}</span>
+            <span class="label">CATEGORÍA</span>
+            <span class="value">{{ selectedMatch?.categoria || '4ta' }}</span>
           </div>
           <div class="intel-actions">
-            <button class="btn-share-elite">SHARE MATCH</button>
+            <button 
+              type="button"
+              class="btn-register-from-detail" 
+              *ngIf="!selectedMatch?.resultado_registrado"
+              (click)="showDetailModal = false; openResultModal(selectedMatch, $event)">
+              ⚡ Anotar Resultado
+            </button>
+            <button type="button" class="btn-share-elite" (click)="showDetailModal = false">
+              Cerrar Ficha
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>

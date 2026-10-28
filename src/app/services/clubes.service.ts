@@ -584,6 +584,12 @@ export class ClubesService {
         });
     }
 
+    limpiarRankingClub(clubId: number): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/torneos/limpiar_ranking_club.php`, { club_id: clubId }, {
+            headers: this.getHeaders()
+        });
+    }
+
     // TORNEOS V2 (Groups + Playoffs)
     createTorneoV2(torneoData: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/torneos/create_torneo_v2.php`, torneoData, {
