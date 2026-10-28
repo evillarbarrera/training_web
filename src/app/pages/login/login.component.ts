@@ -219,8 +219,10 @@ export class LoginComponent implements OnInit, AfterViewInit {
       next: (res: any) => {
         console.log('Respuesta del servidor (Recovery):', res);
         this.isLoading = false;
-        if (res.success) {
-          this.recoverMessage = res.message || 'Instrucciones enviadas a tu correo.';
+        if (res.success && res.mail_sent !== false) {
+          this.recoverMessage = (res.message || 'Instrucciones enviadas a tu correo.') + ' (Recuerda revisar también tu carpeta de Spam o No deseados).';
+        } else if (res.mail_sent === false) {
+          this.recoverError = 'No se pudo entregar el correo en este momento. Por favor contacta a soporte.';
         } else {
           this.recoverError = res.message || 'No se pudo enviar el correo.';
         }
