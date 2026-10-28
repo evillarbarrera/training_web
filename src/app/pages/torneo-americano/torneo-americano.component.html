@@ -92,7 +92,7 @@
                                 </div>
                                 <div class="form-group animate-in" *ngIf="torneo.modalidad !== 'mixto'">
                                     <label><span class="label-icon">🚻</span> Género</label>
-                                    <select [(ngModel)]="torneo.genero">
+                                    <select [(ngModel)]="torneo.genero" (ngModelChange)="onGeneroChange()">
                                         <option value="Varones">Varones</option>
                                         <option value="Damas">Damas</option>
                                     </select>
@@ -109,12 +109,11 @@
                                             <option value="Sexta">Sexta</option>
                                         </optgroup>
                                         <optgroup label="Damas" *ngIf="torneo.genero === 'Damas'">
-                                            <option value="Primera Damas">1ª Damas</option>
-                                            <option value="Segunda Damas">2ª Damas</option>
-                                            <option value="Tercera Damas">3ª Damas</option>
-                                            <option value="Cuarta Damas">4ª Damas</option>
-                                            <option value="Quinta Damas">5ª Damas</option>
-                                            <option value="Sexta Damas">6ª Damas</option>
+                                            <option value="Damas A">Damas A</option>
+                                            <option value="Damas B">Damas B</option>
+                                            <option value="Damas C">Damas C</option>
+                                            <option value="Damas D">Damas D</option>
+                                            <option value="Damas E">Damas E</option>
                                         </optgroup>
                                     </select>
                                 </div>

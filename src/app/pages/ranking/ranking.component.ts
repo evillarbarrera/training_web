@@ -39,13 +39,13 @@ export class RankingComponent implements OnInit {
     ];
 
     categoriasDamas: string[] = [
-        'Primera Damas', 'Segunda Damas', 'Tercera Damas', 'Cuarta Damas', 'Quinta Damas', 'Sexta Damas'
+        'Damas A', 'Damas B', 'Damas C', 'Damas D', 'Damas E'
     ];
 
     categorias: string[] = [
         'General',
         'Primera', 'Segunda', 'Tercera', 'Cuarta', 'Quinta', 'Sexta', 'Séptima',
-        'Primera Damas', 'Segunda Damas', 'Tercera Damas', 'Cuarta Damas', 'Quinta Damas', 'Sexta Damas'
+        'Damas A', 'Damas B', 'Damas C', 'Damas D', 'Damas E'
     ];
 
     get categoriasVisibles(): string[] {
@@ -58,7 +58,7 @@ export class RankingComponent implements OnInit {
         this.selectedRama = rama;
         this.currentPage = 1;
         if (rama === 'damas' && !this.selectedCategoria.includes('Damas')) {
-            this.setCategoria('Primera Damas');
+            this.setCategoria('Damas A');
         } else if (rama === 'open' && this.selectedCategoria.includes('Damas')) {
             this.setCategoria('General');
         }
@@ -398,6 +398,48 @@ export class RankingComponent implements OnInit {
                     error: (err) => {
                         console.error('Error restaurando puntos:', err);
                         Swal.fire('Error', err.error?.error || 'No se pudieron restablecer los puntos.', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    limpiarRankingClub(): void {
+        const clubNombre = this.selectedClubNombre || 'el club seleccionado';
+        const clubId = this.selectedClubId;
+
+        Swal.fire({
+            title: '¿Limpiar ranking del club?',
+            html: `Se restablecerán a <strong>0 PTS</strong> todos los puntos de ranking de los jugadores asociados a <strong>${clubNombre}</strong> y se anularán los puntos otorgados en sus torneos.<br><br><span style="color:#ef4444; font-weight:600;">Esta acción no se puede deshacer.</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '🧹 Sí, limpiar ranking',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Limpiando ranking...',
+                    text: 'Restableciendo puntos del club a cero',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                this.clubesService.limpiarRankingClub(clubId).subscribe({
+                    next: (res) => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Ranking Limpiado',
+                            text: res.mensaje || 'Se han restablecido los puntos de ranking exitosamente.',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                        this.loadRanking();
+                    },
+                    error: (err) => {
+                        console.error('Error al limpiar ranking del club:', err);
+                        Swal.fire('Error', err.error?.error || 'No se pudo limpiar el ranking.', 'error');
                     }
                 });
             }

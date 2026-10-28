@@ -30,11 +30,14 @@ export class JugadorPartidosComponent implements OnInit {
   totalJugados = 0;
   victorias = 0;
   derrotas = 0;
+  winRatePct = 0;
   categoriaMasJugada = 'N/A';
+  pendientesResultado = 0;
 
   selectedTab: 'proximos' | 'historial' = 'proximos';
 
   // Filters
+  filtroResultado: 'todos' | 'ganados' | 'perdidos' | 'sin_marcador' = 'todos';
   filterClub = '';
   filterCategoria = '';
   filterFecha = '';
@@ -60,6 +63,12 @@ export class JugadorPartidosComponent implements OnInit {
   winLossChart: any;
   activityChart: any;
 
+  // Pagination
+  historialPage = 1;
+  historialPageSize = 5;
+  paginatedJugados: any[] = [];
+  totalPages = 1;
+
   constructor(
     public mysql: MysqlService, 
     public router: Router,
@@ -70,15 +79,23 @@ export class JugadorPartidosComponent implements OnInit {
     this.loadPartidos();
   }
 
+  enrichMatch(p: any): any {
+    p.parsedSets = this.parseMarcador(p.marcador);
+    p.esGanador = this.isWinner(p);
+    p.esEquipo1 = this.isUserTeam(p, 1);
+    p.esEquipo2 = this.isUserTeam(p, 2);
+    return p;
+  }
+
   loadPartidos() {
     this.isLoading = true;
     this.mysql.getMisPartidos().subscribe({
       next: (res: any[]) => {
-        // Only keep active, non-cancelled matches
+        // Only keep active, non-cancelled matches and pre-enrich them
         this.partidos = (res || []).filter(p => {
           const st = (p.estado || '').toLowerCase();
           return st !== 'cancelada' && st !== 'cancelado' && st !== 'anulado' && st !== 'eliminado' && st !== 'eliminada';
-        });
+        }).map(p => this.enrichMatch(p));
 
         this.updateLists();
         this.calculateStats();
@@ -104,31 +121,120 @@ export class JugadorPartidosComponent implements OnInit {
     });
   }
 
-  updateLists() {
-    const activePartidos = (this.partidos || []).filter(p => {
-      const st = (p.estado || '').toLowerCase();
-      return st !== 'cancelada' && st !== 'cancelado' && st !== 'anulado' && st !== 'eliminado' && st !== 'eliminada';
-    });
+  selectTab(tab: 'proximos' | 'historial') {
+    this.selectedTab = tab;
+    if (tab === 'historial') {
+      this.historialPage = 1;
+      this.updatePagination();
+    }
+  }
 
-    this.jugados = activePartidos.filter(p => p.jugado);
-    this.proximos = activePartidos.filter(p => !p.jugado).sort((a,b) => a.fecha.localeCompare(b.fecha));
+  setFiltro(tipo: 'todos' | 'ganados' | 'perdidos' | 'sin_marcador') {
+    this.filtroResultado = tipo;
+    this.historialPage = 1;
+    this.updateLists();
+  }
+
+  updateLists() {
+    let jList = (this.partidos || []).filter(p => p.jugado);
+    let pList = (this.partidos || []).filter(p => !p.jugado).sort((a,b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+    // Filtro por resultado
+    if (this.filtroResultado === 'ganados') {
+      jList = jList.filter(p => p.esGanador);
+    } else if (this.filtroResultado === 'perdidos') {
+      jList = jList.filter(p => p.resultado_registrado && !p.esGanador);
+    } else if (this.filtroResultado === 'sin_marcador') {
+      jList = jList.filter(p => !p.resultado_registrado);
+    }
 
     if (this.filterClub) {
-        this.jugados = this.jugados.filter(p => p.club_id == this.filterClub);
+      jList = jList.filter(p => p.club_id == this.filterClub);
+      pList = pList.filter(p => p.club_id == this.filterClub);
     }
     if (this.filterCategoria) {
-        this.jugados = this.jugados.filter(p => p.categoria === this.filterCategoria);
+      jList = jList.filter(p => p.categoria === this.filterCategoria);
     }
     if (this.filterFecha) {
-        this.jugados = this.jugados.filter(p => p.fecha === this.filterFecha);
+      jList = jList.filter(p => p.fecha === this.filterFecha);
     }
+
+    this.jugados = jList;
+    this.proximos = pList;
+    this.updatePagination();
+  }
+
+  updatePagination() {
+    this.totalPages = Math.max(1, Math.ceil(this.jugados.length / this.historialPageSize));
+    if (this.historialPage > this.totalPages) {
+      this.historialPage = 1;
+    }
+    const start = (this.historialPage - 1) * this.historialPageSize;
+    this.paginatedJugados = this.jugados.slice(start, start + this.historialPageSize);
+  }
+
+  prevPage() {
+    if (this.historialPage > 1) {
+      this.historialPage--;
+      this.updatePagination();
+    }
+  }
+
+  nextPage() {
+    if (this.historialPage < this.totalPages) {
+      this.historialPage++;
+      this.updatePagination();
+    }
+  }
+
+  goToPage(p: number | string) {
+    if (typeof p === 'number' && p >= 1 && p <= this.totalPages) {
+      this.historialPage = p;
+      this.updatePagination();
+    }
+  }
+
+  get visiblePages(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.historialPage;
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  }
+
+  startIndex(): number {
+    if (this.jugados.length === 0) return 0;
+    return (this.historialPage - 1) * this.historialPageSize + 1;
+  }
+
+  endIndex(): number {
+    return Math.min(this.historialPage * this.historialPageSize, this.jugados.length);
+  }
+
+  trackByMatchId(index: number, item: any): any {
+    return item?.id || index;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 
   calculateStats() {
     const list = this.partidos.filter(p => p.jugado);
     this.totalJugados = list.length;
-    this.victorias = list.filter(p => p.id_ganador && ((p.id_ganador == 1 && (p.usuario_id == this.userId || p.jugador2_id == this.userId)) || (p.id_ganador == 2 && (p.jugador3_id == this.userId || p.jugador4_id == this.userId)))).length;
+    this.victorias = list.filter(p => this.isWinner(p)).length;
     this.derrotas = list.filter(p => p.resultado_registrado && !this.isWinner(p)).length;
+    this.pendientesResultado = list.filter(p => !p.resultado_registrado).length;
+
+    const totalDecididos = this.victorias + this.derrotas;
+    this.winRatePct = totalDecididos > 0 ? Math.round((this.victorias / totalDecididos) * 100) : 0;
     
     const cats = list.filter(p => p.categoria).map(p => p.categoria);
     if (cats.length > 0) {
@@ -136,19 +242,67 @@ export class JugadorPartidosComponent implements OnInit {
       cats.forEach(c => counts[c] = (counts[c] || 0) + 1);
       this.categoriaMasJugada = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
     } else {
-        this.categoriaMasJugada = 'N/A';
+      this.categoriaMasJugada = '4ta';
     }
   }
 
   isWinner(p: any): boolean {
-    if (!p.id_ganador) return false;
-    const isTeam1 = (p.usuario_id == this.userId || p.jugador2_id == this.userId);
+    if (!p || !p.id_ganador) return false;
+    const isTeam1 = (p.usuario_id == this.userId || p.jugador1_id == this.userId || p.jugador2_id == this.userId);
     const isTeam2 = (p.jugador3_id == this.userId || p.jugador4_id == this.userId);
     return (p.id_ganador == 1 && isTeam1) || (p.id_ganador == 2 && isTeam2);
   }
 
-  openResultModal(match: any, event: Event) {
-    event.stopPropagation();
+  isUserTeam(p: any, teamNum: number): boolean {
+    if (!p) return false;
+    if (teamNum === 1) {
+      return p.usuario_id == this.userId || p.jugador1_id == this.userId || p.jugador2_id == this.userId;
+    }
+    return p.jugador3_id == this.userId || p.jugador4_id == this.userId;
+  }
+
+  parseMarcador(marcador: any): { a: string, b: string }[] {
+    if (!marcador || typeof marcador !== 'string') return [];
+    try {
+      return marcador
+        .trim()
+        .replace(/,/g, ' ')
+        .split(/\s+/)
+        .filter(s => s && s.includes('-'))
+        .map(s => {
+          const parts = s.split('-');
+          return {
+            a: (parts[0] || '').trim() || '0',
+            b: (parts[1] || '').trim() || '0'
+          };
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  getMarcadorSets(marcador: any): { a: string, b: string }[] {
+    return this.parseMarcador(marcador);
+  }
+
+  setQuickScore(setNum: number, a: number, b: number) {
+    if (setNum === 1) { this.set1A = a; this.set1B = b; }
+    else if (setNum === 2) { this.set2A = a; this.set2B = b; }
+    else if (setNum === 3) { this.set3A = a; this.set3B = b; }
+    this.updateGanadorManual();
+  }
+
+  clearSet(setNum: number) {
+    if (setNum === 1) { this.set1A = null; this.set1B = null; }
+    else if (setNum === 2) { this.set2A = null; this.set2B = null; }
+    else if (setNum === 3) { this.set3A = null; this.set3B = null; }
+    this.updateGanadorManual();
+  }
+
+  openResultModal(match: any, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
     this.selectedMatch = match;
     this.categoria = match.categoria || '';
     this.set1A = null; this.set1B = null;
@@ -206,24 +360,36 @@ export class JugadorPartidosComponent implements OnInit {
     if (!ctx) return;
     if (this.winLossChart) this.winLossChart.destroy();
 
+    const hasData = (this.victorias + this.derrotas) > 0;
+    const dataVals = hasData ? [this.victorias, this.derrotas] : [1];
+    const dataLabels = hasData ? ['Victorias', 'Derrotas'] : ['Sin partidos'];
+    const bgColors = hasData ? ['#ccff00', '#0f172a'] : ['#e2e8f0'];
+
     this.winLossChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Victorias', 'Derrotas'],
+        labels: dataLabels,
         datasets: [{
-          data: [this.victorias, this.derrotas],
-          backgroundColor: ['#ccff00', '#111'],
+          data: dataVals,
+          backgroundColor: bgColors,
           borderWidth: 0,
-          hoverOffset: 10
+          hoverOffset: hasData ? 6 : 0
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { font: { weight: 'bold' }, color: '#000' } }
+          legend: {
+            display: hasData,
+            position: 'bottom',
+            labels: { font: { weight: 'bold', size: 11 }, color: '#475569', boxWidth: 12, padding: 12 }
+          },
+          tooltip: {
+            enabled: hasData
+          }
         },
-        cutout: '75%'
+        cutout: '76%'
       }
     });
   }
@@ -258,17 +424,36 @@ export class JugadorPartidosComponent implements OnInit {
           label: 'Partidos',
           data: Object.values(months),
           backgroundColor: '#ccff00',
-          borderRadius: 8,
-          barThickness: 25
+          hoverBackgroundColor: '#b8e600',
+          borderRadius: 6,
+          barThickness: 20
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleFont: { weight: 'bold' },
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: (item: any) => `${item.raw} partido${Number(item.raw) === 1 ? '' : 's'}`
+            }
+          }
+        },
         scales: {
-          y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
-          x: { grid: { display: false } }
+          y: {
+            beginAtZero: true,
+            grid: { color: '#f1f5f9' },
+            ticks: { stepSize: 1, color: '#94a3b8', font: { size: 10, weight: 'bold' } }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#64748b', font: { size: 11, weight: 'bold' } }
+          }
         }
       }
     });
