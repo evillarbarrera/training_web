@@ -290,7 +290,9 @@ export class EntrenadorAgendaComponent implements OnInit {
     // Since official WhatsApp group links require being an admin and creating a link,
     // we use a workaround to open a chat with multiple numbers or just inform.
     // For now, we'll open a chat with the first one or prompt about the group.
-    const message = encodeURIComponent(`Hola alumnos de la clase de las ${item.hora_inicio.slice(0, 5)}...`);
+    const horaTexto = item.hora_inicio ? item.hora_inicio.slice(0, 5) : '';
+    const clubTexto = item.club_nombre ? ` en ${item.club_nombre}` : '';
+    const message = encodeURIComponent(`Hola alumnos 👋, les escribo desde la Academia de Pádel respecto a nuestra clase de las *${horaTexto} hrs*${clubTexto}. 🎾\n\n📲 Les recordamos que sus sesiones, asistencia y seguimiento técnico se gestionan a través de *PadelBlox*. ¡Nos vemos en la pista!`);
     window.open(`https://wa.me/${phones[0]}?text=${message}`, '_blank');
   }
 }
