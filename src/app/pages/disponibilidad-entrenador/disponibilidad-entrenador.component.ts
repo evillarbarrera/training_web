@@ -98,6 +98,7 @@ export class DisponibilidadEntrenadorComponent implements OnInit {
   // 1. Click & Drag State
   isDragging: boolean = false;
   dragSelectMode: boolean = true;
+  private ignoreNextClick: boolean = false;
 
   // 2. Selector de Rango Rápido
   rangeHoraInicio: string = '16:00';
@@ -121,6 +122,9 @@ export class DisponibilidadEntrenadorComponent implements OnInit {
   @HostListener('window:mouseup')
   onMouseUp() {
     this.isDragging = false;
+    setTimeout(() => {
+      this.ignoreNextClick = false;
+    }, 120);
   }
 
   constructor(
@@ -515,6 +519,10 @@ onMonthChange() {
   ============================== */
 
   toggleBloque(b: BloqueHorario) {
+    if (this.ignoreNextClick) {
+      this.ignoreNextClick = false;
+      return;
+    }
     if (b.ocupado || b.lockedByOtherClub) return;
     b.seleccionado = !b.seleccionado;
   }
@@ -555,9 +563,11 @@ onMonthChange() {
      CLICK & DRAG (EFECTO PINCEL)
   ============================== */
   onBlockMouseDown(bloque: BloqueHorario, event: MouseEvent) {
+    if (event.button !== 0) return; // Solo responder a click izquierdo
     if (bloque.ocupado || bloque.lockedByOtherClub) return;
     event.preventDefault();
     this.isDragging = true;
+    this.ignoreNextClick = true;
     this.dragSelectMode = !bloque.seleccionado;
     bloque.seleccionado = this.dragSelectMode;
   }

@@ -160,7 +160,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         console.error('Login error:', err);
-        this.error = 'Error al iniciar sesión. Verifica tus credenciales.';
+        this.error = err?.error?.error_details || err?.error?.error || err?.error?.message || 'Error al iniciar sesión. Verifica tus credenciales.';
         this.isLoading = false;
       }
     });
