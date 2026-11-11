@@ -32,7 +32,7 @@
     <!-- Main Landing Content -->
     <div *ngIf="!isLoading && clubData" class="landing-content animate-fade-in">
         
-        <!-- 1. TOP NAVBAR (Logo a la izquierda, menú a la derecha) -->
+        <!-- 1. TOP NAVBAR -->
         <nav class="top-navbar">
             <div class="container navbar-flex">
                 <!-- Izquierda: Logo y Nombre del Club -->
@@ -52,6 +52,9 @@
                     <button *ngIf="clubData.landing_mostrar_americanos != 0" class="nav-link-btn" (click)="scrollToSection('torneos')">
                         <i class="fas fa-trophy"></i> Torneos
                     </button>
+                    <button class="nav-link-btn share-btn" (click)="copiarEnlaceClub()" title="Copiar enlace directo de reserva">
+                        <i class="fas fa-link"></i> Compartir Link
+                    </button>
                     <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="nav-link-btn wa-nav" (click)="openWhatsApp()">
                         <i class="fab fa-whatsapp"></i> Contacto
                     </button>
@@ -59,7 +62,7 @@
             </div>
         </nav>
 
-        <!-- 2. CLUB PROFILE HERO (Foto de perfil a la izquierda, Texto e información a la derecha) -->
+        <!-- 2. CLUB PROFILE HERO -->
         <section class="club-profile-hero" [style.background-image]="'url(' + defaultBannerUrl + ')'">
             <div class="hero-overlay"></div>
             
@@ -94,8 +97,11 @@
                             {{ clubData.landing_descripcion || clubData.descripcion }}
                         </p>
 
-                        <!-- Botones de Contacto -->
+                        <!-- Botones de Acción y Contacto -->
                         <div class="social-contact-row">
+                            <button class="btn-contact-pill share-pill" (click)="copiarEnlaceClub()">
+                                <i class="fas fa-share-nodes"></i> Copiar Link de Reserva
+                            </button>
                             <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="btn-contact-pill wa" (click)="openWhatsApp()">
                                 <i class="fab fa-whatsapp"></i> WhatsApp
                             </button>
@@ -114,12 +120,12 @@
         <!-- SECCIONES EN ORDEN VERTICAL -->
         <div class="container sections-vertical-stack">
             
-            <!-- 3. DISPONIBILIDAD DE CANCHAS (Arriba) -->
+            <!-- 3. DISPONIBILIDAD DE CANCHAS Y HORARIOS EN VIVO -->
             <section id="canchas" *ngIf="clubData.landing_mostrar_reservas != 0" class="section-pane">
                 <div class="section-pane-header">
                     <div>
-                        <h2>🎾 Disponibilidad de Canchas</h2>
-                        <p>Selecciona tu día preferido y reserva tu horario en nuestras instalaciones.</p>
+                        <h2>🎾 Disponibilidad de Canchas en Vivo</h2>
+                        <p>Toca el horario que prefieras para reservar de inmediato sin necesidad de crear cuenta.</p>
                     </div>
                 </div>
 
@@ -139,13 +145,21 @@
 
                     <div class="custom-date-picker">
                         <i class="fas fa-calendar-alt"></i>
-                        <input type="date" [(ngModel)]="fechaSeleccionada" class="date-input-field">
+                        <input type="date" [(ngModel)]="fechaSeleccionada" (change)="onFechaChange()" class="date-input-field">
                     </div>
                 </div>
 
-                <!-- Grid de Canchas -->
+                <!-- Indicador de carga de horarios -->
+                <div *ngIf="isLoadingDisponibilidad" class="disponibilidad-loader">
+                    <div class="mini-spinner"></div>
+                    <span>Consultando horarios disponibles en tiempo real...</span>
+                </div>
+
+                <!-- Grid de Canchas con Parrilla de Horarios -->
                 <div class="courts-grid-layout" *ngIf="canchas.length > 0">
                     <div class="court-card-item" *ngFor="let c of canchas">
+                        
+                        <!-- Header de la Cancha -->
                         <div class="card-header-flex">
                             <span class="court-badge-tag" [class.indoor]="c.techada">
                                 <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
@@ -156,6 +170,7 @@
 
                         <h3 class="court-title">{{ c.nombre }}</h3>
 
+                        <!-- Características de la Cancha -->
                         <div class="court-specs">
                             <div class="spec-row" *ngIf="c.superficie">
                                 <i class="fas fa-layer-group"></i> Superficie: <strong>{{ c.superficie }}</strong>
@@ -168,34 +183,62 @@
                             </div>
                         </div>
 
+                        <!-- PARRILLA DE SLOTS / HORARIOS EN VIVO -->
+                        <div class="slots-section">
+                            <div class="slots-header-row">
+                                <span class="slots-title">
+                                    <i class="fas fa-clock"></i> Horarios Disponibles:
+                                </span>
+                                <span class="badge-free-slots" *ngIf="c.slots_disponibles_count !== undefined">
+                                    {{ c.slots_disponibles_count }} libre(s)
+                                </span>
+                            </div>
+
+                            <div class="slots-grid-chips" *ngIf="c.slots && c.slots.length > 0">
+                                <button *ngFor="let slot of c.slots"
+                                        type="button"
+                                        class="slot-chip-btn"
+                                        [class.slot-libre]="slot.disponible"
+                                        [class.slot-ocupado]="!slot.disponible"
+                                        [disabled]="!slot.disponible"
+                                        (click)="abrirReservaSlot(c, slot)"
+                                        [title]="slot.disponible ? 'Clic para reservar este horario' : (slot.motivo || 'Ocupado')">
+                                    <span class="slot-hour">{{ slot.hora_inicio }}</span>
+                                    <span class="slot-price-tag" *ngIf="slot.disponible">{{ slot.precio_formateado }}</span>
+                                    <span class="slot-occupied-lbl" *ngIf="!slot.disponible">{{ slot.motivo || 'Ocupado' }}</span>
+                                </button>
+                            </div>
+
+                            <div *ngIf="!c.slots || c.slots.length === 0" class="no-slots-note">
+                                <i class="fas fa-info-circle"></i> No hay horarios configurados para este día.
+                            </div>
+                        </div>
+
+                        <!-- Footer de la Tarjeta -->
                         <div class="court-footer-flex">
                             <div class="price-info">
                                 <span class="lbl">Precio desde</span>
-                                <span class="amount">$ {{ c.precio_hora | number:'1.0-0' }} <small>/ hr</small></span>
+                                <span class="amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
                             </div>
-
-                            <button class="btn-reserve-cta" (click)="reservarCancha(c)">
-                                <span>Reservar Horario</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                            <span class="hint-reserve">Toca un horario 🟢</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Estado sin canchas -->
-                <div *ngIf="canchas.length === 0" class="empty-state-box">
+                <div *ngIf="canchas.length === 0 && !isLoadingDisponibilidad" class="empty-state-box">
                     <div class="empty-icon-wrap">
                         <i class="fas fa-calendar-times"></i>
                     </div>
-                    <h3>No hay canchas disponibles actualmente para esta fecha</h3>
-                    <p>Prueba eligiendo otro día en el calendario o contáctate directamente por WhatsApp.</p>
+                    <h3>No hay canchas disponibles para esta fecha</h3>
+                    <p>Prueba seleccionando otro día o consulta directamente al club por WhatsApp.</p>
                     <button *ngIf="clubData.landing_whatsapp || clubData.telefono" class="btn-wa-contact" (click)="openWhatsApp()">
                         <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
                     </button>
                 </div>
             </section>
 
-            <!-- 4. RANKING DEL CLUB POR CATEGORÍA (Medio) -->
+            <!-- 4. RANKING DEL CLUB POR CATEGORÍA -->
             <section id="ranking" *ngIf="clubData.landing_mostrar_ranking != 0" class="section-pane">
                 <div class="section-pane-header">
                     <div>
@@ -256,17 +299,17 @@
                     <div class="empty-icon-wrap">
                         <i class="fas fa-list-ol"></i>
                     </div>
-                    <h3>Sin jugadores en esta categoría</h3>
-                    <p>No se registran clasificaciones en el filtro seleccionado.</p>
+                    <h3>Sin clasificaciones en esta categoría</h3>
+                    <p>No se registran jugadores en el filtro seleccionado.</p>
                 </div>
             </section>
 
-            <!-- 5. FUTUROS AMERICANOS O TORNEOS (Abajo) -->
+            <!-- 5. PRÓXIMOS AMERICANOS O TORNEOS -->
             <section id="torneos" *ngIf="clubData.landing_mostrar_americanos != 0" class="section-pane">
                 <div class="section-pane-header">
                     <div>
                         <h2>🏆 Próximos Torneos y Americanos</h2>
-                        <p>Inscríbete en los eventos oficiales del club, suma puntos y compite.</p>
+                        <p>Inscríbete junto a tu pareja de pádel en solo 1 paso sin registrarte.</p>
                     </div>
                 </div>
 
@@ -298,7 +341,7 @@
 
                         <div class="torneo-card-footer">
                             <button class="btn-enroll-cta" (click)="inscribirAmericano(t)">
-                                <span>Inscribirme Ahora</span>
+                                <span>Inscribir Pareja Ahora</span>
                                 <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -331,6 +374,275 @@
             </div>
         </footer>
 
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 1: RESERVA RÁPIDA SIN LOGIN (GUEST CHECKOUT)       -->
+    <!-- ======================================================== -->
+    <div *ngIf="showBookingModal" class="modal-backdrop-fade" (click)="cerrarModalReserva()">
+        <div class="modal-guest-box" (click)="$event.stopPropagation()">
+            
+            <button class="modal-close-btn" (click)="cerrarModalReserva()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- VISTA DE RESERVA EXITOSA / COMPROBANTE -->
+            <div *ngIf="bookingSuccessData" class="success-voucher-view">
+                <div class="success-badge-icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3>¡Tu cancha está reservada! 🎾</h3>
+                <p class="voucher-sub">Hemos confirmado tu turno en <strong>{{ clubData.nombre }}</strong>.</p>
+
+                <div class="voucher-card">
+                    <div class="voucher-header">
+                        <span class="code-lbl">Código de Reserva</span>
+                        <span class="code-val">{{ bookingSuccessData.codigo }}</span>
+                    </div>
+                    <div class="voucher-body">
+                        <div class="v-row">
+                            <span class="v-label">Cancha:</span>
+                            <span class="v-value">{{ bookingSuccessData.cancha }}</span>
+                        </div>
+                        <div class="v-row">
+                            <span class="v-label">Fecha:</span>
+                            <span class="v-value">{{ bookingSuccessData.fecha | date:'dd/MM/yyyy' }}</span>
+                        </div>
+                        <div class="v-row">
+                            <span class="v-label">Horario:</span>
+                            <span class="v-value">{{ bookingSuccessData.hora_inicio }} a {{ bookingSuccessData.hora_fin }} hrs</span>
+                        </div>
+                        <div class="v-row">
+                            <span class="v-label">Titular:</span>
+                            <span class="v-value">{{ bookingSuccessData.nombre }}</span>
+                        </div>
+                        <div class="v-row total-row">
+                            <span class="v-label">Total a pagar:</span>
+                            <span class="v-value highlight">{{ bookingSuccessData.precio_formateado }} CLP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="voucher-actions">
+                    <a *ngIf="bookingSuccessData.whatsapp_confirmacion_url" 
+                       [href]="bookingSuccessData.whatsapp_confirmacion_url" 
+                       target="_blank" 
+                       class="btn-wa-confirm">
+                        <i class="fab fa-whatsapp"></i> Confirmar con el Club por WhatsApp
+                    </a>
+                    <button class="btn-finish-cta" (click)="cerrarModalReserva()">
+                        Listo, Entendido
+                    </button>
+                </div>
+            </div>
+
+            <!-- FORMULARIO DE RESERVA -->
+            <div *ngIf="!bookingSuccessData" class="booking-form-view">
+                
+                <div class="modal-form-header">
+                    <div class="header-icon-court">🎾</div>
+                    <div>
+                        <h3>Reserva Rápida de Cancha</h3>
+                        <p>Completa tus datos para confirmar tu turno en 30 segundos.</p>
+                    </div>
+                </div>
+
+                <!-- Resumen del Turno Elegido -->
+                <div class="slot-summary-card">
+                    <div class="sum-row">
+                        <span class="sum-court">{{ selectedCancha?.nombre }}</span>
+                        <span class="sum-price">{{ selectedSlot?.precio_formateado }}</span>
+                    </div>
+                    <div class="sum-meta">
+                        <span><i class="fas fa-calendar-day"></i> {{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+                        <span><i class="fas fa-clock"></i> {{ selectedSlot?.hora_inicio }} a {{ selectedSlot?.hora_fin }} ({{ selectedSlot?.duracion }} min)</span>
+                    </div>
+                </div>
+
+                <form (ngSubmit)="confirmarReservaGuest()" class="guest-booking-form">
+                    
+                    <div class="form-group">
+                        <label for="nombreGuest"><i class="fas fa-user"></i> Nombre y Apellido *</label>
+                        <input type="text" 
+                               id="nombreGuest"
+                               name="nombreGuest"
+                               [(ngModel)]="guestBookingData.nombre" 
+                               required 
+                               placeholder="Ej: Juan Pérez"
+                               class="form-control-neon">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telefonoGuest"><i class="fab fa-whatsapp"></i> WhatsApp / Teléfono *</label>
+                        <input type="tel" 
+                               id="telefonoGuest"
+                               name="telefonoGuest"
+                               [(ngModel)]="guestBookingData.telefono" 
+                               required 
+                               placeholder="Ej: +56 9 1234 5678"
+                               class="form-control-neon">
+                        <small class="field-hint">Te enviaremos la confirmación y recordatorio a este número.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailGuest"><i class="fas fa-envelope"></i> Correo Electrónico (Opcional)</label>
+                        <input type="email" 
+                               id="emailGuest"
+                               name="emailGuest"
+                               [(ngModel)]="guestBookingData.email" 
+                               placeholder="Ej: juan@gmail.com"
+                               class="form-control-neon">
+                        <small class="field-hint">Para recibir el comprobante de reserva en tu bandeja de entrada.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-credit-card"></i> Método de Pago</label>
+                        <div class="payment-options-grid">
+                            <label class="payment-opt-pill" [class.selected]="guestBookingData.metodoPago === 'club'">
+                                <input type="radio" name="metodoPago" value="club" [(ngModel)]="guestBookingData.metodoPago">
+                                <i class="fas fa-store"></i> Pagar en la Recepción del Club
+                            </label>
+                            <label class="payment-opt-pill" [class.selected]="guestBookingData.metodoPago === 'transferencia'">
+                                <input type="radio" name="metodoPago" value="transferencia" [(ngModel)]="guestBookingData.metodoPago">
+                                <i class="fas fa-money-bill-transfer"></i> Transferencia
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notasGuest"><i class="fas fa-comment-dots"></i> Notas o Peticiones (Opcional)</label>
+                        <input type="text" 
+                               id="notasGuest"
+                               name="notasGuest"
+                               [(ngModel)]="guestBookingData.notas" 
+                               placeholder="Ej: Necesitamos arriendo de palas y pelotas"
+                               class="form-control-neon">
+                    </div>
+
+                    <div class="modal-footer-btns">
+                        <button type="button" class="btn-cancel-modal" (click)="cerrarModalReserva()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-confirm-reserve" [disabled]="isSubmittingBooking">
+                            <span *ngIf="!isSubmittingBooking">
+                                <i class="fas fa-check-circle"></i> Confirmar Reserva
+                            </span>
+                            <span *ngIf="isSubmittingBooking">
+                                <i class="fas fa-spinner fa-spin"></i> Confirmando...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- MODAL 2: INSCRIPCIÓN A TORNEO SIN LOGIN                  -->
+    <!-- ======================================================== -->
+    <div *ngIf="showTournamentModal" class="modal-backdrop-fade" (click)="cerrarModalTorneo()">
+        <div class="modal-guest-box" (click)="$event.stopPropagation()">
+            
+            <button class="modal-close-btn" (click)="cerrarModalTorneo()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- VISTA DE INSCRIPCIÓN EXITOSA -->
+            <div *ngIf="tournamentSuccessData" class="success-voucher-view">
+                <div class="success-badge-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <h3>¡Inscripción Recibida! 🏆</h3>
+                <p class="voucher-sub">La pareja <strong>{{ tournamentSuccessData.pareja }}</strong> ha quedado registrada en <strong>{{ tournamentSuccessData.torneo }}</strong>.</p>
+
+                <div class="voucher-actions">
+                    <a *ngIf="tournamentSuccessData.whatsapp_url" 
+                       [href]="tournamentSuccessData.whatsapp_url" 
+                       target="_blank" 
+                       class="btn-wa-confirm">
+                        <i class="fab fa-whatsapp"></i> Notificar a la Organización por WhatsApp
+                    </a>
+                    <button class="btn-finish-cta" (click)="cerrarModalTorneo()">
+                        Aceptar
+                    </button>
+                </div>
+            </div>
+
+            <!-- FORMULARIO DE INSCRIPCIÓN -->
+            <div *ngIf="!tournamentSuccessData" class="booking-form-view">
+                
+                <div class="modal-form-header">
+                    <div class="header-icon-court">🏆</div>
+                    <div>
+                        <h3>Inscripción a Torneo / Americano</h3>
+                        <p>Inscribe a tu pareja de pádel en {{ selectedTournament?.nombre }}.</p>
+                    </div>
+                </div>
+
+                <div class="slot-summary-card">
+                    <div class="sum-row">
+                        <span class="sum-court">{{ selectedTournament?.nombre }}</span>
+                        <span class="sum-price" *ngIf="selectedTournament?.precio">$ {{ selectedTournament?.precio | number:'1.0-0' }}</span>
+                    </div>
+                    <div class="sum-meta">
+                        <span><i class="fas fa-calendar-day"></i> Inicio: {{ selectedTournament?.fecha_inicio | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                </div>
+
+                <form (ngSubmit)="confirmarInscripcionTorneo()" class="guest-booking-form">
+                    
+                    <h4 class="form-section-title">🎾 Jugador 1 (Titular)</h4>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label>Nombre y Apellido *</label>
+                            <input type="text" name="j1Nombre" [(ngModel)]="guestTournamentData.j1Nombre" required placeholder="Tu nombre" class="form-control-neon">
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono / WhatsApp *</label>
+                            <input type="tel" name="j1Telefono" [(ngModel)]="guestTournamentData.j1Telefono" required placeholder="+56 9..." class="form-control-neon">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Correo Electrónico (Opcional)</label>
+                        <input type="email" name="j1Email" [(ngModel)]="guestTournamentData.j1Email" placeholder="correo@gmail.com" class="form-control-neon">
+                    </div>
+
+                    <h4 class="form-section-title">🎾 Jugador 2 (Pareja)</h4>
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label>Nombre y Apellido *</label>
+                            <input type="text" name="j2Nombre" [(ngModel)]="guestTournamentData.j2Nombre" required placeholder="Nombre de tu pareja" class="form-control-neon">
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono (Opcional)</label>
+                            <input type="tel" name="j2Telefono" [(ngModel)]="guestTournamentData.j2Telefono" placeholder="+56 9..." class="form-control-neon">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nombre de la Pareja (Opcional)</label>
+                        <input type="text" name="nombrePareja" [(ngModel)]="guestTournamentData.nombrePareja" placeholder="Ej: Los Voleadores" class="form-control-neon">
+                    </div>
+
+                    <div class="modal-footer-btns">
+                        <button type="button" class="btn-cancel-modal" (click)="cerrarModalTorneo()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-confirm-reserve" [disabled]="isSubmittingTournament">
+                            <span *ngIf="!isSubmittingTournament">
+                                <i class="fas fa-trophy"></i> Inscribir Pareja
+                            </span>
+                            <span *ngIf="isSubmittingTournament">
+                                <i class="fas fa-spinner fa-spin"></i> Inscribiendo...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
     </div>
 
 </div>
