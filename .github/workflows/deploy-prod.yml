@@ -29,7 +29,18 @@ jobs:
 
       - name: 🚀 Sincronizar dist/ al Servidor (Ferozo)
         run: |
-          sudo apt-get update && sudo apt-get install -y lftp
+          if ! command -v lftp &> /dev/null; then
+            echo "Configurando DNS de respaldo..."
+            sudo bash -c 'echo "nameserver 8.8.8.8" >> /etc/resolv.conf'
+            sudo bash -c 'echo "nameserver 1.1.1.1" >> /etc/resolv.conf'
+            for i in 1 2 3 4 5; do
+              echo "Intento $i de instalación de lftp..."
+              sudo apt-get update -y && sudo apt-get install -y --fix-missing lftp && break || {
+                echo "Intento $i falló por red/DNS. Reintentando en 5 segundos..."
+                sleep 5
+              }
+            done
+          fi
           lftp -u "${{ secrets.SFTP_USERNAME || 'c2632100' }},${{ secrets.SFTP_PASSWORD }}" -p 21 ${{ secrets.SFTP_SERVER || 'c2632100.ferozo.com' }} << 'EOF'
           set ftp:ssl-allow yes
           set ftp:ssl-protect-data no
