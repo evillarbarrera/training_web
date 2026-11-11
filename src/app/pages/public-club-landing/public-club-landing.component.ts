@@ -80,6 +80,11 @@ export class PublicClubLandingComponent implements OnInit {
     return this.clubData?.landing_banner || 'assets/images/padel-court-hero.jpg';
   }
 
+  get clubInitials(): string {
+    const name = this.clubData?.nombre || 'Padel';
+    return name.slice(0, 2).toUpperCase();
+  }
+
   get shareableLink(): string {
     if (typeof window !== 'undefined') {
       return `${window.location.origin}/c/${this.slug || this.clubData?.landing_slug || this.clubData?.id}`;

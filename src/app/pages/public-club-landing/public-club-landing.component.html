@@ -74,7 +74,7 @@
                         <div class="avatar-ring-glow">
                             <img *ngIf="clubData.logo_url" [src]="clubData.logo_url" [alt]="clubData.nombre" class="club-profile-img">
                             <div *ngIf="!clubData.logo_url" class="club-profile-fallback">
-                                <span class="club-initials">{{ (clubData.nombre || 'Padel') | slice:0:2 | uppercase }}</span>
+                                <span class="club-initials">{{ clubInitials }}</span>
                                 <span class="padel-emoji">🎾</span>
                             </div>
                         </div>
