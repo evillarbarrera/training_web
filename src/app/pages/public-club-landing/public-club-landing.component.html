@@ -37,7 +37,8 @@
             <div class="container navbar-flex">
                 <!-- Izquierda: Logo y Nombre del Club -->
                 <div class="navbar-logo-brand">
-                    <img [src]="clubData.logo_url || 'assets/images/logo-circular.png'" [alt]="clubData.nombre" class="app-logo-img">
+                    <img *ngIf="clubData.logo_url" [src]="clubData.logo_url" [alt]="clubData.nombre" class="app-logo-img">
+                    <div *ngIf="!clubData.logo_url" class="app-logo-fallback">🎾</div>
                     <span class="app-brand-name">{{ clubData.nombre }}</span>
                 </div>
 
@@ -71,7 +72,11 @@
                     <!-- Foto de Perfil del Club (Izquierda) -->
                     <div class="profile-avatar-col">
                         <div class="avatar-ring-glow">
-                            <img [src]="clubData.logo_url || 'assets/images/logo-circular.png'" [alt]="clubData.nombre" class="club-profile-img">
+                            <img *ngIf="clubData.logo_url" [src]="clubData.logo_url" [alt]="clubData.nombre" class="club-profile-img">
+                            <div *ngIf="!clubData.logo_url" class="club-profile-fallback">
+                                <span class="club-initials">{{ (clubData.nombre || 'Padel') | slice:0:2 | uppercase }}</span>
+                                <span class="padel-emoji">🎾</span>
+                            </div>
                         </div>
                         <span class="verified-badge-pill">
                             <i class="fas fa-check-circle"></i> Verificado
