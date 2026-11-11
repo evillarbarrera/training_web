@@ -457,7 +457,7 @@
                                     </td>
                                     <td class="td-player">
                                         <div class="player-info-flex">
-                                            <img [src]="r.foto || 'assets/images/placeholder_avatar.png'" class="player-photo" alt="Avatar">
+                                            <img [src]="r.foto || 'assets/images/placeholder_avatar.png'" class="player-photo" alt="Avatar" (error)="onPlayerPhotoError($event)">
                                             <span class="player-name">{{ r.nombre }}</span>
                                         </div>
                                     </td>

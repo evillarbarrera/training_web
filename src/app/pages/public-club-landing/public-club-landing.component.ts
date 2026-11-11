@@ -88,6 +88,12 @@ export class PublicClubLandingComponent implements OnInit {
     this.logoHasError = true;
   }
 
+  onPlayerPhotoError(event: any): void {
+    if (event?.target) {
+      event.target.src = 'assets/images/placeholder_avatar.png';
+    }
+  }
+
   get colorPrimary(): string {
     return this.clubData?.landing_color_primary || '#0b0f19';
   }
@@ -303,7 +309,10 @@ export class PublicClubLandingComponent implements OnInit {
           this.clubData = res.club;
           this.canchas = res.canchas || [];
           this.americanos = res.americanos || [];
-          this.ranking = res.ranking || [];
+          this.ranking = (res.ranking || []).map((r: any) => ({
+            ...r,
+            foto: this.assetService.getAssetUrl(r.foto, 'perfil')
+          }));
 
           // Cargar disponibilidad de horarios en vivo para la fecha seleccionada
           this.cargarDisponibilidad();
