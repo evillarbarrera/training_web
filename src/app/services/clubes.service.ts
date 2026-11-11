@@ -473,10 +473,9 @@ export class ClubesService {
         });
     }
 
-    cancelReserva(reservaId: number): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/clubes/cancel_reserva.php`, {
-            reserva_id: reservaId
-        }, {
+    cancelReserva(payloadOrId: any): Observable<any> {
+        const body = (typeof payloadOrId === 'object' && payloadOrId !== null) ? payloadOrId : { reserva_id: payloadOrId };
+        return this.http.post<any>(`${this.apiUrl}/clubes/cancel_reserva.php`, body, {
             headers: this.getHeaders()
         });
     }
@@ -581,6 +580,12 @@ export class ClubesService {
 
     anularRestaurarPuntosTorneo(payload: { usuario_id: number; torneo_id: number; puntos_descontar: number; categoria: string; accion: 'anular' | 'restaurar' }): Observable<any> {
         return this.http.post<any>(`${this.apiUrl}/torneos/eliminar_puntos_torneo_jugador.php`, payload, {
+            headers: this.getHeaders()
+        });
+    }
+
+    limpiarRankingClub(clubId: number): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/torneos/limpiar_ranking_club.php`, { club_id: clubId }, {
             headers: this.getHeaders()
         });
     }
@@ -856,6 +861,22 @@ export class ClubesService {
         let url = `${this.apiUrl}/clubes/get_public_club_landing.php?slug=${encodeURIComponent(slug)}`;
         if (preview) url += '&preview=1';
         return this.http.get<any>(url);
+    }
+
+    getDisponibilidadPublica(slugOrId: string | number, fecha: string): Observable<any> {
+        let param = typeof slugOrId === 'number' ? `club_id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
+        let url = `${this.apiUrl}/clubes/get_disponibilidad_publica.php?${param}&fecha=${encodeURIComponent(fecha)}`;
+        return this.http.get<any>(url);
+    }
+
+    reservarPublicaGuest(payload: any): Observable<any> {
+        let url = `${this.apiUrl}/clubes/reserva_publica_guest.php`;
+        return this.http.post<any>(url, payload);
+    }
+
+    inscribirTorneoGuest(payload: any): Observable<any> {
+        let url = `${this.apiUrl}/torneos/inscripcion_torneo_guest.php`;
+        return this.http.post<any>(url, payload);
     }
 
     // MATCHMAKING & PREFERENCIAS HORARIAS

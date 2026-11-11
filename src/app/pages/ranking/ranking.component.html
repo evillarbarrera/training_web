@@ -30,9 +30,18 @@
                     <p class="subtitle">Clasificación deportiva acumulada según rendimiento en competencias y torneos oficiales.</p>
                 </div>
             </div>
-            <div class="header-badge-season">
-                <span class="season-dot"></span>
-                <span>Temporada Activa ⚡</span>
+            <div class="header-right-actions">
+                <button type="button" 
+                        class="btn-reset-ranking" 
+                        *ngIf="isAdmin"
+                        (click)="limpiarRankingClub()"
+                        title="Limpiar puntos y reiniciar ranking para este club">
+                    🧹 Limpiar Ranking del Club
+                </button>
+                <div class="header-badge-season">
+                    <span class="season-dot"></span>
+                    <span>Temporada Activa ⚡</span>
+                </div>
             </div>
         </div>
 

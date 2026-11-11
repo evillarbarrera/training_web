@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MysqlService } from '../../services/mysql.service';
@@ -17,20 +17,67 @@ Chart.register(...registerables);
   templateUrl: './jugador-home.component.html',
   styleUrls: ['./jugador-home.component.scss']
 })
-export class JugadorHomeComponent implements OnInit {
+export class JugadorHomeComponent implements OnInit, OnDestroy {
   jugadorNombre = 'Jugador';
   jugadorFoto = '';
+  greeting = '¡Hola de nuevo!';
+  diaSemana = '';
+  fechaHoyFormatted = '';
+
   stats: any = {
     pagadas: 0,
     reservadas: 0,
     disponibles: 0,
     grupales: 0,
-    pendientes: 0
+    pendientes: 0,
+    futuras: 0
   };
+
   packsDetalle: any[] = [];
+  proximaClase: any = null;
   isLoading = true;
   userId: number | null = null;
-  chart: any;
+
+  // Paginación de Packs
+  packCurrentPage = 1;
+  packPageSize = 3;
+
+  get paginatedPacks(): any[] {
+    const startIndex = (this.packCurrentPage - 1) * this.packPageSize;
+    return this.packsDetalle.slice(startIndex, startIndex + this.packPageSize);
+  }
+
+  get totalPackPages(): number {
+    return Math.ceil(this.packsDetalle.length / this.packPageSize) || 1;
+  }
+
+  getPagesArray(): number[] {
+    return Array.from({ length: this.totalPackPages }, (_, i) => i + 1);
+  }
+
+  prevPackPage(): void {
+    if (this.packCurrentPage > 1) {
+      this.packCurrentPage--;
+    }
+  }
+
+  nextPackPage(): void {
+    if (this.packCurrentPage < this.totalPackPages) {
+      this.packCurrentPage++;
+    }
+  }
+
+  goToPackPage(page: number): void {
+    if (page >= 1 && page <= this.totalPackPages) {
+      this.packCurrentPage = page;
+    }
+  }
+
+  // Evaluaciones y Rendimiento
+  hasEvaluaciones = false;
+  promedioGeneral: number | null = null;
+  chart: any = null;
+  private chartData: { labels: string[], values: number[] } | null = null;
 
   constructor(
     private mysqlService: MysqlService,
@@ -41,6 +88,8 @@ export class JugadorHomeComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.updateGreetingAndDate();
+
     this.userId = Number(localStorage.getItem('userId'));
     const userRole = localStorage.getItem('userRole') || '';
 
@@ -63,12 +112,36 @@ export class JugadorHomeComponent implements OnInit {
     this.loadEvaluaciones();
   }
 
+  ngOnDestroy(): void {
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
+  }
+
+  updateGreetingAndDate(): void {
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 12) {
+      this.greeting = 'Buenos días';
+    } else if (hour < 20) {
+      this.greeting = 'Buenas tardes';
+    } else {
+      this.greeting = 'Buenas noches';
+    }
+
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    this.diaSemana = days[now.getDay()];
+    this.fechaHoyFormatted = `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`;
+  }
+
   loadStats(): void {
     if (!this.userId) return;
 
     this.mysqlService.getPerfil(this.userId).subscribe({
       next: (res: any) => {
-        if (res.success) {
+        if (res.success && res.user) {
           this.jugadorNombre = res.user.nombre || 'Jugador';
           this.jugadorFoto = res.user.foto_perfil || '';
         }
@@ -88,15 +161,25 @@ export class JugadorHomeComponent implements OnInit {
         }
 
         if (packs) {
-          this.stats.pagadas = parseInt(packs.pagadas || packs.pagada) || 0;
-          this.stats.reservadas = parseInt(packs.reservadas || packs.reservada) || 0;
-          this.stats.disponibles = parseInt(packs.disponibles || packs.disponible) || 0;
-          this.stats.grupales = parseInt(packs.grupales || packs.grupal) || 0;
-          this.stats.pendientes = parseInt(packs.pendientes || packs.pendiente) || 0;
+          this.stats.pagadas = parseInt(packs.pagadas || packs.pagada, 10) || 0;
+          this.stats.reservadas = parseInt(packs.reservadas || packs.reservada, 10) || 0;
+          this.stats.disponibles = parseInt(packs.disponibles || packs.disponible, 10) || 0;
+          this.stats.grupales = parseInt(packs.grupales || packs.grupal, 10) || 0;
+          this.stats.pendientes = parseInt(packs.pendientes || packs.pendiente, 10) || 0;
+          this.stats.futuras = parseInt(packs.futuras || packs.futura, 10) || 0;
           this.packsDetalle = packs.detalle || [];
         }
 
+        if (res && res.prox_clase) {
+          this.proximaClase = res.prox_clase;
+        }
+
         this.isLoading = false;
+
+        // Si las evaluaciones cargaron antes de los stats, renderizar gráfico
+        if (this.chartData) {
+          setTimeout(() => this.renderChart(this.chartData!.labels, this.chartData!.values), 120);
+        }
       },
       error: (err: any) => {
         console.error('Error loading stats:', err);
@@ -105,43 +188,63 @@ export class JugadorHomeComponent implements OnInit {
     });
   }
 
-  loadEvaluaciones() {
+  loadEvaluaciones(): void {
     if (!this.userId) return;
     this.evaluacionService.getEvaluaciones(this.userId).subscribe({
       next: (data) => {
         if (data && data.length > 0) {
-          // Sort by date ascending
           const sorted = data.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-          const labels = sorted.map(e => e.fecha);
-          const values = sorted.map(e => Number(e.promedio_general));
-          this.renderChart(labels, values);
+          const labels = sorted.map(e => {
+            const parts = (e.fecha || '').split('-');
+            return parts.length >= 3 ? `${parts[2]}/${parts[1]}` : e.fecha;
+          });
+          const values = sorted.map(e => Number(e.promedio_general) || 0);
+
+          this.chartData = { labels, values };
+          this.hasEvaluaciones = true;
+
+          const lastVal = values[values.length - 1];
+          this.promedioGeneral = Number(lastVal.toFixed(1));
+
+          if (!this.isLoading) {
+            setTimeout(() => this.renderChart(labels, values), 120);
+          }
+        } else {
+          this.hasEvaluaciones = false;
         }
       },
-      error: (err) => console.error(err)
+      error: (err) => {
+        console.error('Error loading evaluaciones:', err);
+        this.hasEvaluaciones = false;
+      }
     });
   }
 
-  renderChart(labels: string[], data: number[]) {
+  renderChart(labels: string[], data: number[]): void {
     const ctx = document.getElementById('progressChart') as HTMLCanvasElement;
     if (!ctx) return;
 
-    if (this.chart) this.chart.destroy();
+    if (this.chart) {
+      this.chart.destroy();
+    }
 
     this.chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          label: 'Evolución de Rendimiento',
+          label: 'Nivel Técnico',
           data: data,
-          borderColor: '#ccff00',
-          backgroundColor: 'rgba(204, 255, 0, 0.1)',
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
           borderWidth: 3,
-          tension: 0.4,
+          tension: 0.35,
           fill: true,
-          pointBackgroundColor: '#111',
-          pointBorderColor: '#ccff00',
-          pointRadius: 6
+          pointBackgroundColor: '#0f172a',
+          pointBorderColor: '#10b981',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
         }]
       },
       options: {
@@ -150,28 +253,31 @@ export class JugadorHomeComponent implements OnInit {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#111',
-            titleColor: '#ccff00',
-            bodyColor: '#fff',
+            backgroundColor: '#0f172a',
+            titleColor: '#34d399',
+            bodyColor: '#ffffff',
             padding: 10,
-            displayColors: false
+            displayColors: false,
+            callbacks: {
+              label: (context) => `Puntuación: ${context.parsed.y} / 10`
+            }
           }
         },
         scales: {
           y: {
             beginAtZero: true,
             max: 10,
-            grid: { color: '#f0f0f0' }
+            ticks: { stepSize: 2, color: '#94a3b8' },
+            grid: { color: 'rgba(148, 163, 184, 0.15)' }
           },
           x: {
+            ticks: { color: '#94a3b8' },
             grid: { display: false }
           }
         }
       }
     });
   }
-
-
 
   irAReservas(): void {
     this.router.navigate(['/jugador-reservas']);
@@ -185,8 +291,20 @@ export class JugadorHomeComponent implements OnInit {
     this.router.navigate(['/clubes-reservar']);
   }
 
+  irATorneos(): void {
+    this.router.navigate(['/mis-torneos']);
+  }
+
+  irAPartidos(): void {
+    this.router.navigate(['/mis-partidos']);
+  }
+
+  irAHabilidades(): void {
+    this.router.navigate(['/mis-habilidades']);
+  }
+
   irAPacks(): void {
-    this.popupService.info('Información', 'Para adquirir un nuevo pack, debes seleccionar un horario en "Agendar Clase" una vez hayas completado tus clases actuales.');
+    this.router.navigate(['/jugador-packs']);
   }
 
   irAPerfil(): void {
@@ -199,3 +317,4 @@ export class JugadorHomeComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 }
+

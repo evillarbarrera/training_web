@@ -957,6 +957,7 @@
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
+    user-select: none;
 
     .tbc-time-range {
       display: flex;

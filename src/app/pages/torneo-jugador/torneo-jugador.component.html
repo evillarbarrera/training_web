@@ -1,35 +1,90 @@
 <div class="dashboard-container">
-    <app-sidebar [activePage]="'torneo-jugador'" [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto"
+    <app-sidebar [activePage]="'mis-torneos'" [userId]="userId" [jugadorNombre]="userName" [jugadorFoto]="userFoto"
         [role]="userRole"></app-sidebar>
 
     <main class="main-content">
-        <!-- HEADER SECTION -->
-        <header class="content-header">
-            <div>
-                <h1>Torneos y Ligas</h1>
-                <p>Sigue tus partidos agendados, tablas de posiciones y explora nuevas competencias</p>
+        
+        <!-- ATHLETIC EXECUTIVE HEADER -->
+        <header class="dashboard-header">
+            <div class="header-main">
+                <div class="title-wrap">
+                    <div class="header-tag">
+                        <span class="pulse-dot"></span>
+                        CIRCUITO DE COMPETICIONES
+                    </div>
+                    <h1>Torneos y Ligas</h1>
+                    <p class="subtitle">Sigue tus partidos programados, tablas de posiciones y descubre nuevas competencias abiertas</p>
+                </div>
+
+                <!-- 4 ATHLETIC KPIS -->
+                <div class="kpi-ribbon">
+                    <div class="kpi-card active-tournaments-card">
+                        <div class="kpi-icon-wrap">🏆</div>
+                        <div class="kpi-info">
+                            <span class="kpi-num">{{ misTorneosActivos.length }}</span>
+                            <span class="kpi-lbl">En Juego</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card next-match-card">
+                        <div class="kpi-icon-wrap">⚡</div>
+                        <div class="kpi-info">
+                            <span class="kpi-num time-highlight">{{ globalUpcomingMatch ? getMatchHoraDisplay(globalUpcomingMatch.match) : 'Sin fecha' }}</span>
+                            <span class="kpi-lbl">Próximo Cruce</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card history-card">
+                        <div class="kpi-icon-wrap">📜</div>
+                        <div class="kpi-info">
+                            <span class="kpi-num">{{ misTorneosHistorial.length }}</span>
+                            <span class="kpi-lbl">Historial</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card open-card">
+                        <div class="kpi-icon-wrap">🎾</div>
+                        <div class="kpi-info">
+                            <span class="kpi-num">{{ availableTournaments.length }}</span>
+                            <span class="kpi-lbl">Abiertos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" class="btn-explore-athletic" (click)="activeTab = 'disponibles'">
+                    <span class="icon-search">🔍</span>
+                    <span>Explorar Competencias</span>
+                </button>
             </div>
         </header>
 
-        <!-- MAIN NAVIGATION SEGMENTED TABS -->
-        <!-- MAIN NAVIGATION SEGMENTED TABS -->
+        <!-- MAIN NAVIGATION CAPSULE TABS -->
         <div class="main-tabs-nav">
-            <button class="tab-btn" [class.active]="activeTab === 'mis-torneos'" (click)="activeTab = 'mis-torneos'">
-                🏆 Competencias Activas
+            <button type="button" class="tab-btn" [class.active]="activeTab === 'mis-torneos'" (click)="activeTab = 'mis-torneos'">
+                <span class="tab-icon">🏆</span>
+                <span class="tab-title">Competencias Activas</span>
                 <span class="tab-counter-pill" *ngIf="misTorneosActivos.length > 0">{{ misTorneosActivos.length }}</span>
             </button>
-            <button class="tab-btn" [class.active]="activeTab === 'historial'" (click)="activeTab = 'historial'">
-                📜 Historial
+            <button type="button" class="tab-btn" [class.active]="activeTab === 'historial'" (click)="activeTab = 'historial'">
+                <span class="tab-icon">📜</span>
+                <span class="tab-title">Historial & Resultados</span>
                 <span class="tab-counter-pill history-pill" *ngIf="misTorneosHistorial.length > 0">{{ misTorneosHistorial.length }}</span>
             </button>
-            <button class="tab-btn" [class.active]="activeTab === 'disponibles'" (click)="activeTab = 'disponibles'">
-                🎾 Explorar Competencias Abiertas
+            <button type="button" class="tab-btn" [class.active]="activeTab === 'disponibles'" (click)="activeTab = 'disponibles'">
+                <span class="tab-icon">🎾</span>
+                <span class="tab-title">Explorar Competencias Abiertas</span>
+                <span class="tab-counter-pill open-pill" *ngIf="availableTournaments.length > 0">{{ availableTournaments.length }}</span>
             </button>
         </div>
 
-        <!-- TAB 1: MIS TORNEOS ACTIVOS -->
+        <!-- ============================================================ -->
+        <!-- TAB 1: MIS TORNEOS ACTIVOS                                   -->
+        <!-- ============================================================ -->
         <div *ngIf="activeTab === 'mis-torneos'" class="tab-content animate-in">
-            <!-- GLOBAL UPCOMING MATCH HERO BANNER -->
+            
+            <!-- GLOBAL UPCOMING MATCH HERO SPOTLIGHT -->
             <section class="upcoming-global-section" *ngIf="globalUpcomingMatch as item">
                 <div class="global-hero-card">
                     <div class="hero-top-bar">
@@ -47,23 +102,23 @@
                             <span class="meta-label">📅 FECHA</span>
                             <span class="meta-val">{{ getMatchFechaDisplay(item.match) }}</span>
                         </div>
-                        <div class="meta-card highlight-blue">
+                        <div class="meta-card highlight-time">
                             <span class="meta-label">⏰ HORA DE INICIO</span>
                             <span class="meta-val time-text">{{ getMatchHoraDisplay(item.match) }}</span>
                         </div>
-                        <div class="meta-card highlight-green">
+                        <div class="meta-card highlight-court">
                             <span class="meta-label">📍 CANCHA ASIGNADA</span>
                             <span class="meta-val court-text">{{ getMatchCanchaDisplay(item.match) }}</span>
                         </div>
                         <div class="meta-card" *ngIf="item.match.jornada_nombre || item.match.ronda_nombre || item.match.grupo_nombre">
-                            <span class="meta-label">🏆 FASE</span>
+                            <span class="meta-label">🏆 FASE / RONDA</span>
                             <span class="meta-val">{{ item.match.jornada_nombre || item.match.ronda_nombre || item.match.grupo_nombre }}</span>
                         </div>
                     </div>
 
                     <div class="hero-versus-row">
                         <div class="team-side team-1">
-                            <span class="team-label">TU PAREJA</span>
+                            <span class="team-label">TU PAREJA (TÚ)</span>
                             <span class="team-name">{{ getMatchTeamNames(item.match, item.torneo).team1 }}</span>
                         </div>
 
@@ -76,8 +131,9 @@
                     </div>
 
                     <div class="hero-footer-action">
-                        <button class="btn-hero-action" (click)="openCompeticionDetail(item.torneo)">
-                            📋 Ver Fixture & Posiciones Completas →
+                        <button type="button" class="btn-hero-action" (click)="openCompeticionDetail(item.torneo)">
+                            <span>📋 Ver Fixture & Posiciones Completas</span>
+                            <span class="arrow">➜</span>
                         </button>
                     </div>
                 </div>
@@ -93,90 +149,110 @@
             <div *ngIf="!isLoadingMyTournaments && misTorneosActivos.length === 0" class="empty-state-card">
                 <div class="empty-icon">🎾</div>
                 <h3>No estás inscrito en ninguna competencia activa actualmente</h3>
-                <p>Explora la pestaña de competencias disponibles para unirte a torneos o ligas con tu compañero.</p>
-                <button class="btn-primary-action" (click)="activeTab = 'disponibles'">Explorar Torneos Abiertos →</button>
+                <p>Explora la pestaña de competencias disponibles para unirte a torneos, ligas o americanos con tu compañero.</p>
+                <button type="button" class="btn-primary-action" (click)="activeTab = 'disponibles'">
+                    Explorar Competencias Abiertas ➜
+                </button>
             </div>
 
             <!-- MY ACTIVE TOURNAMENTS LIST -->
             <div *ngIf="!isLoadingMyTournaments && misTorneosActivos.length > 0" class="my-tournaments-list">
-                <h3 class="section-subtitle">Competencias En Juego</h3>
+                <div class="section-header-compact">
+                    <h3 class="section-subtitle">Competencias En Juego</h3>
+                    <span class="subtitle-count">{{ misTorneosActivos.length }} inscripciones activas</span>
+                </div>
 
-                <div *ngFor="let t of misTorneosActivos" class="tournament-card-v2">
-                    <div class="card-main-info">
-                        <div class="badges-group">
-                            <span class="badge-status enrolled">✓ EN JUEGO</span>
-                            <span class="badge-type">{{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}</span>
-                            <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Categoría: {{ t.categoria_nombre }}</span>
-                            <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                <div class="tournaments-stack">
+                    <div *ngFor="let t of misTorneosActivos; trackBy: trackById" class="tournament-card-athletic">
+                        
+                        <!-- Top Info Bar -->
+                        <div class="card-main-info">
+                            <div class="badges-group">
+                                <span class="badge-status enrolled">✓ EN JUEGO</span>
+                                <span class="badge-type" [ngClass]="(t.tipo_torneo || t.tipo || t.table_source || 'torneo').toLowerCase()">
+                                    {{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}
+                                </span>
+                                <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Cat. {{ t.categoria_nombre }}</span>
+                                <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                            </div>
+                            
+                            <h2 class="t-name">{{ t.nombre }}</h2>
+                            
+                            <div class="t-meta-row">
+                                <span class="t-location">📍 {{ t.club_nombre }}</span>
+                                <span *ngIf="t.nombre_pareja" class="partner-tag">👥 Pareja: <strong>{{ t.nombre_pareja }}</strong></span>
+                            </div>
                         </div>
-                        <h2 class="t-name">{{ t.nombre }}</h2>
-                        <p class="t-location">
-                            📍 {{ t.club_nombre }}
-                            <span *ngIf="t.nombre_pareja" class="partner-text">• 👥 {{ t.nombre_pareja }}</span>
-                        </p>
-                    </div>
 
-                    <!-- UPCOMING MATCH HIGHLIGHT PREVIEW FOR THIS COMPETITION -->
-                    <div class="card-match-preview" *ngIf="getUpcomingMatch(t) as match">
-                        <div class="preview-header">
-                            <span class="preview-tag">⚡ PRÓXIMO PARTIDO PROGRAMADO</span>
-                            <span class="preview-phase" *ngIf="match.jornada_nombre || match.ronda_nombre || match.grupo_nombre">
-                                {{ match.jornada_nombre || match.ronda_nombre || match.grupo_nombre }}
-                            </span>
+                        <!-- UPCOMING MATCH HIGHLIGHT PREVIEW FOR THIS COMPETITION -->
+                        <div class="card-match-preview" *ngIf="getUpcomingMatch(t) as match">
+                            <div class="preview-header">
+                                <span class="preview-tag">⚡ PRÓXIMO PARTIDO</span>
+                                <span class="preview-phase" *ngIf="match.jornada_nombre || match.ronda_nombre || match.grupo_nombre">
+                                    {{ match.jornada_nombre || match.ronda_nombre || match.grupo_nombre }}
+                                </span>
+                            </div>
+                            <div class="preview-teams-row">
+                                <span class="p-t1">{{ getMatchTeamNames(match, t).team1 }}</span>
+                                <span class="p-vs">VS</span>
+                                <span class="p-t2">{{ getMatchTeamNames(match, t).team2 }}</span>
+                            </div>
+                            <div class="preview-meta-row">
+                                <span>📅 {{ getMatchFechaDisplay(match) }}</span>
+                                <span>⏰ {{ getMatchHoraDisplay(match) }}</span>
+                                <span>📍 {{ getMatchCanchaDisplay(match) }}</span>
+                            </div>
                         </div>
-                        <div class="preview-teams-row">
-                            <span class="p-t1">{{ getMatchTeamNames(match, t).team1 }}</span>
-                            <span class="p-vs">VS</span>
-                            <span class="p-t2">{{ getMatchTeamNames(match, t).team2 }}</span>
-                        </div>
-                        <div class="preview-meta-row">
-                            <span>📅 {{ getMatchFechaDisplay(match) }}</span>
-                            <span>⏰ {{ getMatchHoraDisplay(match) }}</span>
-                            <span>📍 {{ getMatchCanchaDisplay(match) }}</span>
-                        </div>
-                    </div>
 
-                    <!-- MATCHES ACCORDION LIST -->
-                    <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
-                        <details class="matches-accordion">
-                            <summary class="matches-summary">
-                                🎾 Ver mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }} en esta competencia
-                            </summary>
-                            <div class="mini-matches-grid">
-                                <div *ngFor="let m of t.partidos" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
-                                    <div class="mm-top">
-                                        <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
-                                        <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
-                                            {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Pendiente') }}
-                                        </span>
-                                    </div>
-                                    <div class="mm-teams">
-                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
-                                        <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
-                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
-                                    </div>
-                                    <div class="mm-meta">
-                                        📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                        <!-- MATCHES ACCORDION LIST -->
+                        <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
+                            <details class="matches-accordion">
+                                <summary class="matches-summary">
+                                    <span>🎾 Ver mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }} en esta competencia</span>
+                                    <span class="chevron-arrow">▼</span>
+                                </summary>
+                                <div class="mini-matches-grid">
+                                    <div *ngFor="let m of t.partidos; trackBy: trackById" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
+                                        <div class="mm-top">
+                                            <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
+                                            <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
+                                                {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Pendiente') }}
+                                            </span>
+                                        </div>
+                                        <div class="mm-teams">
+                                            <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
+                                            <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
+                                            <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
+                                        </div>
+                                        <div class="mm-meta">
+                                            📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </details>
-                    </div>
+                            </details>
+                        </div>
 
-                    <div class="card-actions-group">
-                        <button class="btn-action-primary" (click)="openCompeticionDetail(t)">
-                            📋 Ver Detalle & Posiciones
-                        </button>
-                        <button class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
-                            🌳 Ver Cuadro
-                        </button>
+                        <!-- Actions -->
+                        <div class="card-actions-group">
+                            <button type="button" class="btn-action-primary" (click)="openCompeticionDetail(t)">
+                                📋 Ver Fixture & Posiciones
+                            </button>
+                            <button type="button" class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
+                                🌳 Ver Cuadro Playoff
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- TAB 2: HISTORIAL DE COMPETENCIAS -->
+        <!-- ============================================================ -->
+        <!-- TAB 2: HISTORIAL DE COMPETENCIAS                              -->
+        <!-- ============================================================ -->
         <div *ngIf="activeTab === 'historial'" class="tab-content animate-in">
+            
             <!-- SPINNER -->
             <div *ngIf="isLoadingMyTournaments" class="loading-spinner-box">
                 <span class="spinner"></span>
@@ -187,97 +263,125 @@
             <div *ngIf="!isLoadingMyTournaments && misTorneosHistorial.length === 0" class="empty-state-card">
                 <div class="empty-icon">📜</div>
                 <h3>Sin competencias en el historial</h3>
-                <p>Aquí aparecerán tus torneos y ligas finalizados o cerrados.</p>
+                <p>Aquí aparecerán tus torneos y ligas finalizados o cerrados una vez completados.</p>
             </div>
 
             <!-- HISTORIAL LIST -->
             <div *ngIf="!isLoadingMyTournaments && misTorneosHistorial.length > 0" class="my-tournaments-list">
-                <h3 class="section-subtitle">Competencias Finalizadas / Cerradas</h3>
+                <div class="section-header-compact">
+                    <h3 class="section-subtitle">Competencias Finalizadas / Cerradas</h3>
+                    <span class="subtitle-count">Página {{ historyPage }} de {{ totalHistoryPages }} ({{ misTorneosHistorial.length }} competencias)</span>
+                </div>
 
-                <div *ngFor="let t of paginatedHistoryTournaments" class="tournament-card-v2 history-card">
-                    <div class="card-main-info">
-                        <div class="badges-group">
-                            <span class="badge-status closed">🏁 FINALIZADO</span>
-                            <span class="badge-type">{{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}</span>
-                            <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Categoría: {{ t.categoria_nombre }}</span>
-                            <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                <div class="tournaments-stack">
+                    <div *ngFor="let t of paginatedHistoryTournaments; trackBy: trackById" class="tournament-card-athletic history-card">
+                        
+                        <div class="card-main-info">
+                            <div class="badges-group">
+                                <span class="badge-status closed">🏁 FINALIZADO</span>
+                                <span class="badge-type" [ngClass]="(t.tipo_torneo || t.tipo || t.table_source || 'torneo').toLowerCase()">
+                                    {{ (t.tipo_torneo || t.tipo || t.table_source || 'Torneo') | uppercase }}
+                                </span>
+                                <span class="badge-category" *ngIf="t.categoria_nombre">🏷️ Cat. {{ t.categoria_nombre }}</span>
+                                <span class="badge-matches" *ngIf="t.partidos?.length">🎾 {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                            </div>
+                            
+                            <h2 class="t-name">{{ t.nombre }}</h2>
+                            
+                            <div class="t-meta-row">
+                                <span class="t-location">📍 {{ t.club_nombre }}</span>
+                                <span *ngIf="t.nombre_pareja" class="partner-tag">👥 Pareja: <strong>{{ t.nombre_pareja }}</strong></span>
+                            </div>
                         </div>
-                        <h2 class="t-name">{{ t.nombre }}</h2>
-                        <p class="t-location">
-                            📍 {{ t.club_nombre }}
-                            <span *ngIf="t.nombre_pareja" class="partner-text">• 👥 {{ t.nombre_pareja }}</span>
-                        </p>
-                    </div>
 
-                    <!-- MATCHES ACCORDION LIST -->
-                    <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
-                        <details class="matches-accordion">
-                            <summary class="matches-summary">
-                                📜 Ver historial de mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}
-                            </summary>
-                            <div class="mini-matches-grid">
-                                <div *ngFor="let m of t.partidos" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
-                                    <div class="mm-top">
-                                        <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
-                                        <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
-                                            {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Finalizado') }}
-                                        </span>
-                                    </div>
-                                    <div class="mm-teams">
-                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
-                                        <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
-                                        <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
-                                    </div>
-                                    <div class="mm-meta">
-                                        📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                        <!-- MATCHES ACCORDION LIST -->
+                        <div class="card-matches-list-container" *ngIf="t.partidos && t.partidos.length > 0">
+                            <details class="matches-accordion">
+                                <summary class="matches-summary">
+                                    <span>📜 Ver historial de mis {{ t.partidos.length }} {{ t.partidos.length === 1 ? 'partido' : 'partidos' }}</span>
+                                    <span class="chevron-arrow">▼</span>
+                                </summary>
+                                <div class="mini-matches-grid">
+                                    <div *ngFor="let m of t.partidos; trackBy: trackById" class="mini-match-card" [class.win]="getMatchResult(m, t) === 'win'" [class.loss]="getMatchResult(m, t) === 'loss'" [class.draw]="getMatchResult(m, t) === 'draw'">
+                                        <div class="mm-top">
+                                            <span class="mm-phase">{{ m.jornada_nombre || m.grupo_nombre || m.ronda_nombre || ('Ronda ' + (m.ronda || '1')) }}</span>
+                                            <span class="mm-status-badge" [ngClass]="getMatchResult(m, t)">
+                                                {{ getMatchResult(m, t) === 'win' ? '✓ Victoria' : getMatchResult(m, t) === 'loss' ? '✕ Derrota' : (getMatchResult(m, t) === 'draw' ? '= Empate' : '⏳ Finalizado') }}
+                                            </span>
+                                        </div>
+                                        <div class="mm-teams">
+                                            <div class="mm-team-line">{{ getMatchTeamNames(m, t).team1 }}</div>
+                                            <div class="mm-score-line">{{ getMatchScore(m, t) }}</div>
+                                            <div class="mm-team-line">{{ getMatchTeamNames(m, t).team2 }}</div>
+                                        </div>
+                                        <div class="mm-meta">
+                                            📅 {{ getMatchFechaDisplay(m) }} • ⏰ {{ getMatchHoraDisplay(m) }} • 📍 {{ getMatchCanchaDisplay(m) }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </details>
-                    </div>
+                            </details>
+                        </div>
 
-                    <div class="card-actions-group">
-                        <button class="btn-action-primary" (click)="openCompeticionDetail(t)">
-                            📋 Ver Resultados & Tabla Final
-                        </button>
-                        <button class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
-                            🌳 Ver Cuadro Final
-                        </button>
+                        <div class="card-actions-group">
+                            <button type="button" class="btn-action-primary" (click)="openCompeticionDetail(t)">
+                                📋 Ver Resultados & Tabla Final
+                            </button>
+                            <button type="button" class="btn-action-secondary" *ngIf="t.tipo_torneo === 'v2' || t.table_source === 'v2'" (click)="viewTournamentBracket(t)">
+                                🌳 Ver Cuadro Final
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 
-                <!-- PAGINATION CONTROLS FOR HISTORIAL -->
-                <div class="pagination-footer-bar" *ngIf="totalHistoryPages > 1" style="margin-top: 16px;">
-                    <span class="page-info">Página {{ historyPage }} de {{ totalHistoryPages }} ({{ misTorneosHistorial.length }} competencias)</span>
-                    <div class="page-buttons">
-                        <button class="btn-page-nav" [disabled]="historyPage === 1" (click)="changeHistoryPage(historyPage - 1)">
-                            ◄ Anterior
-                        </button>
-                        <button class="btn-page-nav" [disabled]="historyPage === totalHistoryPages" (click)="changeHistoryPage(historyPage + 1)">
-                            Siguiente ►
-                        </button>
+                <!-- NUMERIC PAGINATION CONTROLS FOR HISTORIAL -->
+                <div class="pagination-bar-elite" *ngIf="totalHistoryPages > 1">
+                    <button type="button" class="pager-nav-btn" [disabled]="historyPage === 1" (click)="changeHistoryPage(historyPage - 1)">
+                        ◀ Anterior
+                    </button>
+
+                    <div class="page-pills">
+                        <ng-container *ngFor="let pg of visibleHistoryPages">
+                            <button 
+                                type="button" 
+                                class="pill-num" 
+                                *ngIf="pg !== '...'"
+                                [class.active]="pg === historyPage" 
+                                (click)="goToHistoryPage(pg)">
+                                {{ pg }}
+                            </button>
+                            <span class="pill-dots" *ngIf="pg === '...'">...</span>
+                        </ng-container>
                     </div>
+
+                    <button type="button" class="pager-nav-btn" [disabled]="historyPage === totalHistoryPages" (click)="changeHistoryPage(historyPage + 1)">
+                        Siguiente ▶
+                    </button>
                 </div>
             </div>
+
         </div>
 
-        <!-- TAB 2: EXPLORAR COMPETENCIAS DISPONIBLES -->
+        <!-- ============================================================ -->
+        <!-- TAB 3: EXPLORAR COMPETENCIAS DISPONIBLES                     -->
+        <!-- ============================================================ -->
         <div *ngIf="activeTab === 'disponibles'" class="tab-content animate-in">
             
             <!-- CLUBES CON COMPETENCIAS ACTIVAS -->
             <div class="clubs-discovery-section" *ngIf="clubesConCompetencias && clubesConCompetencias.length > 0">
                 <div class="section-header-row">
-                    <h3>🏛️ Clubes con Competencias Activas</h3>
-                    <span class="clubs-count-badge">{{ clubesConCompetencias.length }} clubes disponiendo competencias</span>
+                    <h3>🏛️ Clubes con Competencias Abiertas</h3>
+                    <span class="clubs-count-badge">{{ clubesConCompetencias.length }} {{ clubesConCompetencias.length === 1 ? 'club disponible' : 'clubes disponibles' }}</span>
                 </div>
+                
                 <div class="clubs-cards-grid">
-                    <div *ngFor="let club of clubesConCompetencias" 
+                    <div *ngFor="let club of clubesConCompetencias; trackBy: trackById" 
                          class="club-card-v2" 
                          [class.selected]="selectedClubId === club.id"
                          (click)="filterByClub(club.id)">
                         <div class="club-header">
                             <div class="club-logo-circle">
-                                <img [src]="club.logoUrl || club.logo || 'assets/fondo-cancha.png'" [alt]="club.nombre" (error)="$any($event.target).src = 'assets/fondo-cancha.png'">
+                                <img [src]="club.logoUrl || club.logo || 'assets/fondo-cancha.png'" [alt]="club.nombre" (error)="onClubImgError($event)">
                             </div>
                             <div class="club-info">
                                 <h4>{{ club.nombre }}</h4>
@@ -293,26 +397,26 @@
                 </div>
             </div>
 
-            <!-- FILTERS BAR -->
+            <!-- FILTERS TOOLBAR -->
             <div class="filters-bar-v2">
                 <div class="segmented-type-filters">
-                    <button [class.active]="selectedCompetitionFilter === 'todos'" (click)="selectedCompetitionFilter = 'todos'">Todos</button>
-                    <button [class.active]="selectedCompetitionFilter === 'torneo'" (click)="selectedCompetitionFilter = 'torneo'">🏆 Torneos</button>
-                    <button [class.active]="selectedCompetitionFilter === 'liga'" (click)="selectedCompetitionFilter = 'liga'">🛡️ Ligas</button>
-                    <button [class.active]="selectedCompetitionFilter === 'americano'" (click)="selectedCompetitionFilter = 'americano'">⚡ Americanos</button>
+                    <button type="button" [class.active]="selectedCompetitionFilter === 'todos'" (click)="selectedCompetitionFilter = 'todos'">Todos</button>
+                    <button type="button" [class.active]="selectedCompetitionFilter === 'torneo'" (click)="selectedCompetitionFilter = 'torneo'">🏆 Torneos</button>
+                    <button type="button" [class.active]="selectedCompetitionFilter === 'liga'" (click)="selectedCompetitionFilter = 'liga'">🛡️ Ligas</button>
+                    <button type="button" [class.active]="selectedCompetitionFilter === 'americano'" (click)="selectedCompetitionFilter = 'americano'">⚡ Americanos</button>
                 </div>
 
                 <div class="search-box-v2">
                     <span class="search-icon">🔍</span>
-                    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar por torneo, liga o club..." class="search-input-v2">
-                    <button class="clear-search-btn" *ngIf="searchTerm" (click)="searchTerm = ''">✕</button>
+                    <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar torneo, liga o club..." class="search-input-v2">
+                    <button type="button" class="clear-search-btn" *ngIf="searchTerm" (click)="searchTerm = ''">✕</button>
                 </div>
             </div>
 
             <!-- ACTIVE CLUB FILTER BANNER -->
             <div class="active-filter-banner" *ngIf="selectedClubId">
                 <span>📍 Filtrando por club: <strong>{{ getSelectedClubName() }}</strong></span>
-                <button class="btn-clear-filter" (click)="filterByClub(null)">Mostrar Todos los Clubes ✕</button>
+                <button type="button" class="btn-clear-filter" (click)="filterByClub(null)">Mostrar Todos los Clubes ✕</button>
             </div>
 
             <!-- SPINNER -->
@@ -323,12 +427,17 @@
 
             <!-- EMPTY STATE SEARCH -->
             <div *ngIf="!isLoading && filteredAvailableTournaments.length === 0" class="empty-state-card">
-                <p>No se encontraron competencias abiertas con los filtros seleccionados.</p>
+                <div class="empty-icon">🔍</div>
+                <h3>No se encontraron competencias</h3>
+                <p>No hay competencias abiertas con los filtros o término de búsqueda ingresado.</p>
+                <button type="button" class="btn-secondary-sm" (click)="selectedCompetitionFilter = 'todos'; selectedClubId = null; searchTerm = ''">
+                    Limpiar Filtros
+                </button>
             </div>
 
             <!-- COMPETITIONS GRID -->
             <div *ngIf="!isLoading && filteredAvailableTournaments.length > 0" class="competitions-grid-v2">
-                <div *ngFor="let t of filteredAvailableTournaments" class="comp-card-v2">
+                <div *ngFor="let t of filteredAvailableTournaments; trackBy: trackById" class="comp-card-v2">
                     <div class="comp-card-top">
                         <span class="type-pill-v2" [ngClass]="(t.table_source || t.tipo || '').toLowerCase()">
                             {{ (t.table_source || t.tipo || 'Competición') | uppercase }}
@@ -350,23 +459,31 @@
                             <span>💰 Precio:</span>
                             <strong class="price-text">{{ formatPrecio(t.precio) }}</strong>
                         </div>
+                        <div class="meta-row" *ngIf="!formatPrecio(t.precio)">
+                            <span>💰 Inscripción:</span>
+                            <strong class="price-free">GRATUITA</strong>
+                        </div>
                     </div>
 
                     <div class="comp-card-actions">
-                        <button class="btn-card-info" (click)="openCompeticionDetail(t)">
+                        <button type="button" class="btn-card-info" (click)="openCompeticionDetail(t)">
                             ℹ️ Ver Detalles
                         </button>
-                        <button class="btn-card-join" (click)="inscribirse(t)" [disabled]="isEnrolled(t)">
+                        <button type="button" class="btn-card-join" (click)="inscribirse(t)" [disabled]="isEnrolled(t)">
                             {{ isEnrolled(t) ? '✓ Inscrito' : '📝 Inscribirse' }}
                         </button>
                     </div>
                 </div>
             </div>
+
         </div>
 
-        <!-- COMPETITION DETAIL MODAL OVERLAY -->
-        <div class="modal-overlay" *ngIf="showDetailModal">
-            <div class="modal-card wide-modal">
+        <!-- ============================================================ -->
+        <!-- MODAL: COMPETITION DETAIL (INSCRITOS, FIXTURE, POSICIONES)   -->
+        <!-- ============================================================ -->
+        <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
+            <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
+                
                 <div class="modal-header-v2">
                     <div>
                         <div class="modal-badge-group">
@@ -378,7 +495,7 @@
                         <h2>{{ selectedCompeticionDetail?.nombre }}</h2>
                         <p class="modal-club-name">📍 {{ selectedCompeticionDetail?.club_nombre }}</p>
                     </div>
-                    <button class="btn-close-modal" (click)="closeDetailModal()">✕</button>
+                    <button type="button" class="btn-close-modal" (click)="closeDetailModal()">✕</button>
                 </div>
 
                 <div class="modal-body-v2" *ngIf="loadingCompDetail">
@@ -417,14 +534,14 @@
                         <div class="info-categories-section-v2" *ngIf="selectedCompeticionDetail.categorias && selectedCompeticionDetail.categorias.length > 0">
                             <h4>Categorías Abiertas</h4>
                             <div class="categories-pills-v2">
-                                <span *ngFor="let cat of selectedCompeticionDetail.categorias" class="cat-pill-v2">
+                                <span *ngFor="let cat of selectedCompeticionDetail.categorias; trackBy: trackById" class="cat-pill-v2">
                                     {{ cat.nombre }}
                                 </span>
                             </div>
                         </div>
 
                         <div class="modal-actions-v2">
-                            <button class="btn-primary-join" (click)="inscribirse(selectedCompeticionDetail)">
+                            <button type="button" class="btn-primary-join" (click)="inscribirse(selectedCompeticionDetail)">
                                 📝 Inscribirse en esta Competencia
                             </button>
                         </div>
@@ -436,26 +553,26 @@
                         <div class="category-tabs-selector-v2" *ngIf="displayCategorias && displayCategorias.length > 1">
                             <span class="selector-label">Categoría:</span>
                             <div class="cat-buttons-v2">
-                                <button *ngFor="let cat of displayCategorias; let i = index"
+                                <button type="button" *ngFor="let cat of displayCategorias; let i = index"
                                     [class.active]="selectedCategoryIdx === i"
                                     (click)="selectedCategoryIdx = i; selectedJornadaIdx = 0; paginaActualInscritosDetail = 1;">
                                     {{ cat.nombre }}
                                 </button>
                             </div>
                         </div>
-                        <div class="category-single-badge-v2" *ngIf="displayCategorias && displayCategorias.length === 1 && isEnrolled(selectedCompeticionDetail)" style="margin-bottom: 14px; font-weight: 800; font-size: 0.85rem; color: #475569; background: #f1f5f9; padding: 6px 14px; border-radius: 8px; display: inline-block;">
-                            🏷️ Categoría: <strong style="color: #0f172a;">{{ currentDetailCategory?.nombre }}</strong>
+                        <div class="category-single-badge-v2" *ngIf="displayCategorias && displayCategorias.length === 1 && isEnrolled(selectedCompeticionDetail)">
+                            🏷️ Categoría: <strong>{{ currentDetailCategory?.nombre }}</strong>
                         </div>
 
                         <!-- SUB-TABS (INSCRITOS, FIXTURE, POSICIONES) -->
                         <div class="sub-tabs-header-v2">
-                            <button [class.active]="compDetailTab === 'inscritos'" (click)="compDetailTab = 'inscritos'">
+                            <button type="button" [class.active]="compDetailTab === 'inscritos'" (click)="compDetailTab = 'inscritos'">
                                 👥 Parejas Inscritas
                             </button>
-                            <button [class.active]="compDetailTab === 'fixture'" (click)="compDetailTab = 'fixture'">
+                            <button type="button" [class.active]="compDetailTab === 'fixture'" (click)="compDetailTab = 'fixture'">
                                 🗓️ Fixture de Partidos
                             </button>
-                            <button [class.active]="compDetailTab === 'posiciones'" (click)="compDetailTab = 'posiciones'">
+                            <button type="button" [class.active]="compDetailTab === 'posiciones'" (click)="compDetailTab = 'posiciones'">
                                 🏆 Tabla de Posiciones
                             </button>
                         </div>
@@ -475,11 +592,11 @@
                             <div class="pagination-footer-bar" *ngIf="totalPaginasInscritosDetail > 1">
                                 <span class="page-info">Página {{ paginaActualInscritosDetail }} de {{ totalPaginasInscritosDetail }}</span>
                                 <div class="page-buttons">
-                                    <button class="btn-page-nav" [disabled]="paginaActualInscritosDetail === 1" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail - 1)">
-                                        ◄ Anterior
+                                    <button type="button" class="btn-page-nav" [disabled]="paginaActualInscritosDetail === 1" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail - 1)">
+                                        ◀ Anterior
                                     </button>
-                                    <button class="btn-page-nav" [disabled]="paginaActualInscritosDetail === totalPaginasInscritosDetail" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail + 1)">
-                                        Siguiente ►
+                                    <button type="button" class="btn-page-nav" [disabled]="paginaActualInscritosDetail === totalPaginasInscritosDetail" (click)="cambiarPaginaInscritosDetail(paginaActualInscritosDetail + 1)">
+                                        Siguiente ▶
                                     </button>
                                 </div>
                             </div>
@@ -487,9 +604,9 @@
 
                         <!-- SUB-TAB 2: FIXTURE DE PARTIDOS -->
                         <div *ngIf="compDetailTab === 'fixture'" class="subtab-content-v2">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                                <div class="jornada-selector-row-v2" *ngIf="currentDetailJornadas && currentDetailJornadas.length > 0" style="margin-bottom: 0;">
-                                    <button *ngFor="let j of currentDetailJornadas; let jIdx = index"
+                            <div class="fixture-controls-bar">
+                                <div class="jornada-selector-row-v2" *ngIf="currentDetailJornadas && currentDetailJornadas.length > 0">
+                                    <button type="button" *ngFor="let j of currentDetailJornadas; let jIdx = index"
                                         [class.active]="selectedJornadaIdx === jIdx"
                                         (click)="selectedJornadaIdx = jIdx">
                                         {{ j.nombre || ('Jornada ' + (jIdx + 1)) }}
@@ -497,11 +614,11 @@
                                 </div>
 
                                 <!-- FILTER TOGGLE -->
-                                <div class="fixture-filter-group" style="display: flex; gap: 4px; background: #e2e8f0; padding: 3px; border-radius: 10px;">
-                                    <button type="button" (click)="soloMisPartidosFixture = true" style="padding: 5px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: none; cursor: pointer;" [style.background]="soloMisPartidosFixture ? '#0f172a' : 'transparent'" [style.color]="soloMisPartidosFixture ? '#ccff00' : '#475569'">
+                                <div class="fixture-filter-group">
+                                    <button type="button" (click)="soloMisPartidosFixture = true" [class.active]="soloMisPartidosFixture">
                                         Solo mis partidos
                                     </button>
-                                    <button type="button" (click)="soloMisPartidosFixture = false" style="padding: 5px 12px; font-size: 0.75rem; font-weight: 800; border-radius: 8px; border: none; cursor: pointer;" [style.background]="!soloMisPartidosFixture ? '#0f172a' : 'transparent'" [style.color]="!soloMisPartidosFixture ? '#ccff00' : '#475569'">
+                                    <button type="button" (click)="soloMisPartidosFixture = false" [class.active]="!soloMisPartidosFixture">
                                         Ver todos
                                     </button>
                                 </div>
@@ -510,13 +627,13 @@
                             <div *ngIf="filteredDetailJornadaPartidos.length === 0" class="empty-subtab">
                                 <p *ngIf="soloMisPartidosFixture && currentDetailJornada?.partidos?.length > 0">No tienes partidos programados en esta jornada.</p>
                                 <p *ngIf="!soloMisPartidosFixture || !currentDetailJornada?.partidos || currentDetailJornada.partidos.length === 0">No hay partidos programados para esta jornada aún.</p>
-                                <button *ngIf="soloMisPartidosFixture && currentDetailJornada?.partidos?.length > 0" (click)="soloMisPartidosFixture = false" class="btn-secondary-sm" style="margin-top: 10px; font-size: 0.8rem; background: #0f172a; color: #fff; padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;">
+                                <button type="button" *ngIf="soloMisPartidosFixture && currentDetailJornada?.partidos?.length > 0" (click)="soloMisPartidosFixture = false" class="btn-secondary-sm">
                                     👁️ Ver todos los partidos de la jornada
                                 </button>
                             </div>
 
                             <div *ngIf="filteredDetailJornadaPartidos.length > 0" class="matches-list-v2">
-                                <div *ngFor="let m of filteredDetailJornadaPartidos" class="match-item-card-v2">
+                                <div *ngFor="let m of filteredDetailJornadaPartidos; trackBy: trackById" class="match-item-card-v2">
                                     <div class="match-time-badge-v2">
                                         <span class="m-date">📅 {{ getMatchFechaDisplay(m) }}</span>
                                         <span class="m-time">⏰ {{ getMatchHoraDisplay(m) }}</span>
@@ -545,74 +662,83 @@
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
-        <!-- BRACKET OVERLAY MODAL -->
-        <div class="bracket-overlay" *ngIf="showBracketModal">
-            <div class="overlay-header">
-                <h2>Cuadro de Playoff: {{ selectedTournamentBracket?.nombre }}</h2>
-                <button (click)="closeBracket()" class="btn-close-bracket">CERRAR ✕</button>
-            </div>
-
-            <div class="bracket-container">
-                <!-- OCTAVOS -->
-                <div class="round-column" *ngIf="bracketRounds.octavos.length > 0">
-                    <h3>Octavos</h3>
-                    <div *ngFor="let m of bracketRounds.octavos" class="bracket-match-card octavos">
-                        <div class="b-team">
-                            <span>{{ m.pareja1_nombre }}</span>
-                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
-                        </div>
-                        <div class="b-team">
-                            <span>{{ m.pareja2_nombre }}</span>
-                        </div>
+        <!-- ============================================================ -->
+        <!-- MODAL: BRACKET OVERLAY (CUADRO DE PLAYOFFS)                  -->
+        <!-- ============================================================ -->
+        <div class="bracket-overlay" *ngIf="showBracketModal" (click)="closeBracket()">
+            <div class="bracket-modal-card" (click)="$event.stopPropagation()">
+                <div class="overlay-header">
+                    <div class="bracket-title-wrap">
+                        <span class="bracket-tag">PLAYOFFS OFICIALES</span>
+                        <h2>Cuadro de Playoff: {{ selectedTournamentBracket?.nombre }}</h2>
                     </div>
+                    <button type="button" (click)="closeBracket()" class="btn-close-bracket">CERRAR ✕</button>
                 </div>
 
-                <!-- CUARTOS -->
-                <div class="round-column" *ngIf="bracketRounds.cuartos.length > 0">
-                    <h3>Cuartos</h3>
-                    <div *ngFor="let m of bracketRounds.cuartos" class="bracket-match-card cuartos">
-                        <div class="b-team">
-                            <span>{{ m.pareja1_nombre }}</span>
-                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
-                        </div>
-                        <div class="b-team">
-                            <span>{{ m.pareja2_nombre }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEMI -->
-                <div class="round-column" *ngIf="bracketRounds.semi.length > 0">
-                    <h3>Semifinal</h3>
-                    <div *ngFor="let m of bracketRounds.semi" class="bracket-match-card semi">
-                        <div class="b-team">
-                            <span>{{ m.pareja1_nombre }}</span>
-                            <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
-                        </div>
-                        <div class="b-team">
-                            <span>{{ m.pareja2_nombre }}</span>
+                <div class="bracket-container">
+                    <!-- OCTAVOS -->
+                    <div class="round-column" *ngIf="bracketRounds.octavos.length > 0">
+                        <h3>Octavos de Final</h3>
+                        <div *ngFor="let m of bracketRounds.octavos; trackBy: trackById" class="bracket-match-card octavos">
+                            <div class="b-team">
+                                <span>{{ m.pareja1_nombre || 'Pareja 1' }}</span>
+                                <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                            </div>
+                            <div class="b-team">
+                                <span>{{ m.pareja2_nombre || 'Pareja 2' }}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- FINAL -->
-                <div class="round-column" *ngIf="bracketRounds.final.length > 0">
-                    <h3>🏆 Final</h3>
-                    <div *ngFor="let m of bracketRounds.final" class="bracket-match-card final">
-                        <div class="b-team">
-                            <span>{{ m.pareja1_nombre }}</span>
+                    <!-- CUARTOS -->
+                    <div class="round-column" *ngIf="bracketRounds.cuartos.length > 0">
+                        <h3>Cuartos de Final</h3>
+                        <div *ngFor="let m of bracketRounds.cuartos; trackBy: trackById" class="bracket-match-card cuartos">
+                            <div class="b-team">
+                                <span>{{ m.pareja1_nombre || 'Pareja 1' }}</span>
+                                <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                            </div>
+                            <div class="b-team">
+                                <span>{{ m.pareja2_nombre || 'Pareja 2' }}</span>
+                            </div>
                         </div>
-                        <div class="b-vs">VS</div>
-                        <div class="b-team">
-                            <span>{{ m.pareja2_nombre }}</span>
+                    </div>
+
+                    <!-- SEMI -->
+                    <div class="round-column" *ngIf="bracketRounds.semi.length > 0">
+                        <h3>Semifinal</h3>
+                        <div *ngFor="let m of bracketRounds.semi; trackBy: trackById" class="bracket-match-card semi">
+                            <div class="b-team">
+                                <span>{{ m.pareja1_nombre || 'Pareja 1' }}</span>
+                                <span *ngIf="m.resultado" class="b-score">{{ m.resultado }}</span>
+                            </div>
+                            <div class="b-team">
+                                <span>{{ m.pareja2_nombre || 'Pareja 2' }}</span>
+                            </div>
                         </div>
-                        <div *ngIf="m.resultado" class="b-score-final">{{ m.resultado }}</div>
+                    </div>
+
+                    <!-- FINAL -->
+                    <div class="round-column" *ngIf="bracketRounds.final.length > 0">
+                        <h3>🏆 Gran Final</h3>
+                        <div *ngFor="let m of bracketRounds.final; trackBy: trackById" class="bracket-match-card final">
+                            <div class="b-team">
+                                <span>{{ m.pareja1_nombre || 'Pareja 1' }}</span>
+                            </div>
+                            <div class="b-vs">VS</div>
+                            <div class="b-team">
+                                <span>{{ m.pareja2_nombre || 'Pareja 2' }}</span>
+                            </div>
+                            <div *ngIf="m.resultado" class="b-score-final">{{ m.resultado }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </main>
 </div>

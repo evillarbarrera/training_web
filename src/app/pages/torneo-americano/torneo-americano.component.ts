@@ -102,6 +102,18 @@ export class TorneoAmericanoComponent implements OnInit {
         private router: Router
     ) { }
 
+    onGeneroChange(): void {
+        if (this.torneo.genero === 'Damas') {
+            if (!this.torneo.categoria || !this.torneo.categoria.startsWith('Damas')) {
+                this.torneo.categoria = 'Damas A';
+            }
+        } else if (this.torneo.genero === 'Varones') {
+            if (!this.torneo.categoria || this.torneo.categoria.startsWith('Damas')) {
+                this.torneo.categoria = 'Cuarta';
+            }
+        }
+    }
+
     ngOnInit(): void {
         let currentUser = this.apiService.getCurrentUser();
         if (!currentUser) {

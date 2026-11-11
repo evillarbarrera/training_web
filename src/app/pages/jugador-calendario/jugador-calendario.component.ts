@@ -17,11 +17,12 @@ import { PopupService } from '../../services/popup.service';
 export class JugadorCalendarioComponent implements OnInit {
   // View State
   vistaActual: 'activas' | 'historial' = 'activas';
+  tipoFiltro: 'todos' | 'clases' | 'canchas' | 'grupales' = 'todos';
   isLoading = true;
   userId: number | null = null;
 
   // Pagination
-  itemsPerPage = 8;
+  itemsPerPage = 10;
   currentPage = 1;
 
   @HostListener('window:resize', ['$event'])
@@ -30,17 +31,15 @@ export class JugadorCalendarioComponent implements OnInit {
   }
 
   private calcularItemsPerPage() {
-    if (window.innerWidth >= 768) {
-      this.itemsPerPage = 9999;
+    if (window.innerWidth >= 992) {
+      this.itemsPerPage = 12;
       return;
     }
-    // Restamos cabeceras, titulo de la página
-    const alturaDisponible = window.innerHeight - 250;
-    const filas = Math.max(2, Math.floor(alturaDisponible / 180));
-
-    let columnas = 1;
-
-    this.itemsPerPage = filas * columnas;
+    if (window.innerWidth >= 768) {
+      this.itemsPerPage = 8;
+      return;
+    }
+    this.itemsPerPage = 6;
   }
 
   // User Data
@@ -78,7 +77,7 @@ export class JugadorCalendarioComponent implements OnInit {
     if (!this.userId) return;
     this.mysqlService.getPerfil(this.userId).subscribe({
       next: (res) => {
-        if (res.success) {
+        if (res.success && res.user) {
           this.jugadorNombre = res.user.nombre;
           this.jugadorFoto = res.user.foto_perfil || res.user.foto || null;
         }
@@ -92,15 +91,79 @@ export class JugadorCalendarioComponent implements OnInit {
     this.currentPage = 1;
   }
 
-  get paginatedReservas(): any[] {
+  cambiarFiltro(filtro: 'todos' | 'clases' | 'canchas' | 'grupales'): void {
+    this.tipoFiltro = filtro;
+    this.currentPage = 1;
+  }
+
+  get filteredReservas(): any[] {
     const source = this.vistaActual === 'activas' ? this.reservasFuturas : this.reservasPasadas;
+    if (this.tipoFiltro === 'todos') return source;
+    if (this.tipoFiltro === 'canchas') {
+      return source.filter(r => r.tipo === 'cancha');
+    }
+    if (this.tipoFiltro === 'grupales') {
+      return source.filter(r => r.tipo === 'grupal' || r.tipo === 'pack_grupal' || r.tipo === 'clase grupal' || (r.cantidad_personas > 1 && r.tipo !== 'cancha'));
+    }
+    if (this.tipoFiltro === 'clases') {
+      return source.filter(r => r.tipo !== 'cancha');
+    }
+    return source;
+  }
+
+  get paginatedReservas(): any[] {
+    const source = this.filteredReservas;
     const start = (this.currentPage - 1) * this.itemsPerPage;
     return source.slice(start, start + this.itemsPerPage);
   }
 
   get totalPages(): number {
-    const source = this.vistaActual === 'activas' ? this.reservasFuturas : this.reservasPasadas;
-    return Math.ceil(source.length / this.itemsPerPage);
+    return Math.ceil(this.filteredReservas.length / this.itemsPerPage) || 1;
+  }
+
+  get totalProximas(): number {
+    return this.reservasFuturas.length;
+  }
+
+  get totalEstaSemana(): number {
+    const now = new Date();
+    const inSevenDays = new Date();
+    inSevenDays.setDate(now.getDate() + 7);
+    return this.reservasFuturas.filter(r => {
+      const d = new Date((r.fecha || '') + 'T' + (r.hora_inicio || '00:00'));
+      return d >= now && d <= inSevenDays;
+    }).length;
+  }
+
+  get totalGrupalesActivas(): number {
+    return this.reservasFuturas.filter(r => r.tipo === 'grupal' || r.cantidad_personas > 1).length;
+  }
+
+  get totalHistorial(): number {
+    return this.reservasPasadas.length;
+  }
+
+  getRelativeTime(fechaStr: string, horaStr?: string): string {
+    if (!fechaStr) return '';
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const parts = fechaStr.split('-');
+    if (parts.length !== 3) return fechaStr;
+    const targetDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    targetDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Mañana';
+    if (diffDays === 2) return 'Pasado mañana';
+    if (diffDays > 2 && diffDays <= 7) return `En ${diffDays} días`;
+    if (diffDays < 0) {
+      if (diffDays === -1) return 'Ayer';
+      return 'Finalizada';
+    }
+    return `En ${diffDays} días`;
   }
 
   nextPage() {
@@ -109,6 +172,14 @@ export class JugadorCalendarioComponent implements OnInit {
 
   prevPage() {
     if (this.currentPage > 1) this.currentPage--;
+  }
+
+  irAAgendar(): void {
+    this.router.navigate(['/jugador-reservas']);
+  }
+
+  irAReservarCancha(): void {
+    this.router.navigate(['/clubes-reservar']);
   }
 
   loadReservas(): void {

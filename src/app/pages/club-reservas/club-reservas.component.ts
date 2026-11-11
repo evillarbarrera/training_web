@@ -428,7 +428,10 @@ export class ClubReservasComponent implements OnInit {
     }
 
     getPaymentStatus(res: any): 'total' | 'parcial' | 'pendiente' {
-        // En los partidos de liga, se paga la liga completa (inscripción) y no el partido individual
+        // En los torneos americanos y partidos de liga, se paga la inscripción aparte
+        if (this.isAmericanoReserva(res)) {
+            return 'total';
+        }
         if (res.liga_partido_id && Number(res.liga_partido_id) > 0) {
             return 'total';
         }
@@ -519,8 +522,14 @@ export class ClubReservasComponent implements OnInit {
                     if (r.torneo_nombre && !existing.torneo_nombre) {
                         existing.torneo_nombre = r.torneo_nombre;
                     }
+                    if (!existing.all_ids) {
+                        existing.all_ids = existing.id ? [existing.id] : [];
+                    }
+                    if (r.id && !existing.all_ids.includes(r.id)) {
+                        existing.all_ids.push(r.id);
+                    }
                 } else {
-                    americanoMap.set(key, { ...r });
+                    americanoMap.set(key, { ...r, all_ids: r.id ? [r.id] : [] });
                 }
             } else {
                 nonAmericano.push(r);
@@ -751,6 +760,9 @@ export class ClubReservasComponent implements OnInit {
     }
 
     getPaymentStatusText(res: any): string {
+        if (this.isAmericanoReserva(res)) {
+            return 'Torneo Americano (Pago aparte)';
+        }
         if (res.liga_partido_id && Number(res.liga_partido_id) > 0) {
             return 'Pagado (Liga)';
         }
@@ -821,6 +833,7 @@ export class ClubReservasComponent implements OnInit {
 
         this.newReserva = { 
             ...res,
+            all_ids: res.all_ids || (res.id ? [res.id] : []),
             precio: Math.round(Number(res.precio || 0)),
             jugador_id: res.usuario_id || 0,
             jugador2_id: res.jugador2_id || 0,
@@ -1486,6 +1499,42 @@ export class ClubReservasComponent implements OnInit {
     eliminarReserva() {
         if (!this.newReserva.id) return;
 
+        if (this.isAmericanoReserva(this.newReserva)) {
+            Swal.fire({
+                title: '¿Eliminar reserva de Americano?',
+                text: '¿Deseas liberar solo esta pista o todas las pistas reservadas para este torneo americano?',
+                icon: 'warning',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Liberar esta pista',
+                denyButtonText: 'Liberar todas las pistas',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef4444',
+                denyButtonColor: '#dc2626'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.ejecutarCancelacionReserva({
+                        reserva_id: this.newReserva.id,
+                        reserva_ids: this.newReserva.all_ids || [this.newReserva.id],
+                        cancha_id: this.newReserva.cancha_id,
+                        fecha: this.newReserva.fecha,
+                        torneo_id: this.newReserva.torneo_id,
+                        cancel_all_torneo: false
+                    });
+                } else if (result.isDenied) {
+                    this.ejecutarCancelacionReserva({
+                        reserva_id: this.newReserva.id,
+                        reserva_ids: this.newReserva.all_ids || [this.newReserva.id],
+                        cancha_id: this.newReserva.cancha_id,
+                        fecha: this.newReserva.fecha,
+                        torneo_id: this.newReserva.torneo_id,
+                        cancel_all_torneo: true
+                    });
+                }
+            });
+            return;
+        }
+
         Swal.fire({
             title: '¿Eliminar reserva?',
             text: 'Esta acción no se puede deshacer',
@@ -1496,19 +1545,27 @@ export class ClubReservasComponent implements OnInit {
             confirmButtonColor: '#ef4444'
         }).then((result) => {
             if (result.isConfirmed) {
-                this.isSaving = true;
-                this.clubesService.cancelReserva(this.newReserva.id).subscribe({
-                    next: () => {
-                        this.isSaving = false;
-                        this.showAddForm = false;
-                        this.loadReservas();
-                        Swal.fire('Eliminada', 'La reserva ha sido eliminada', 'success');
-                    },
-                    error: () => {
-                        this.isSaving = false;
-                        Swal.fire('Error', 'No se pudo eliminar', 'error');
-                    }
+                this.ejecutarCancelacionReserva({
+                    reserva_id: this.newReserva.id,
+                    reserva_ids: this.newReserva.all_ids || [this.newReserva.id]
                 });
+            }
+        });
+    }
+
+    ejecutarCancelacionReserva(payload: any) {
+        this.isSaving = true;
+        this.clubesService.cancelReserva(payload).subscribe({
+            next: () => {
+                this.isSaving = false;
+                this.showAddForm = false;
+                this.loadReservas();
+                Swal.fire('Eliminada', 'La reserva ha sido eliminada con éxito', 'success');
+            },
+            error: (err) => {
+                this.isSaving = false;
+                console.error('Error al cancelar reserva:', err);
+                Swal.fire('Error', err?.error?.error || 'No se pudo eliminar la reserva', 'error');
             }
         });
     }

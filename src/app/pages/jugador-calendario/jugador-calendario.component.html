@@ -1,321 +1,321 @@
 <div class="admin-layout">
   <!-- Sidebar -->
-  <!-- Sidebar -->
   <app-sidebar [userId]="userId" [jugadorNombre]="jugadorNombre" [jugadorFoto]="jugadorFoto" activePage="calendario">
   </app-sidebar>
 
   <!-- Main Content Area -->
   <main class="main-content">
 
-    <!-- Content -->
     <div class="dashboard-grid">
 
-      <!-- Page Actions / Tabs -->
-      <div class="page-header">
-        <h2 class="section-title">Mis Clases</h2>
-        <div class="view-toggles">
-          <button class="btn-toggle" [class.active]="vistaActual === 'activas'" (click)="cambiarVista('activas')">
-            📋 Activas
+      <!-- 1. HEADER DE AGENDA -->
+      <header class="agenda-header animate-fade-in">
+        <div class="header-left">
+          <span class="header-eyebrow">
+            <i class="fas fa-calendar-check"></i> MI AGENDA DEPORTIVA
+          </span>
+          <h1 class="header-title">Mis Clases y Reservas</h1>
+          <p class="header-subtitle">
+            Monitorea tus sesiones confirmadas, entrenamientos grupales y arriendos de canchas.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-action-top primary" (click)="irAAgendar()">
+            <i class="fas fa-plus"></i>
+            <span>Agendar Clase</span>
           </button>
-          <button class="btn-toggle" [class.active]="vistaActual === 'historial'" (click)="cambiarVista('historial')">
-            🕰 Historial
+          <button class="btn-action-top secondary" (click)="irAReservarCancha()">
+            <i class="fas fa-table-tennis-paddle-ball"></i>
+            <span>Reservar Cancha</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- 2. KPIS RÁPIDOS DE AGENDA -->
+      <section class="agenda-kpi-grid animate-fade-in">
+        <!-- 1. Próximas Sesiones -->
+        <div class="agenda-kpi-card" (click)="cambiarVista('activas')">
+          <div class="kpi-icon-box dark">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ totalProximas }}</span>
+            <span class="kpi-label">Próximas Sesiones</span>
+            <span class="kpi-sub">Activas en calendario</span>
+          </div>
+        </div>
+
+        <!-- 2. Esta Semana -->
+        <div class="agenda-kpi-card accent" (click)="cambiarVista('activas')">
+          <div class="kpi-icon-box accent">
+            <i class="fas fa-fire"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value highlight">{{ totalEstaSemana }}</span>
+            <span class="kpi-label">Esta Semana</span>
+            <span class="kpi-sub">En los próximos 7 días</span>
+          </div>
+        </div>
+
+        <!-- 3. En Grupo / Multijugador -->
+        <div class="agenda-kpi-card" (click)="cambiarFiltro('grupales')">
+          <div class="kpi-icon-box blue">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ totalGrupalesActivas }}</span>
+            <span class="kpi-label">En Equipo</span>
+            <span class="kpi-sub">Grupales y multijugador</span>
+          </div>
+        </div>
+
+        <!-- 4. Historial Realizadas -->
+        <div class="agenda-kpi-card" (click)="cambiarVista('historial')">
+          <div class="kpi-icon-box green">
+            <i class="fas fa-check-double"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ totalHistorial }}</span>
+            <span class="kpi-label">Historial</span>
+            <span class="kpi-sub">Clases finalizadas</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. BARRA DE NAVEGACIÓN: PESTAÑAS Y FILTROS POR MODALIDAD -->
+      <section class="controls-bar animate-fade-in">
+        <!-- Pestañas Principales (Activas vs Historial) -->
+        <div class="view-segmented-tabs">
+          <button class="tab-btn" [class.active]="vistaActual === 'activas'" (click)="cambiarVista('activas')">
+            <i class="fas fa-calendar-days"></i>
+            <span>Próximas Sesiones</span>
+            <span class="tab-count" *ngIf="reservasFuturas.length > 0">{{ reservasFuturas.length }}</span>
+          </button>
+          <button class="tab-btn" [class.active]="vistaActual === 'historial'" (click)="cambiarVista('historial')">
+            <i class="fas fa-clock-rotate-left"></i>
+            <span>Historial</span>
+            <span class="tab-count neutral" *ngIf="reservasPasadas.length > 0">{{ reservasPasadas.length }}</span>
+          </button>
+        </div>
+
+        <!-- Píldoras de Filtro por Tipo -->
+        <div class="filter-pills">
+          <button class="filter-pill" [class.active]="tipoFiltro === 'todos'" (click)="cambiarFiltro('todos')">
+            Todos
+          </button>
+          <button class="filter-pill" [class.active]="tipoFiltro === 'clases'" (click)="cambiarFiltro('clases')">
+            🎾 Clases
+          </button>
+          <button class="filter-pill" [class.active]="tipoFiltro === 'canchas'" (click)="cambiarFiltro('canchas')">
+            🏟️ Canchas
+          </button>
+          <button class="filter-pill" [class.active]="tipoFiltro === 'grupales'" (click)="cambiarFiltro('grupales')">
+            👥 Grupales
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. LOADING STATE -->
+      <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner-shimmer"></div>
+        <p>Cargando tu agenda deportiva...</p>
+      </div>
+
+      <!-- 5. ESTADO VACÍO -->
+      <div *ngIf="!isLoading && filteredReservas.length === 0" class="empty-agenda-card animate-fade-in">
+        <div class="empty-icon-wrap">
+          {{ vistaActual === 'activas' ? '📅' : '📜' }}
+        </div>
+        <h3>{{ vistaActual === 'activas' ? 'No tienes sesiones programadas' : 'Aún no tienes historial de clases' }}</h3>
+        <p>
+          {{ vistaActual === 'activas'
+            ? 'Reserva una cancha o agenda un entrenamiento para mejorar tu nivel y mantenerte activo.'
+            : 'Aquí se guardarán todas las clases y reservas que hayas completado.' }}
+        </p>
+        <div class="empty-actions" *ngIf="vistaActual === 'activas'">
+          <button class="btn-empty primary" (click)="irAAgendar()">
+            <i class="fas fa-graduation-cap"></i> Agendar Clase con Coach
+          </button>
+          <button class="btn-empty secondary" (click)="irAReservarCancha()">
+            <i class="fas fa-table-tennis-paddle-ball"></i> Reservar Cancha
           </button>
         </div>
       </div>
 
-      <!-- VISTA 1: ACTIVAS -->
-      <div *ngIf="vistaActual === 'activas'" class="animate-fade-in">
+      <!-- 6. LISTA DE SESIONES / TARJETAS DE ALTA FIDELIDAD -->
+      <div *ngIf="!isLoading && filteredReservas.length > 0" class="agenda-cards-stream animate-fade-in">
 
-        <div *ngIf="isLoading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Cargando tus reservas...</p>
-        </div>
+        <article class="session-card" *ngFor="let reserva of paginatedReservas" [class.past-card]="vistaActual === 'historial'">
 
-        <div *ngIf="!isLoading && reservasFuturas.length === 0" class="empty-state">
-          <div class="empty-icon">📭</div>
-          <h3>No tienes reservas activas</h3>
-          <p>Agenda tu próxima clase para comenzar a entrenar.</p>
-          <button class="btn-secondary-action" (click)="irAReservas()">Agendar Nueva Clase</button>
-        </div>
+          <!-- RIBETE TEMPORAL (Fecha & Horario) -->
+          <div class="date-ribbon">
+            <span class="ribbon-day-name">{{ reserva.fecha | date:'EEEE':'':'es' | uppercase }}</span>
+            <span class="ribbon-day-num">{{ reserva.fecha | date:'dd' }}</span>
+            <span class="ribbon-month">{{ reserva.fecha | date:'MMM yyyy':'':'es' | uppercase }}</span>
+            <span class="relative-time-pill" [class.today]="getRelativeTime(reserva.fecha) === 'Hoy'">
+              {{ getRelativeTime(reserva.fecha) }}
+            </span>
+          </div>
 
-        <div *ngIf="!isLoading && reservasFuturas.length > 0" class="reservations-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Entrenador / Cancha</th>
-                <th>Fecha</th>
-                <th>Horario</th>
-                <th>Modalidad</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let reserva of paginatedReservas">
-                <td>
-                  <div class="user-cell">
-                    <div class="avatar-wrapper">
-                      <img *ngIf="reserva.tipo !== 'cancha'" class="avatar-small"
-                        [src]="reserva.entrenador_foto || 'assets/images/placeholder_avatar.png'"
-                        style="object-fit: cover;">
-                      <div *ngIf="reserva.tipo === 'cancha'" class="avatar-small"
-                        style="display:flex;align-items:center;justify-content:center;background:#e0f2fe;font-size:18px;">
-                        🎾
-                      </div>
-                      <div class="online-indicator"></div>
-                    </div>
-                    <div class="user-info">
-                      <span class="user-name">{{ reserva.entrenador_nombre }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="date-cell">
-                    <span class="main-date">{{ reserva.fecha | date: 'dd MMM yyyy' }}</span>
-                    <span class="relative-date">{{ reserva.fecha | date: 'EEEE' | titlecase }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="time-cell">
-                    <span class="time-range">{{ (reserva.hora_inicio || reserva.hora || '') | slice:0:5 }} - {{
-                      (reserva.hora_fin || '') | slice:0:5 }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="modalidad-cell">
-                    <span class="badge-modalidad" [class.grupal]="reserva.tipo === 'grupal'"
-                      [class.cancha]="reserva.tipo === 'cancha'"
-                      [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'"
-                      [class.individual]="reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha' && reserva.cantidad_personas <= 1">
+          <!-- CONTENIDO PRINCIPAL -->
+          <div class="session-body">
+            
+            <!-- Badges superiores -->
+            <div class="session-meta-tags">
+              <!-- Modalidad -->
+              <span class="meta-tag modality"
+                    [class.court]="reserva.tipo === 'cancha'"
+                    [class.group]="reserva.tipo === 'grupal' || reserva.cantidad_personas > 1">
+                <i class="fas" [ngClass]="reserva.tipo === 'cancha' ? 'fa-table-tennis-paddle-ball' : ((reserva.tipo === 'grupal' || reserva.cantidad_personas > 1) ? 'fa-users' : 'fa-user-tie')"></i>
+                <span>{{ reserva.tipo === 'cancha' ? 'Arriendo Cancha' : (reserva.tipo === 'grupal' ? 'Clase Grupal' : (reserva.cantidad_personas > 1 ? 'Clase Multijugador' : 'Clase Individual')) }}</span>
+              </span>
 
-                      <i class="icon">{{ reserva.tipo === 'cancha' ? '🎾' : ((reserva.tipo === 'grupal' || reserva.cantidad_personas > 1) ? '👥' : '👤') }}</i>
+              <!-- Rango Horario -->
+              <span class="meta-tag time">
+                <i class="far fa-clock"></i>
+                <span>{{ (reserva.hora_inicio || reserva.hora || '') | slice:0:5 }} - {{ (reserva.hora_fin || '') | slice:0:5 }} HRS</span>
+              </span>
 
-                      <ng-container *ngIf="reserva.tipo === 'grupal'">
-                        GRUPAL ({{ reserva.cupos_ocupados }}/{{ reserva.capacidad_maxima }})
-                      </ng-container>
-                      <ng-container *ngIf="reserva.tipo === 'cancha'">
-                        CANCHA
-                      </ng-container>
-                      <ng-container *ngIf="reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'">
-                        {{ reserva.cantidad_personas > 1 ? 'MULTIJUGADOR' : 'INDIVIDUAL' }}
-                      </ng-container>
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <ng-container *ngIf="reserva.tipo === 'grupal'">
-                    <div class="status-container">
-                      <span class="status-badge" [class]="reserva.estado_grupo?.toLowerCase()">
-                        <i class="status-icon">{{ reserva.estado_grupo === 'activo' ? '🔥' : '⏳' }}</i>
-                        {{ reserva.estado_grupo === 'activo' ? 'ACTIVADA' : 'PENDIENTE' }}
-                      </span>
-                      <div class="info-wrapper" *ngIf="reserva.estado_grupo !== 'activo'">
-                        <div class="info-icon">i</div>
-                        <div class="info-tooltip">
-                          Esta clase se activará cuando se alcance el mínimo de
-                          <b>{{ reserva.capacidad_minima || 4 }} jugadores</b>.
-                        </div>
-                      </div>
-                    </div>
-                  </ng-container>
-                  <ng-container *ngIf="reserva.tipo !== 'grupal'">
-                    <span class="status-badge" [class]="reserva.estado?.toLowerCase()">
-                      <i class="status-icon">✅</i>
-                      {{ reserva.estado | uppercase }}
-                    </span>
-                  </ng-container>
-                </td>
-                <td>
-                  <div class="actions-column">
-                    <div class="actions-buttons">
-                      <button class="btn-action cancel" (click)="cancelarReserva(reserva)"
-                        [disabled]="reserva.estado?.toLowerCase() === 'cancelada' || reserva.estado?.toLowerCase() === 'cancelado'"
-                        title="Cancelar Reserva">
-                        CANCELAR RESERVA
-                      </button>
-                    </div>
+              <!-- Estado -->
+              <span class="meta-tag status"
+                    [class.activo]="reserva.estado_grupo === 'activo' || reserva.estado === 'reservado'"
+                    [class.pendiente]="reserva.estado_grupo === 'pendiente'"
+                    [class.cancelado]="reserva.estado?.toLowerCase() === 'cancelada' || reserva.estado?.toLowerCase() === 'cancelado'">
+                <i class="fas" [ngClass]="(reserva.estado_grupo === 'activo' || reserva.estado === 'reservado') ? 'fa-circle-check' : (reserva.estado_grupo === 'pendiente' ? 'fa-hourglass-half' : 'fa-circle-xmark')"></i>
+                <span>{{ reserva.tipo === 'grupal' ? (reserva.estado_grupo === 'activo' ? 'Grupo Activado' : 'Pendiente Quorum') : (reserva.estado | titlecase) }}</span>
+              </span>
+            </div>
 
-                    <!-- Equipo integration -->
-                    <div class="team-footer" *ngIf="reserva.cantidad_personas > 1">
-                      <div class="team-chips">
-                        <div class="chip-item owner" title="Tú (Titular)">
-                          <span class="letter">{{ jugadorNombre.charAt(0) }}</span>
-                        </div>
-                        <div class="chip-item guest" *ngFor="let inv of reserva.invitados"
-                          [title]="inv.nombre + (inv.estado === 'pendiente' ? ' (Pendiente)' : '')"
-                          [class.pending]="inv.estado === 'pendiente'">
-                          <span class="letter">{{ inv.nombre.charAt(0) }}</span>
-                          <span class="status-dot" *ngIf="inv.estado === 'pendiente'"></span>
-                        </div>
-                        <button class="btn-add-team" *ngIf="(reserva.invitados?.length + 1) < reserva.cantidad_personas"
-                          (click)="abrirModalInvitacion(reserva)" title="Invitar Compañero">
-                          <span class="plus">+</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            <!-- Información del Participante / Entrenador / Pista -->
+            <div class="session-info-row">
+              <div class="participant-avatar">
+                <img *ngIf="reserva.tipo !== 'cancha' && reserva.entrenador_foto"
+                     [src]="reserva.entrenador_foto"
+                     alt="Coach" />
+                <span *ngIf="reserva.tipo !== 'cancha' && !reserva.entrenador_foto" class="fallback-avatar coach">🎾</span>
+                <span *ngIf="reserva.tipo === 'cancha'" class="fallback-avatar court">🏟️</span>
+              </div>
 
-          <div class="mobile-cards">
-            <div *ngFor="let reserva of paginatedReservas" class="reserva-card-mobile">
-              <div class="card-header-mobile">
-                <span class="date">{{ reserva.fecha | date: 'dd MMM' }}</span>
-                <span class="badge-modalidad-mobile" [class.grupal]="reserva.tipo === 'grupal'"
-                  [class.cancha]="reserva.tipo === 'cancha'"
-                  [class.multi]="reserva.cantidad_personas > 1 && reserva.tipo !== 'grupal' && reserva.tipo !== 'cancha'">
-                  {{ (reserva.tipo === 'cancha') ? '🎾 Pista' : ((reserva.tipo === 'grupal') ? ('👥 Grupal (' + reserva.cupos_ocupados + '/' +
-                  reserva.capacidad_maxima + ')') : (reserva.cantidad_personas > 1 ? '👥 MULTIJUGADOR' : '👤 Individual')) }}
+              <div class="participant-text">
+                <h3 class="participant-name">
+                  {{ reserva.tipo === 'cancha' ? (reserva.nombre_cancha || 'Pista de Pádel') : (reserva.nombre_entrenador || reserva.entrenador_nombre || 'Entrenador de Pádel') }}
+                </h3>
+                <div class="details-chips">
+                  <span class="chip-detail" *ngIf="reserva.pack_nombre">
+                    <i class="fas fa-box-archive"></i> {{ reserva.pack_nombre }}
+                  </span>
+                  <span class="chip-detail" *ngIf="reserva.club_nombre">
+                    <i class="fas fa-location-dot"></i> {{ reserva.club_nombre }} <strong *ngIf="reserva.pista_nombre">• {{ reserva.pista_nombre }}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progreso de Quórum en Grupos -->
+            <div class="group-quorum-container" *ngIf="reserva.tipo === 'grupal'">
+              <div class="quorum-header">
+                <span class="quorum-title">
+                  Cupos del Grupo: <strong>{{ reserva.cupos_ocupados || 1 }} de {{ reserva.capacidad_maxima || 4 }}</strong>
+                </span>
+                <span class="quorum-alert" *ngIf="reserva.estado_grupo !== 'activo'">
+                  <i class="fas fa-circle-info"></i> Se activa con mín. {{ reserva.capacidad_minima || 4 }} jugadores
                 </span>
               </div>
-              <div class="card-body-mobile">
-                <h3>{{ reserva.nombre_entrenador || reserva.entrenador_nombre }}</h3>
-                <p>{{ (reserva.hora_inicio || reserva.hora) | slice:0:5 }} - {{ reserva.hora_fin | slice:0:5 }}</p>
-                <div class="status-mobile" style="margin-top: 8px;">
-                  <ng-container *ngIf="reserva.tipo === 'grupal'">
-                    <div class="status-container" style="display: flex; align-items: center; gap: 8px;">
-                      <span class="status-badge" [class]="reserva.estado_grupo?.toLowerCase()">
-                        {{ reserva.estado_grupo === 'activo' ? '🔥 Activada' : '⏳ Pendiente' }}
-                      </span>
-                      <div class="info-wrapper" *ngIf="reserva.estado_grupo !== 'activo'">
-                        <div class="info-icon"
-                          style="width: 16px; height: 16px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; font-style: italic;">
-                          i</div>
-                      </div>
-                    </div>
-                    <p *ngIf="reserva.estado_grupo !== 'activo'" style="font-size: 11px; color: #666; margin-top: 4px;">
-                      Se activa con {{ reserva.capacidad_minima || 4 }} jugadores.
-                    </p>
-                  </ng-container>
-                  <ng-container *ngIf="reserva.tipo !== 'grupal'">
-                    <span class="status-badge" [class]="reserva.estado?.toLowerCase()">
-                      {{ reserva.estado }}
-                    </span>
-                  </ng-container>
+              <div class="quorum-progress-track">
+                <div class="quorum-progress-fill"
+                     [style.width.%]="((reserva.cupos_ocupados || 1) / (reserva.capacidad_maxima || 4)) * 100"></div>
+              </div>
+            </div>
+
+            <!-- Mi Equipo / Multijugador -->
+            <div class="team-container" *ngIf="reserva.cantidad_personas > 1">
+              <span class="team-heading">Equipo asignado:</span>
+              <div class="team-avatars-row">
+                <div class="team-avatar-pill owner" title="Tú (Titular)">
+                  <span class="pill-letter">{{ jugadorNombre.charAt(0) }}</span>
+                  <span class="pill-name">Tú</span>
                 </div>
 
-                <!-- Mi Equipo Mobile -->
-                <div class="team-section-mobile" *ngIf="reserva.cantidad_personas > 1">
-                  <p class="section-label">Mi Equipo:</p>
-                  <div class="team-members-mobile">
-                    <span class="member-dot me" title="Tú"></span>
-                    <span class="member-dot guest" *ngFor="let inv of reserva.invitados"
-                      [class.pending]="inv.estado === 'pendiente'" [title]="inv.nombre"></span>
-                    <button class="add-dot" *ngIf="(reserva.invitados?.length + 1) < reserva.cantidad_personas"
-                      (click)="abrirModalInvitacion(reserva)">+</button>
-                  </div>
+                <div class="team-avatar-pill guest"
+                     *ngFor="let inv of reserva.invitados"
+                     [class.pending]="inv.estado === 'pendiente'"
+                     [title]="inv.nombre + (inv.estado === 'pendiente' ? ' (Invitación Pendiente)' : '')">
+                  <span class="pill-letter">{{ inv.nombre.charAt(0) }}</span>
+                  <span class="pill-name">{{ inv.nombre }}</span>
+                  <span class="pending-dot" *ngIf="inv.estado === 'pendiente'" title="Pendiente de confirmación"></span>
                 </div>
-              </div>
-              <div class="card-actions-mobile">
-                <button class="btn-cancel-action full-width" (click)="cancelarReserva(reserva)">Cancelar
-                  reserva</button>
-                <button class="btn-invite-action full-width" style="margin-top: 8px;"
-                  *ngIf="reserva.pack_jugador_id && reserva.cantidad_personas > 1 && (reserva.invitados?.length + 1) < reserva.cantidad_personas"
-                  (click)="abrirModalInvitacion(reserva)">
-                  + Invitar Compañero
+
+                <button class="btn-invite-pill"
+                        *ngIf="(reserva.invitados?.length + 1) < reserva.cantidad_personas && vistaActual === 'activas'"
+                        (click)="abrirModalInvitacion(reserva)"
+                        title="Invitar a otro compañero">
+                  <i class="fas fa-user-plus"></i>
+                  <span>Invitar Compañero</span>
                 </button>
               </div>
             </div>
+
           </div>
 
-          <!-- Pagination Controls -->
-          <div class="pagination-controls" *ngIf="totalPages > 1">
-            <button class="btn-page" (click)="prevPage()" [disabled]="currentPage === 1">Anterior</button>
-            <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-            <button class="btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages">Siguiente</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- VISTA 2: HISTORIAL -->
-      <div *ngIf="vistaActual === 'historial'" class="animate-fade-in">
-
-        <div *ngIf="isLoading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Cargando historial...</p>
-        </div>
-
-        <div *ngIf="!isLoading && reservasPasadas.length === 0" class="empty-state">
-          <div class="empty-icon">📜</div>
-          <h3>Sin Historial</h3>
-          <p>Aún no tienes clases finalizadas.</p>
-        </div>
-
-        <div *ngIf="!isLoading && reservasPasadas.length > 0" class="reservations-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Entrenador / Cancha</th>
-                <th>Fecha</th>
-                <th>Horario</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let reserva of paginatedReservas">
-                <td>
-                  <div class="user-cell">
-                    <div class="avatar-small">{{ reserva.nombre_entrenador?.charAt(0) ||
-                      reserva.entrenador_nombre?.charAt(0) || 'E' }}</div>
-                    <span class="font-medium">{{ reserva.nombre_entrenador || reserva.entrenador_nombre }}</span>
-                  </div>
-                </td>
-                <td>{{ reserva.fecha | date: 'dd MMM yyyy' }}</td>
-                <td>{{ (reserva.hora_inicio | slice:0:5) }} - {{ (reserva.hora_fin | slice:0:5) }}</td>
-                <td>
-                  <span class="status-badge" [class]="reserva.estado?.toLowerCase()">
-                    {{ reserva.estado }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="mobile-cards">
-            <div *ngFor="let reserva of paginatedReservas" class="reserva-card-mobile past">
-              <div class="card-header-mobile">
-                <span class="date">{{ reserva.fecha | date: 'dd MMM' }}</span>
-                <span class="status-badge" [class]="reserva.estado?.toLowerCase()">{{ reserva.estado }}</span>
-              </div>
-              <div class="card-body-mobile">
-                <h3>{{ reserva.nombre_entrenador || reserva.entrenador_nombre }}</h3>
-                <p>{{ reserva.hora_inicio | slice:0:5 }} - {{ reserva.hora_fin | slice:0:5 }}</p>
-              </div>
-            </div>
+          <!-- ACCIONES DE LA TARJETA -->
+          <div class="session-card-actions" *ngIf="vistaActual === 'activas'">
+            <button class="btn-cancel-reservation"
+                    (click)="cancelarReserva(reserva)"
+                    [disabled]="reserva.estado?.toLowerCase() === 'cancelada' || reserva.estado?.toLowerCase() === 'cancelado'"
+                    title="Cancelar esta sesión">
+              <i class="fas fa-xmark"></i>
+              <span>Cancelar Reserva</span>
+            </button>
           </div>
 
-          <!-- Pagination Controls -->
-          <div class="pagination-controls" *ngIf="totalPages > 1">
-            <button class="btn-page" (click)="prevPage()" [disabled]="currentPage === 1">Anterior</button>
-            <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-            <button class="btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages">Siguiente</button>
-          </div>
+        </article>
+
+        <!-- PAGINACIÓN -->
+        <div class="agenda-pagination" *ngIf="totalPages > 1">
+          <button class="btn-page-step" (click)="prevPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i> Anterior
+          </button>
+          <span class="page-indicator">Página {{ currentPage }} de {{ totalPages }}</span>
+          <button class="btn-page-step" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            Siguiente <i class="fas fa-chevron-right"></i>
+          </button>
         </div>
+
       </div>
 
     </div>
   </main>
 
-  <!-- Modal Invitación -->
+  <!-- MODAL INVITACIÓN DE COMPAÑERO -->
   <div class="modal-invitacion-overlay" *ngIf="showModalInvitacion">
     <div class="modal-invitacion-content animate-pop">
       <div class="modal-header">
-        <h3>Agregar Compañero</h3>
-        <button class="close-btn" (click)="cerrarModal()">×</button>
+        <div class="modal-title-group">
+          <span class="modal-badge"><i class="fas fa-user-plus"></i> EQUIPO</span>
+          <h3>Invitar Compañero</h3>
+        </div>
+        <button class="btn-close-modal" (click)="cerrarModal()">×</button>
       </div>
-      <div class="modal-body">
-        <p>Invita a un amigo para compartir este pack. Debe estar registrado en la App.</p>
 
-        <div class="form-group">
-          <label>Email del Jugador</label>
-          <input [(ngModel)]="emailInvitado" type="email" placeholder="ejemplo@correo.com" class="form-input" />
+      <div class="modal-body">
+        <p class="modal-desc">
+          Ingresa el correo electrónico de tu compañero para sumarlo a esta reserva. Debe estar registrado en Padelblox.
+        </p>
+
+        <div class="form-group-field">
+          <label>Correo Electrónico</label>
+          <div class="input-wrap">
+            <i class="fas fa-envelope"></i>
+            <input [(ngModel)]="emailInvitado" type="email" placeholder="companero@correo.com" class="modal-input" />
+          </div>
         </div>
 
-        <div class="modal-actions">
-          <button class="btn-cancel" (click)="cerrarModal()">Cancelar</button>
-          <button class="btn-confirm" (click)="enviarInvitacion()">Confirmar</button>
+        <div class="modal-footer-actions">
+          <button class="btn-modal cancel" (click)="cerrarModal()">Cancelar</button>
+          <button class="btn-modal confirm" (click)="enviarInvitacion()">
+            <i class="fas fa-paper-plane"></i> Enviar Invitación
+          </button>
         </div>
       </div>
     </div>
