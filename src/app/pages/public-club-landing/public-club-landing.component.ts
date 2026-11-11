@@ -26,7 +26,14 @@ export class PublicClubLandingComponent implements OnInit {
   ranking: any[] = [];
 
   // Active Tab
-  activeTab: 'canchas' | 'americanos' | 'ranking' = 'canchas';
+  activeTab: 'canchas' | 'torneos' | 'ranking' = 'canchas';
+
+  // Court View Modes & Filters
+  selectedCanchaId: number = 0; // 0 = Todas las canchas
+  viewModeCanchas: 'agenda' | 'tarjetas' = 'agenda';
+  filtroMomentoDia: 'todos' | 'manana' | 'tarde' | 'noche' = 'todos';
+  mostrarOcupadosEnAgenda: boolean = false;
+  unifiedTimeSlots: any[] = [];
 
   // Court Reservations Filter
   fechaSeleccionada: string = new Date().toISOString().split('T')[0];
@@ -68,6 +75,8 @@ export class PublicClubLandingComponent implements OnInit {
     notas: ''
   };
 
+  userChoseTab: boolean = false;
+
   get colorPrimary(): string {
     return this.clubData?.landing_color_primary || '#0b0f19';
   }
@@ -90,6 +99,90 @@ export class PublicClubLandingComponent implements OnInit {
       return `${window.location.origin}/c/${this.slug || this.clubData?.landing_slug || this.clubData?.id}`;
     }
     return `https://padelmanager.cl/c/${this.slug}`;
+  }
+
+  get totalSlotsLibres(): number {
+    return this.canchas.reduce((acc, c) => acc + (c.slots_disponibles_count || 0), 0);
+  }
+
+  get selectedCanchaObj(): any {
+    if (!this.selectedCanchaId) return null;
+    return this.canchas.find(c => c.id === this.selectedCanchaId) || null;
+  }
+
+  get filteredUnifiedSlots(): any[] {
+    let list = this.unifiedTimeSlots;
+    if (this.filtroMomentoDia !== 'todos') {
+      list = list.filter(u => u.momento === this.filtroMomentoDia);
+    }
+    if (!this.mostrarOcupadosEnAgenda) {
+      list = list.filter(u => u.disponibles_count > 0);
+    }
+    return list;
+  }
+
+  selectCanchaTab(canchaId: number): void {
+    this.selectedCanchaId = canchaId;
+  }
+
+  setActiveTab(tab: 'canchas' | 'torneos' | 'ranking'): void {
+    this.activeTab = tab;
+    this.userChoseTab = true;
+    if (typeof window !== 'undefined' && window.history) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+  }
+
+  buildUnifiedSlots(): void {
+    const map = new Map<string, any>();
+
+    for (const c of this.canchas) {
+      if (!c.slots) continue;
+      for (const s of c.slots) {
+        if (!map.has(s.hora_inicio)) {
+          const hourNum = parseInt(s.hora_inicio.split(':')[0], 10);
+          let momento: 'manana' | 'tarde' | 'noche' = 'manana';
+          if (hourNum >= 13 && hourNum < 19) momento = 'tarde';
+          else if (hourNum >= 19) momento = 'noche';
+
+          map.set(s.hora_inicio, {
+            hora_inicio: s.hora_inicio,
+            hora_fin: s.hora_fin,
+            duracion: s.duracion || 90,
+            momento,
+            disponibles_count: 0,
+            courtSlots: []
+          });
+        }
+
+        const entry = map.get(s.hora_inicio);
+        if (s.disponible) {
+          entry.disponibles_count++;
+        }
+        entry.courtSlots.push({
+          cancha: c,
+          slot: s
+        });
+      }
+    }
+
+    this.unifiedTimeSlots = Array.from(map.values()).sort((a, b) => {
+      return a.hora_inicio.localeCompare(b.hora_inicio);
+    });
+  }
+
+  getCourtSlotsByMomento(cancha: any, momento: 'manana' | 'tarde' | 'noche'): any[] {
+    if (!cancha || !cancha.slots) return [];
+    return cancha.slots.filter((s: any) => {
+      const hourNum = parseInt(s.hora_inicio.split(':')[0], 10);
+      if (momento === 'manana') return hourNum < 13;
+      if (momento === 'tarde') return hourNum >= 13 && hourNum < 19;
+      return hourNum >= 19;
+    });
   }
 
   setFechaQuick(daysOffset: number): void {
@@ -134,8 +227,25 @@ export class PublicClubLandingComponent implements OnInit {
 
     this.route.params.subscribe(params => {
       this.slug = params['slug'] || params['id'] || '';
+      const tabParam = params['tab'];
+      if (tabParam === 'canchas' || tabParam === 'torneos' || tabParam === 'ranking') {
+        this.activeTab = tabParam;
+        this.userChoseTab = true;
+      } else if (tabParam === 'americanos') {
+        this.activeTab = 'torneos';
+        this.userChoseTab = true;
+      }
+
       this.route.queryParams.subscribe(qParams => {
         this.isPreview = qParams['preview'] === '1';
+        const qTab = qParams['tab'];
+        if (qTab === 'canchas' || qTab === 'torneos' || qTab === 'ranking') {
+          this.activeTab = qTab;
+          this.userChoseTab = true;
+        } else if (qTab === 'americanos') {
+          this.activeTab = 'torneos';
+          this.userChoseTab = true;
+        }
         if (this.slug) {
           this.loadLandingData();
         }
@@ -160,12 +270,14 @@ export class PublicClubLandingComponent implements OnInit {
           this.cargarDisponibilidad();
 
           // Set default active tab based on club visibility settings
-          if (this.clubData.landing_mostrar_reservas != 0) {
-            this.activeTab = 'canchas';
-          } else if (this.clubData.landing_mostrar_americanos != 0) {
-            this.activeTab = 'americanos';
-          } else if (this.clubData.landing_mostrar_ranking != 0) {
-            this.activeTab = 'ranking';
+          if (!this.userChoseTab) {
+            if (this.clubData.landing_mostrar_reservas != 0) {
+              this.activeTab = 'canchas';
+            } else if (this.clubData.landing_mostrar_americanos != 0) {
+              this.activeTab = 'torneos';
+            } else if (this.clubData.landing_mostrar_ranking != 0) {
+              this.activeTab = 'ranking';
+            }
           }
 
           // Extract ranking categories
@@ -204,6 +316,7 @@ export class PublicClubLandingComponent implements OnInit {
         if (res.status === 'success' && res.canchas) {
           // Actualizar canchas con sus slots calculados en tiempo real
           this.canchas = res.canchas;
+          this.buildUnifiedSlots();
         }
       },
       error: () => {
@@ -275,6 +388,7 @@ export class PublicClubLandingComponent implements OnInit {
           if (this.selectedSlot) {
             this.selectedSlot.disponible = false;
             this.selectedSlot.motivo = 'Reservado recién';
+            this.buildUnifiedSlots();
           }
           Swal.fire({
             title: '¡Cancha Reservada! 🎾',
