@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ClubesService } from '../../services/clubes.service';
+import { AssetService } from '../../services/asset.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -74,6 +75,18 @@ export class PublicClubLandingComponent implements OnInit {
   };
 
   userChoseTab: boolean = false;
+  logoHasError: boolean = false;
+
+  get clubLogoUrl(): string {
+    if (this.logoHasError) return '';
+    const raw = this.clubData?.logo_url || this.clubData?.logo;
+    if (!raw) return '';
+    return this.assetService.getAssetUrl(raw, 'club');
+  }
+
+  onLogoError(): void {
+    this.logoHasError = true;
+  }
 
   get colorPrimary(): string {
     return this.clubData?.landing_color_primary || '#0b0f19';
@@ -236,7 +249,8 @@ export class PublicClubLandingComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private clubesService: ClubesService
+    private clubesService: ClubesService,
+    public assetService: AssetService
   ) {}
 
   ngOnInit(): void {
@@ -280,6 +294,7 @@ export class PublicClubLandingComponent implements OnInit {
   loadLandingData(): void {
     this.isLoading = true;
     this.errorMessage = '';
+    this.logoHasError = false;
 
     this.clubesService.getPublicClubLanding(this.slug, this.isPreview).subscribe({
       next: (res: any) => {
