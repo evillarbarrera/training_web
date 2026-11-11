@@ -863,6 +863,22 @@ export class ClubesService {
         return this.http.get<any>(url);
     }
 
+    getDisponibilidadPublica(slugOrId: string | number, fecha: string): Observable<any> {
+        let param = typeof slugOrId === 'number' ? `club_id=${slugOrId}` : `slug=${encodeURIComponent(slugOrId)}`;
+        let url = `${this.apiUrl}/clubes/get_disponibilidad_publica.php?${param}&fecha=${encodeURIComponent(fecha)}`;
+        return this.http.get<any>(url);
+    }
+
+    reservarPublicaGuest(payload: any): Observable<any> {
+        let url = `${this.apiUrl}/clubes/reserva_publica_guest.php`;
+        return this.http.post<any>(url, payload);
+    }
+
+    inscribirTorneoGuest(payload: any): Observable<any> {
+        let url = `${this.apiUrl}/torneos/inscripcion_torneo_guest.php`;
+        return this.http.post<any>(url, payload);
+    }
+
     // MATCHMAKING & PREFERENCIAS HORARIAS
     getJugadoresPreferencias(clubId?: number, search?: string, categoria?: string, franja?: string, posicion?: string): Observable<any> {
         let url = `${this.apiUrl}/clubes/get_jugadores_preferencias.php?1=1`;

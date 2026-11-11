@@ -16,6 +16,7 @@ export class PublicClubLandingComponent implements OnInit {
   slug: string = '';
   isPreview: boolean = false;
   isLoading: boolean = true;
+  isLoadingDisponibilidad: boolean = false;
   errorMessage: string = '';
 
   // Data
@@ -25,7 +26,12 @@ export class PublicClubLandingComponent implements OnInit {
   ranking: any[] = [];
 
   // Active Tab
-  activeTab: 'canchas' | 'americanos' | 'ranking' = 'canchas';
+  activeTab: 'canchas' | 'torneos' | 'ranking' = 'canchas';
+
+  // Mobile-Style Booking Flow (1° Elegir Horario -> 2° Aparecen Canchas Libres)
+  selectedHora: string = '';
+  filtroMomentoHora: 'todos' | 'manana' | 'tarde' | 'noche' = 'todos';
+  unifiedTimeSlots: any[] = [];
 
   // Court Reservations Filter
   fechaSeleccionada: string = new Date().toISOString().split('T')[0];
@@ -35,6 +41,39 @@ export class PublicClubLandingComponent implements OnInit {
   categoriasDisponibles: string[] = ['Todas'];
   categoriaSeleccionada: string = 'Todas';
   rankingFiltrado: any[] = [];
+
+  // Modal Reserva Rápida (Sin Login / Guest Checkout)
+  showBookingModal: boolean = false;
+  selectedCancha: any = null;
+  selectedSlot: any = null;
+  isSubmittingBooking: boolean = false;
+  bookingSuccessData: any = null;
+
+  guestBookingData = {
+    nombre: '',
+    telefono: '',
+    email: '',
+    notas: '',
+    metodoPago: 'club' // 'club' (pagar en recepción), 'transferencia'
+  };
+
+  // Modal Inscripción Torneo (Sin Login)
+  showTournamentModal: boolean = false;
+  selectedTournament: any = null;
+  isSubmittingTournament: boolean = false;
+  tournamentSuccessData: any = null;
+
+  guestTournamentData = {
+    j1Nombre: '',
+    j1Telefono: '',
+    j1Email: '',
+    j2Nombre: '',
+    j2Telefono: '',
+    nombrePareja: '',
+    notas: ''
+  };
+
+  userChoseTab: boolean = false;
 
   get colorPrimary(): string {
     return this.clubData?.landing_color_primary || '#0b0f19';
@@ -48,10 +87,137 @@ export class PublicClubLandingComponent implements OnInit {
     return this.clubData?.landing_banner || 'assets/images/padel-court-hero.jpg';
   }
 
+  get clubInitials(): string {
+    const name = this.clubData?.nombre || 'Padel';
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  get shareableLink(): string {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/c/${this.slug || this.clubData?.landing_slug || this.clubData?.id}`;
+    }
+    return `https://padelmanager.cl/c/${this.slug}`;
+  }
+
+  get totalSlotsLibres(): number {
+    return this.canchas.reduce((acc, c) => acc + (c.slots_disponibles_count || 0), 0);
+  }
+
+  selectHora(hora: string): void {
+    this.selectedHora = hora;
+  }
+
+  get availableHours(): any[] {
+    // Horarios que tienen al menos 1 cancha libre
+    return this.unifiedTimeSlots.filter(u => u.disponibles_count > 0);
+  }
+
+  get filteredAvailableHours(): any[] {
+    let list = this.availableHours;
+    if (this.filtroMomentoHora !== 'todos') {
+      list = list.filter(u => u.momento === this.filtroMomentoHora);
+    }
+    return list;
+  }
+
+  get currentSelectedSlotEntry(): any {
+    if (!this.selectedHora) return null;
+    return this.unifiedTimeSlots.find(u => u.hora_inicio === this.selectedHora) || null;
+  }
+
+  get canchasDisponiblesParaHora(): any[] {
+    const entry = this.currentSelectedSlotEntry;
+    if (!entry) return [];
+    // Retornar solo las canchas libres a esta hora seleccionada
+    return entry.courtSlots.filter((cs: any) => cs.slot.disponible);
+  }
+
+  get canchasOcupadasParaHora(): any[] {
+    const entry = this.currentSelectedSlotEntry;
+    if (!entry) return [];
+    return entry.courtSlots.filter((cs: any) => !cs.slot.disponible);
+  }
+
+  setActiveTab(tab: 'canchas' | 'torneos' | 'ranking'): void {
+    this.activeTab = tab;
+    this.userChoseTab = true;
+    if (typeof window !== 'undefined' && window.history) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+  }
+
+  buildUnifiedSlots(): void {
+    const map = new Map<string, any>();
+
+    for (const c of this.canchas) {
+      if (!c.slots) continue;
+      for (const s of c.slots) {
+        if (!map.has(s.hora_inicio)) {
+          const hourNum = parseInt(s.hora_inicio.split(':')[0], 10);
+          let momento: 'manana' | 'tarde' | 'noche' = 'manana';
+          if (hourNum >= 13 && hourNum < 19) momento = 'tarde';
+          else if (hourNum >= 19) momento = 'noche';
+
+          map.set(s.hora_inicio, {
+            hora_inicio: s.hora_inicio,
+            hora_fin: s.hora_fin,
+            duracion: s.duracion || 90,
+            momento,
+            disponibles_count: 0,
+            courtSlots: []
+          });
+        }
+
+        const entry = map.get(s.hora_inicio);
+        if (s.disponible) {
+          entry.disponibles_count++;
+        }
+        entry.courtSlots.push({
+          cancha: c,
+          slot: s
+        });
+      }
+    }
+
+    this.unifiedTimeSlots = Array.from(map.values()).sort((a, b) => {
+      return a.hora_inicio.localeCompare(b.hora_inicio);
+    });
+
+    // Auto-seleccionar primer horario libre para que aparezcan de inmediato las canchas
+    const freeHours = this.unifiedTimeSlots.filter(u => u.disponibles_count > 0);
+    if (freeHours.length > 0) {
+      const isCurrentStillFree = freeHours.some(u => u.hora_inicio === this.selectedHora);
+      if (!isCurrentStillFree || !this.selectedHora) {
+        this.selectedHora = freeHours[0].hora_inicio;
+      }
+    } else {
+      this.selectedHora = '';
+    }
+  }
+
+  getCourtSlotsByMomento(cancha: any, momento: 'manana' | 'tarde' | 'noche'): any[] {
+    if (!cancha || !cancha.slots) return [];
+    return cancha.slots.filter((s: any) => {
+      const hourNum = parseInt(s.hora_inicio.split(':')[0], 10);
+      if (momento === 'manana') return hourNum < 13;
+      if (momento === 'tarde') return hourNum >= 13 && hourNum < 19;
+      return hourNum >= 19;
+    });
+  }
+
   setFechaQuick(daysOffset: number): void {
     const d = new Date();
     d.setDate(d.getDate() + daysOffset);
     this.fechaSeleccionada = d.toISOString().split('T')[0];
+    this.cargarDisponibilidad();
+  }
+
+  onFechaChange(): void {
+    this.cargarDisponibilidad();
   }
 
   scrollToSection(sectionId: string): void {
@@ -74,10 +240,36 @@ export class PublicClubLandingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Intentar auto-rellenar datos si el usuario ya tiene sesión o los guardó antes
+    const savedName = localStorage.getItem('user_name') || localStorage.getItem('guest_name') || '';
+    const savedPhone = localStorage.getItem('user_phone') || localStorage.getItem('guest_phone') || '';
+    const savedEmail = localStorage.getItem('user_email') || localStorage.getItem('guest_email') || '';
+
+    if (savedName) this.guestBookingData.nombre = savedName;
+    if (savedPhone) this.guestBookingData.telefono = savedPhone;
+    if (savedEmail) this.guestBookingData.email = savedEmail;
+
     this.route.params.subscribe(params => {
       this.slug = params['slug'] || params['id'] || '';
+      const tabParam = params['tab'];
+      if (tabParam === 'canchas' || tabParam === 'torneos' || tabParam === 'ranking') {
+        this.activeTab = tabParam;
+        this.userChoseTab = true;
+      } else if (tabParam === 'americanos') {
+        this.activeTab = 'torneos';
+        this.userChoseTab = true;
+      }
+
       this.route.queryParams.subscribe(qParams => {
         this.isPreview = qParams['preview'] === '1';
+        const qTab = qParams['tab'];
+        if (qTab === 'canchas' || qTab === 'torneos' || qTab === 'ranking') {
+          this.activeTab = qTab;
+          this.userChoseTab = true;
+        } else if (qTab === 'americanos') {
+          this.activeTab = 'torneos';
+          this.userChoseTab = true;
+        }
         if (this.slug) {
           this.loadLandingData();
         }
@@ -98,13 +290,18 @@ export class PublicClubLandingComponent implements OnInit {
           this.americanos = res.americanos || [];
           this.ranking = res.ranking || [];
 
+          // Cargar disponibilidad de horarios en vivo para la fecha seleccionada
+          this.cargarDisponibilidad();
+
           // Set default active tab based on club visibility settings
-          if (this.clubData.landing_mostrar_reservas != 0) {
-            this.activeTab = 'canchas';
-          } else if (this.clubData.landing_mostrar_americanos != 0) {
-            this.activeTab = 'americanos';
-          } else if (this.clubData.landing_mostrar_ranking != 0) {
-            this.activeTab = 'ranking';
+          if (!this.userChoseTab) {
+            if (this.clubData.landing_mostrar_reservas != 0) {
+              this.activeTab = 'canchas';
+            } else if (this.clubData.landing_mostrar_americanos != 0) {
+              this.activeTab = 'torneos';
+            } else if (this.clubData.landing_mostrar_ranking != 0) {
+              this.activeTab = 'ranking';
+            }
           }
 
           // Extract ranking categories
@@ -132,6 +329,26 @@ export class PublicClubLandingComponent implements OnInit {
     });
   }
 
+  cargarDisponibilidad(): void {
+    if (!this.clubData?.id && !this.slug) return;
+    this.isLoadingDisponibilidad = true;
+
+    const identifier = this.clubData?.id || this.slug;
+    this.clubesService.getDisponibilidadPublica(identifier, this.fechaSeleccionada).subscribe({
+      next: (res: any) => {
+        this.isLoadingDisponibilidad = false;
+        if (res.status === 'success' && res.canchas) {
+          // Actualizar canchas con sus slots calculados en tiempo real
+          this.canchas = res.canchas;
+          this.buildUnifiedSlots();
+        }
+      },
+      error: () => {
+        this.isLoadingDisponibilidad = false;
+      }
+    });
+  }
+
   filtrarRanking(): void {
     if (this.categoriaSeleccionada === 'Todas') {
       this.rankingFiltrado = this.ranking;
@@ -140,44 +357,160 @@ export class PublicClubLandingComponent implements OnInit {
     }
   }
 
-  reservarCancha(cancha: any): void {
-    const isLoggedIn = !!localStorage.getItem('token');
-    if (!isLoggedIn) {
-      Swal.fire({
-        title: 'Iniciar Sesión',
-        text: 'Para completar tu reserva debes iniciar sesión o crear una cuenta gratuita.',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Iniciar Sesión / Registrarse',
-        cancelButtonText: 'Cancelar'
-      }).then(res => {
-        if (res.isConfirmed) {
-          this.router.navigate(['/login']);
+  // --- FLUJO DE RESERVA RÁPIDA SIN LOGIN (GUEST CHECKOUT) ---
+  abrirReservaSlot(cancha: any, slot: any): void {
+    if (!slot.disponible) return;
+
+    this.selectedCancha = cancha;
+    this.selectedSlot = slot;
+    this.bookingSuccessData = null;
+    this.showBookingModal = true;
+  }
+
+  cerrarModalReserva(): void {
+    this.showBookingModal = false;
+    this.selectedSlot = null;
+    this.selectedCancha = null;
+    this.bookingSuccessData = null;
+  }
+
+  confirmarReservaGuest(): void {
+    if (!this.guestBookingData.nombre.trim()) {
+      Swal.fire('Nombre Requerido', 'Por favor ingresa tu nombre y apellido para la reserva.', 'warning');
+      return;
+    }
+    if (!this.guestBookingData.telefono.trim()) {
+      Swal.fire('Teléfono Requerido', 'Por favor ingresa tu número de WhatsApp o teléfono.', 'warning');
+      return;
+    }
+
+    this.isSubmittingBooking = true;
+
+    // Recordar datos en navegador para futuras reservas
+    localStorage.setItem('guest_name', this.guestBookingData.nombre);
+    localStorage.setItem('guest_phone', this.guestBookingData.telefono);
+    if (this.guestBookingData.email) localStorage.setItem('guest_email', this.guestBookingData.email);
+
+    const payload = {
+      cancha_id: this.selectedCancha.id,
+      fecha: this.fechaSeleccionada,
+      hora_inicio: this.selectedSlot.hora_inicio,
+      duracion: this.selectedSlot.duracion || 90,
+      nombre_invitado: this.guestBookingData.nombre,
+      telefono_invitado: this.guestBookingData.telefono,
+      email_invitado: this.guestBookingData.email,
+      metodo_pago: this.guestBookingData.metodoPago,
+      notas: this.guestBookingData.notas
+    };
+
+    this.clubesService.reservarPublicaGuest(payload).subscribe({
+      next: (res: any) => {
+        this.isSubmittingBooking = false;
+        if (res.status === 'success') {
+          this.bookingSuccessData = res.reserva;
+          // Marcar el slot como ocupado localmente
+          if (this.selectedSlot) {
+            this.selectedSlot.disponible = false;
+            this.selectedSlot.motivo = 'Reservado recién';
+            this.buildUnifiedSlots();
+          }
+          Swal.fire({
+            title: '¡Cancha Reservada! 🎾',
+            text: `Tu turno ha sido confirmado con código ${res.reserva.codigo}.`,
+            icon: 'success',
+            confirmButtonText: 'Ver Comprobante'
+          });
+        } else {
+          Swal.fire('Aviso', res.message || 'No se pudo completar la reserva.', 'error');
         }
-      });
-    } else {
-      this.router.navigate(['/clubes-reservar'], { queryParams: { club_id: this.clubData.id, fecha: this.fechaSeleccionada } });
+      },
+      error: (err) => {
+        this.isSubmittingBooking = false;
+        const msg = err.error?.message || 'Ocurrió un error al reservar el horario. Intenta nuevamente.';
+        Swal.fire('Error', msg, 'error');
+      }
+    });
+  }
+
+  // --- FLUJO DE INSCRIPCIÓN A TORNEOS SIN LOGIN ---
+  inscribirAmericano(torneo: any): void {
+    this.selectedTournament = torneo;
+    this.tournamentSuccessData = null;
+    this.showTournamentModal = true;
+
+    if (this.guestBookingData.nombre && !this.guestTournamentData.j1Nombre) {
+      this.guestTournamentData.j1Nombre = this.guestBookingData.nombre;
+    }
+    if (this.guestBookingData.telefono && !this.guestTournamentData.j1Telefono) {
+      this.guestTournamentData.j1Telefono = this.guestBookingData.telefono;
+    }
+    if (this.guestBookingData.email && !this.guestTournamentData.j1Email) {
+      this.guestTournamentData.j1Email = this.guestBookingData.email;
     }
   }
 
-  inscribirAmericano(torneo: any): void {
-    const isLoggedIn = !!localStorage.getItem('token');
-    if (!isLoggedIn) {
-      Swal.fire({
-        title: 'Iniciar Sesión',
-        text: 'Para inscribirte en este torneo/americano debes iniciar sesión.',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Iniciar Sesión',
-        cancelButtonText: 'Cancelar'
-      }).then(res => {
-        if (res.isConfirmed) {
-          this.router.navigate(['/login']);
-        }
-      });
-    } else {
-      this.router.navigate(['/mis-torneos'], { queryParams: { torneo_id: torneo.id } });
+  cerrarModalTorneo(): void {
+    this.showTournamentModal = false;
+    this.selectedTournament = null;
+    this.tournamentSuccessData = null;
+  }
+
+  confirmarInscripcionTorneo(): void {
+    if (!this.guestTournamentData.j1Nombre.trim() || !this.guestTournamentData.j1Telefono.trim()) {
+      Swal.fire('Datos Incompletos', 'Por favor ingresa nombre y teléfono del Jugador 1.', 'warning');
+      return;
     }
+    if (!this.guestTournamentData.j2Nombre.trim()) {
+      Swal.fire('Pareja Requerida', 'Por favor ingresa el nombre de tu compañero/a de pádel.', 'warning');
+      return;
+    }
+
+    this.isSubmittingTournament = true;
+
+    const payload = {
+      torneo_id: this.selectedTournament.id,
+      jugador1_nombre: this.guestTournamentData.j1Nombre,
+      jugador1_telefono: this.guestTournamentData.j1Telefono,
+      jugador1_email: this.guestTournamentData.j1Email,
+      jugador2_nombre: this.guestTournamentData.j2Nombre,
+      jugador2_telefono: this.guestTournamentData.j2Telefono,
+      nombre_pareja: this.guestTournamentData.nombrePareja,
+      notas: this.guestTournamentData.notas
+    };
+
+    this.clubesService.inscribirTorneoGuest(payload).subscribe({
+      next: (res: any) => {
+        this.isSubmittingTournament = false;
+        if (res.status === 'success') {
+          this.tournamentSuccessData = res.detalle;
+          Swal.fire({
+            title: '¡Inscripción Exitosa! 🏆',
+            text: 'Tu pareja ha quedado registrada en el torneo.',
+            icon: 'success',
+            confirmButtonText: 'Aceptar'
+          });
+        } else {
+          Swal.fire('Aviso', res.message || 'No se pudo procesar la inscripción.', 'error');
+        }
+      },
+      error: (err) => {
+        this.isSubmittingTournament = false;
+        const msg = err.error?.message || 'Ocurrió un error al procesar la inscripción.';
+        Swal.fire('Error', msg, 'error');
+      }
+    });
+  }
+
+  copiarEnlaceClub(): void {
+    navigator.clipboard.writeText(this.shareableLink).then(() => {
+      Swal.fire({
+        title: '¡Enlace Copiado!',
+        text: 'Copia este link en la bio de tu Instagram o compártelo por WhatsApp con tus jugadores.',
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+      });
+    });
   }
 
   openWhatsApp(): void {
