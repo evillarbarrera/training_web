@@ -44,14 +44,23 @@
 
                 <!-- Derecha: Menú de navegación -->
                 <div class="navbar-menu-links">
-                    <button *ngIf="clubData.landing_mostrar_reservas != 0" class="nav-link-btn" (click)="scrollToSection('canchas')">
+                    <button *ngIf="clubData.landing_mostrar_reservas != 0" 
+                            class="nav-link-btn" 
+                            [class.active]="activeTab === 'canchas'" 
+                            (click)="setActiveTab('canchas')">
                         <i class="fas fa-calendar-check"></i> Canchas
                     </button>
-                    <button *ngIf="clubData.landing_mostrar_ranking != 0" class="nav-link-btn" (click)="scrollToSection('ranking')">
-                        <i class="fas fa-chart-line"></i> Ranking
-                    </button>
-                    <button *ngIf="clubData.landing_mostrar_americanos != 0" class="nav-link-btn" (click)="scrollToSection('torneos')">
+                    <button *ngIf="clubData.landing_mostrar_americanos != 0" 
+                            class="nav-link-btn" 
+                            [class.active]="activeTab === 'torneos'" 
+                            (click)="setActiveTab('torneos')">
                         <i class="fas fa-trophy"></i> Torneos
+                    </button>
+                    <button *ngIf="clubData.landing_mostrar_ranking != 0" 
+                            class="nav-link-btn" 
+                            [class.active]="activeTab === 'ranking'" 
+                            (click)="setActiveTab('ranking')">
+                        <i class="fas fa-chart-line"></i> Ranking
                     </button>
                     <button class="nav-link-btn share-btn" (click)="copiarEnlaceClub()" title="Copiar enlace directo de reserva">
                         <i class="fas fa-link"></i> Compartir Link
@@ -122,28 +131,74 @@
             </div>
         </section>
 
-        <!-- SECCIONES EN ORDEN VERTICAL -->
+        <!-- MAIN TABS NAVIGATION (CANCHAS / TORNEOS / RANKING) -->
+        <div class="container main-tabs-nav-container">
+            <div class="main-segmented-tabs">
+                <button *ngIf="clubData.landing_mostrar_reservas != 0" 
+                        type="button"
+                        class="segmented-tab-btn" 
+                        [class.active]="activeTab === 'canchas'" 
+                        (click)="setActiveTab('canchas')">
+                    <span class="tab-icon">🎾</span>
+                    <div class="tab-text-wrap">
+                        <span class="tab-label">Canchas & Turnos</span>
+                        <span class="tab-sublabel">Reserva directa</span>
+                    </div>
+                    <span class="tab-badge-pill" *ngIf="totalSlotsLibres > 0">{{ totalSlotsLibres }} libres</span>
+                </button>
+
+                <button *ngIf="clubData.landing_mostrar_americanos != 0" 
+                        type="button"
+                        class="segmented-tab-btn" 
+                        [class.active]="activeTab === 'torneos'" 
+                        (click)="setActiveTab('torneos')">
+                    <span class="tab-icon">🏆</span>
+                    <div class="tab-text-wrap">
+                        <span class="tab-label">Torneos & Americanos</span>
+                        <span class="tab-sublabel">Inscripción online</span>
+                    </div>
+                    <span class="tab-badge-pill tournament-badge" *ngIf="americanos.length > 0">{{ americanos.length }}</span>
+                </button>
+
+                <button *ngIf="clubData.landing_mostrar_ranking != 0" 
+                        type="button"
+                        class="segmented-tab-btn" 
+                        [class.active]="activeTab === 'ranking'" 
+                        (click)="setActiveTab('ranking')">
+                    <span class="tab-icon">📊</span>
+                    <div class="tab-text-wrap">
+                        <span class="tab-label">Ranking del Club</span>
+                        <span class="tab-sublabel">Posiciones oficiales</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL POR SECCIONES (SOLO LA PESTAÑA ACTIVA) -->
         <div class="container sections-vertical-stack">
             
-            <!-- 3. DISPONIBILIDAD DE CANCHAS Y HORARIOS EN VIVO -->
-            <section id="canchas" *ngIf="clubData.landing_mostrar_reservas != 0" class="section-pane">
+            <!-- ======================================================== -->
+            <!-- 1. VISTA DE CANCHAS Y DISPONIBILIDAD                     -->
+            <!-- ======================================================== -->
+            <section id="canchas" *ngIf="activeTab === 'canchas' && clubData.landing_mostrar_reservas != 0" class="section-pane animate-fade-in">
+                
                 <div class="section-pane-header">
                     <div>
                         <h2>🎾 Disponibilidad de Canchas en Vivo</h2>
-                        <p>Toca el horario que prefieras para reservar de inmediato sin necesidad de crear cuenta.</p>
+                        <p>Selecciona tu horario preferido y reserva de inmediato sin necesidad de crear cuenta.</p>
                     </div>
                 </div>
 
                 <!-- Filtro de Fecha Rápido -->
                 <div class="date-selector-bar">
                     <div class="quick-dates-group">
-                        <button class="date-btn-pill" [class.active]="isFechaSelected(0)" (click)="setFechaQuick(0)">
+                        <button type="button" class="date-btn-pill" [class.active]="isFechaSelected(0)" (click)="setFechaQuick(0)">
                             Hoy
                         </button>
-                        <button class="date-btn-pill" [class.active]="isFechaSelected(1)" (click)="setFechaQuick(1)">
+                        <button type="button" class="date-btn-pill" [class.active]="isFechaSelected(1)" (click)="setFechaQuick(1)">
                             Mañana
                         </button>
-                        <button class="date-btn-pill" [class.active]="isFechaSelected(2)" (click)="setFechaQuick(2)">
+                        <button type="button" class="date-btn-pill" [class.active]="isFechaSelected(2)" (click)="setFechaQuick(2)">
                             Pasado Mañana
                         </button>
                     </div>
@@ -160,73 +215,302 @@
                     <span>Consultando horarios disponibles en tiempo real...</span>
                 </div>
 
-                <!-- Grid de Canchas con Parrilla de Horarios -->
-                <div class="courts-grid-layout" *ngIf="canchas.length > 0">
-                    <div class="court-card-item" *ngFor="let c of canchas">
-                        
-                        <!-- Header de la Cancha -->
-                        <div class="card-header-flex">
-                            <span class="court-badge-tag" [class.indoor]="c.techada">
-                                <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
-                                {{ c.techada ? 'Techada (Indoor)' : 'Al Aire Libre' }}
-                            </span>
-                            <span class="court-type-lbl" *ngIf="c.tipo">{{ c.tipo }}</span>
+                <!-- PESTAÑAS DE CANCHAS (COURT TABS) -->
+                <div class="court-subtabs-bar" *ngIf="canchas.length > 0 && !isLoadingDisponibilidad">
+                    <button type="button" 
+                            class="court-tab-pill" 
+                            [class.active]="selectedCanchaId === 0" 
+                            (click)="selectCanchaTab(0)">
+                        <i class="fas fa-table-cells-large"></i>
+                        <span>Todas las Pistas</span>
+                        <span class="court-tab-badge">{{ totalSlotsLibres }}</span>
+                    </button>
+
+                    <button *ngFor="let c of canchas" 
+                            type="button" 
+                            class="court-tab-pill" 
+                            [class.active]="selectedCanchaId === c.id" 
+                            (click)="selectCanchaTab(c.id)">
+                        <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
+                        <span>{{ c.nombre }}</span>
+                        <span class="court-tab-badge" [class.has-free]="(c.slots_disponibles_count || 0) > 0">
+                            {{ c.slots_disponibles_count || 0 }}
+                        </span>
+                    </button>
+                </div>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- CASO A: TODAS LAS PISTAS (selectedCanchaId === 0)    -->
+                <!-- ---------------------------------------------------- -->
+                <div *ngIf="selectedCanchaId === 0 && canchas.length > 0 && !isLoadingDisponibilidad">
+                    
+                    <!-- Barra de Controles y Filtros para Todas las Pistas -->
+                    <div class="agenda-controls-bar">
+                        <!-- Filtro por Momento del Día -->
+                        <div class="moment-filters-group">
+                            <button type="button" 
+                                    class="moment-btn" 
+                                    [class.active]="filtroMomentoDia === 'todos'" 
+                                    (click)="filtroMomentoDia = 'todos'">
+                                Todos ({{ totalSlotsLibres }})
+                            </button>
+                            <button type="button" 
+                                    class="moment-btn" 
+                                    [class.active]="filtroMomentoDia === 'manana'" 
+                                    (click)="filtroMomentoDia = 'manana'">
+                                🌅 Mañana
+                            </button>
+                            <button type="button" 
+                                    class="moment-btn" 
+                                    [class.active]="filtroMomentoDia === 'tarde'" 
+                                    (click)="filtroMomentoDia = 'tarde'">
+                                ☀️ Tarde
+                            </button>
+                            <button type="button" 
+                                    class="moment-btn" 
+                                    [class.active]="filtroMomentoDia === 'noche'" 
+                                    (click)="filtroMomentoDia = 'noche'">
+                                🌙 Noche
+                            </button>
                         </div>
 
-                        <h3 class="court-title">{{ c.nombre }}</h3>
+                        <!-- Opciones de Vista y Toggle -->
+                        <div class="view-options-group">
+                            <label class="toggle-occupied-check">
+                                <input type="checkbox" [(ngModel)]="mostrarOcupadosEnAgenda">
+                                <span>Ver ocupados</span>
+                            </label>
 
-                        <!-- Características de la Cancha -->
-                        <div class="court-specs">
-                            <div class="spec-row" *ngIf="c.superficie">
-                                <i class="fas fa-layer-group"></i> Superficie: <strong>{{ c.superficie }}</strong>
-                            </div>
-                            <div class="spec-row">
-                                <i class="fas fa-bolt"></i> Iluminación LED
-                            </div>
-                            <div class="spec-row">
-                                <i class="fas fa-shield-alt"></i> Cristales Templados
-                            </div>
-                        </div>
-
-                        <!-- PARRILLA DE SLOTS / HORARIOS EN VIVO -->
-                        <div class="slots-section">
-                            <div class="slots-header-row">
-                                <span class="slots-title">
-                                    <i class="fas fa-clock"></i> Horarios Disponibles:
-                                </span>
-                                <span class="badge-free-slots" *ngIf="c.slots_disponibles_count !== undefined">
-                                    {{ c.slots_disponibles_count }} libre(s)
-                                </span>
-                            </div>
-
-                            <div class="slots-grid-chips" *ngIf="c.slots && c.slots.length > 0">
-                                <button *ngFor="let slot of c.slots"
-                                        type="button"
-                                        class="slot-chip-btn"
-                                        [class.slot-libre]="slot.disponible"
-                                        [class.slot-ocupado]="!slot.disponible"
-                                        [disabled]="!slot.disponible"
-                                        (click)="abrirReservaSlot(c, slot)"
-                                        [title]="slot.disponible ? 'Clic para reservar este horario' : (slot.motivo || 'Ocupado')">
-                                    <span class="slot-hour">{{ slot.hora_inicio }}</span>
-                                    <span class="slot-price-tag" *ngIf="slot.disponible">{{ slot.precio_formateado }}</span>
-                                    <span class="slot-occupied-lbl" *ngIf="!slot.disponible">{{ slot.motivo || 'Ocupado' }}</span>
+                            <div class="view-switch-btns">
+                                <button type="button" 
+                                        class="switch-btn" 
+                                        [class.active]="viewModeCanchas === 'agenda'" 
+                                        (click)="viewModeCanchas = 'agenda'" 
+                                        title="Vista de agenda para ver todas las pistas juntas por horario">
+                                    <i class="fas fa-list-timeline"></i> Agenda
+                                </button>
+                                <button type="button" 
+                                        class="switch-btn" 
+                                        [class.active]="viewModeCanchas === 'tarjetas'" 
+                                        (click)="viewModeCanchas = 'tarjetas'" 
+                                        title="Vista en tarjetas de canchas">
+                                    <i class="fas fa-grip"></i> Tarjetas
                                 </button>
                             </div>
+                        </div>
+                    </div>
 
-                            <div *ngIf="!c.slots || c.slots.length === 0" class="no-slots-note">
-                                <i class="fas fa-info-circle"></i> No hay horarios configurados para este día.
+                    <!-- VISTA 1: AGENDA UNIFICADA POR HORARIO (Ver todas de una) -->
+                    <div *ngIf="viewModeCanchas === 'agenda'" class="agenda-timeline-container">
+                        
+                        <div *ngIf="filteredUnifiedSlots.length > 0" class="agenda-slots-list">
+                            <div class="agenda-time-row" *ngFor="let u of filteredUnifiedSlots">
+                                
+                                <div class="agenda-time-info">
+                                    <span class="agenda-hour-main">{{ u.hora_inicio }}</span>
+                                    <span class="agenda-hour-sub">{{ u.hora_fin }}</span>
+                                    <span class="agenda-badge-status" 
+                                          [class.free]="u.disponibles_count > 0" 
+                                          [class.full]="u.disponibles_count === 0">
+                                        {{ u.disponibles_count > 0 ? (u.disponibles_count + ' libre' + (u.disponibles_count > 1 ? 's' : '')) : 'Agotado' }}
+                                    </span>
+                                </div>
+
+                                <div class="agenda-courts-chips">
+                                    <button *ngFor="let cs of u.courtSlots" 
+                                            type="button" 
+                                            class="agenda-court-chip" 
+                                            [class.slot-libre]="cs.slot.disponible" 
+                                            [class.slot-ocupado]="!cs.slot.disponible" 
+                                            [disabled]="!cs.slot.disponible" 
+                                            (click)="abrirReservaSlot(cs.cancha, cs.slot)" 
+                                            [title]="cs.slot.disponible ? 'Clic para reservar en ' + cs.cancha.nombre : cs.slot.motivo || 'Ocupado'">
+                                        <div class="chip-court-header">
+                                            <span class="court-chip-name">{{ cs.cancha.nombre }}</span>
+                                            <span class="court-chip-indoor" *ngIf="cs.cancha.techada">Indoor</span>
+                                        </div>
+                                        <div class="chip-slot-footer">
+                                            <span class="chip-price" *ngIf="cs.slot.disponible">{{ cs.slot.precio_formateado }}</span>
+                                            <span class="chip-occ" *ngIf="!cs.slot.disponible">{{ cs.slot.motivo || 'Ocupado' }}</span>
+                                            <i class="fas fa-check-circle" *ngIf="cs.slot.disponible"></i>
+                                        </div>
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
 
-                        <!-- Footer de la Tarjeta -->
-                        <div class="court-footer-flex">
-                            <div class="price-info">
-                                <span class="lbl">Precio desde</span>
-                                <span class="amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
-                            </div>
-                            <span class="hint-reserve">Toca un horario 🟢</span>
+                        <div *ngIf="filteredUnifiedSlots.length === 0" class="empty-state-box">
+                            <div class="empty-icon-wrap"><i class="fas fa-clock"></i></div>
+                            <h3>No hay turnos disponibles para este filtro</h3>
+                            <p>Prueba seleccionando otro momento del día o activa "Ver ocupados" para ver los horarios del club.</p>
                         </div>
+
+                    </div>
+
+                    <!-- VISTA 2: TARJETAS DE CANCHAS -->
+                    <div *ngIf="viewModeCanchas === 'tarjetas'" class="courts-grid-layout">
+                        <div class="court-card-item" *ngFor="let c of canchas">
+                            <div class="card-header-flex">
+                                <span class="court-badge-tag" [class.indoor]="c.techada">
+                                    <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
+                                    {{ c.techada ? 'Techada (Indoor)' : 'Al Aire Libre' }}
+                                </span>
+                                <span class="court-type-lbl" *ngIf="c.tipo">{{ c.tipo }}</span>
+                            </div>
+
+                            <h3 class="court-title">{{ c.nombre }}</h3>
+
+                            <div class="court-specs">
+                                <div class="spec-row" *ngIf="c.superficie">
+                                    <i class="fas fa-layer-group"></i> Superficie: <strong>{{ c.superficie }}</strong>
+                                </div>
+                                <div class="spec-row"><i class="fas fa-bolt"></i> Iluminación LED</div>
+                                <div class="spec-row"><i class="fas fa-shield-alt"></i> Cristales Templados</div>
+                            </div>
+
+                            <div class="slots-section">
+                                <div class="slots-header-row">
+                                    <span class="slots-title"><i class="fas fa-clock"></i> Horarios Disponibles:</span>
+                                    <span class="badge-free-slots" *ngIf="c.slots_disponibles_count !== undefined">
+                                        {{ c.slots_disponibles_count }} libre(s)
+                                    </span>
+                                </div>
+
+                                <div class="slots-grid-chips" *ngIf="c.slots && c.slots.length > 0">
+                                    <button *ngFor="let slot of c.slots"
+                                            type="button"
+                                            class="slot-chip-btn"
+                                            [class.slot-libre]="slot.disponible"
+                                            [class.slot-ocupado]="!slot.disponible"
+                                            [disabled]="!slot.disponible"
+                                            (click)="abrirReservaSlot(c, slot)"
+                                            [title]="slot.disponible ? 'Clic para reservar' : (slot.motivo || 'Ocupado')">
+                                        <span class="slot-hour">{{ slot.hora_inicio }}</span>
+                                        <span class="slot-price-tag" *ngIf="slot.disponible">{{ slot.precio_formateado }}</span>
+                                        <span class="slot-occupied-lbl" *ngIf="!slot.disponible">{{ slot.motivo || 'Ocupado' }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="court-footer-flex">
+                                <div class="price-info">
+                                    <span class="lbl">Precio desde</span>
+                                    <span class="amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
+                                </div>
+                                <span class="hint-reserve">Toca un horario 🟢</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ---------------------------------------------------- -->
+                <!-- CASO B: CANCHA INDIVIDUAL ENFOCADA (selectedCanchaId) -->
+                <!-- ---------------------------------------------------- -->
+                <div *ngIf="selectedCanchaId !== 0 && selectedCanchaObj as c" class="focused-court-container">
+                    <div class="focused-court-hero-card">
+                        <div class="focused-header-left">
+                            <div class="focused-tags-row">
+                                <span class="focused-tag" [class.indoor]="c.techada">
+                                    <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
+                                    {{ c.techada ? 'Pista Techada (Indoor)' : 'Pista Al Aire Libre (Outdoor)' }}
+                                </span>
+                                <span class="focused-tag" *ngIf="c.superficie">
+                                    <i class="fas fa-layer-group"></i> {{ c.superficie }}
+                                </span>
+                                <span class="focused-tag"><i class="fas fa-bolt"></i> Iluminación LED</span>
+                                <span class="focused-tag"><i class="fas fa-shield-alt"></i> Cristales Templados</span>
+                            </div>
+                            <h2 class="focused-court-name">{{ c.nombre }}</h2>
+                        </div>
+
+                        <div class="focused-header-right">
+                            <div class="price-display-box">
+                                <span class="p-lbl">Tarifa estándar</span>
+                                <span class="p-amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
+                            </div>
+                            <span class="badge-free-total" [class.has-free]="(c.slots_disponibles_count || 0) > 0">
+                                <i class="fas fa-calendar-check"></i> {{ c.slots_disponibles_count || 0 }} turnos disponibles
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Horarios agrupados por periodo del día -->
+                    <div class="periods-cards-grid">
+                        
+                        <!-- Mañana -->
+                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'manana').length > 0">
+                            <div class="period-panel-header">
+                                <div class="p-title-wrap">
+                                    <span class="p-icon">🌅</span>
+                                    <h4>Turnos de Mañana</h4>
+                                </div>
+                                <span class="p-time-range">07:00 a 13:00 hrs</span>
+                            </div>
+                            <div class="period-chips-grid">
+                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'manana')"
+                                        type="button"
+                                        class="slot-chip-btn"
+                                        [class.slot-libre]="s.disponible"
+                                        [class.slot-ocupado]="!s.disponible"
+                                        [disabled]="!s.disponible"
+                                        (click)="abrirReservaSlot(c, s)">
+                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
+                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
+                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tarde -->
+                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'tarde').length > 0">
+                            <div class="period-panel-header">
+                                <div class="p-title-wrap">
+                                    <span class="p-icon">☀️</span>
+                                    <h4>Turnos de Tarde</h4>
+                                </div>
+                                <span class="p-time-range">13:00 a 19:00 hrs</span>
+                            </div>
+                            <div class="period-chips-grid">
+                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'tarde')"
+                                        type="button"
+                                        class="slot-chip-btn"
+                                        [class.slot-libre]="s.disponible"
+                                        [class.slot-ocupado]="!s.disponible"
+                                        [disabled]="!s.disponible"
+                                        (click)="abrirReservaSlot(c, s)">
+                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
+                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
+                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Noche -->
+                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'noche').length > 0">
+                            <div class="period-panel-header">
+                                <div class="p-title-wrap">
+                                    <span class="p-icon">🌙</span>
+                                    <h4>Turnos de Noche</h4>
+                                </div>
+                                <span class="p-time-range">19:00 a 23:30 hrs</span>
+                            </div>
+                            <div class="period-chips-grid">
+                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'noche')"
+                                        type="button"
+                                        class="slot-chip-btn"
+                                        [class.slot-libre]="s.disponible"
+                                        [class.slot-ocupado]="!s.disponible"
+                                        [disabled]="!s.disponible"
+                                        (click)="abrirReservaSlot(c, s)">
+                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
+                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
+                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -241,20 +525,79 @@
                         <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
                     </button>
                 </div>
+
             </section>
 
-            <!-- 4. RANKING DEL CLUB POR CATEGORÍA -->
-            <section id="ranking" *ngIf="clubData.landing_mostrar_ranking != 0" class="section-pane">
+            <!-- ======================================================== -->
+            <!-- 2. VISTA DE TORNEOS Y AMERICANOS                          -->
+            <!-- ======================================================== -->
+            <section id="torneos" *ngIf="activeTab === 'torneos' && clubData.landing_mostrar_americanos != 0" class="section-pane animate-fade-in">
                 <div class="section-pane-header">
                     <div>
-                        <h2>📊 Ranking del Club por Categoría</h2>
-                        <p>Clasificación oficial de jugadores ordenada por posiciones y puntos acumulados.</p>
+                        <h2>🏆 Próximos Torneos y Americanos</h2>
+                        <p>Inscríbete junto a tu pareja de pádel en solo 1 paso sin necesidad de estar registrado.</p>
+                    </div>
+                </div>
+
+                <div class="torneos-grid-layout" *ngIf="americanos.length > 0">
+                    <div class="torneo-card-item" *ngFor="let t of americanos">
+                        <div class="torneo-card-header">
+                            <span class="status-open-pill">
+                                <span class="dot"></span> Inscripciones Abiertas
+                            </span>
+                            <span class="type-name">{{ t.tipo || 'Americano' }}</span>
+                        </div>
+
+                        <h3 class="torneo-name">{{ t.nombre }}</h3>
+
+                        <div class="torneo-meta-list">
+                            <div class="meta-row">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>Fecha Inicio: <strong>{{ t.fecha_inicio | date:'dd/MM/yyyy' }}</strong></span>
+                            </div>
+                            <div class="meta-row" *ngIf="t.precio">
+                                <i class="fas fa-ticket-alt"></i>
+                                <span>Inscripción: <strong>$ {{ t.precio | number:'1.0-0' }}</strong></span>
+                            </div>
+                            <div class="meta-row" *ngIf="t.cupos_maximos">
+                                <i class="fas fa-users"></i>
+                                <span>Cupos: <strong>{{ t.cupos_maximos }} Parejas</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="torneo-card-footer">
+                            <button class="btn-enroll-cta" (click)="inscribirAmericano(t)">
+                                <span>Inscribir Pareja Ahora</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div *ngIf="americanos.length === 0" class="empty-state-box">
+                    <div class="empty-icon-wrap">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>No hay torneos programados actualmente</h3>
+                    <p>La administración del club publicará nuevas fechas próximamente. ¡Mantente atento!</p>
+                </div>
+            </section>
+
+            <!-- ======================================================== -->
+            <!-- 3. VISTA DE RANKING OFICIAL DEL CLUB                     -->
+            <!-- ======================================================== -->
+            <section id="ranking" *ngIf="activeTab === 'ranking' && clubData.landing_mostrar_ranking != 0" class="section-pane animate-fade-in">
+                <div class="section-pane-header">
+                    <div>
+                        <h2>📊 Ranking Oficial del Club por Categoría</h2>
+                        <p>Clasificación oficial de jugadores ordenada por posiciones y puntos acumulados en la temporada.</p>
                     </div>
                 </div>
 
                 <!-- Filtro de Categorías -->
                 <div class="category-pills-bar" *ngIf="categoriasDisponibles.length > 1">
                     <button *ngFor="let cat of categoriasDisponibles" 
+                            type="button"
                             class="cat-filter-btn"
                             [class.active]="categoriaSeleccionada === cat" 
                             (click)="categoriaSeleccionada = cat; filtrarRanking()">
@@ -305,60 +648,7 @@
                         <i class="fas fa-list-ol"></i>
                     </div>
                     <h3>Sin clasificaciones en esta categoría</h3>
-                    <p>No se registran jugadores en el filtro seleccionado.</p>
-                </div>
-            </section>
-
-            <!-- 5. PRÓXIMOS AMERICANOS O TORNEOS -->
-            <section id="torneos" *ngIf="clubData.landing_mostrar_americanos != 0" class="section-pane">
-                <div class="section-pane-header">
-                    <div>
-                        <h2>🏆 Próximos Torneos y Americanos</h2>
-                        <p>Inscríbete junto a tu pareja de pádel en solo 1 paso sin registrarte.</p>
-                    </div>
-                </div>
-
-                <div class="torneos-grid-layout" *ngIf="americanos.length > 0">
-                    <div class="torneo-card-item" *ngFor="let t of americanos">
-                        <div class="torneo-card-header">
-                            <span class="status-open-pill">
-                                <span class="dot"></span> Inscripciones Abiertas
-                            </span>
-                            <span class="type-name">{{ t.tipo || 'Americano' }}</span>
-                        </div>
-
-                        <h3 class="torneo-name">{{ t.nombre }}</h3>
-
-                        <div class="torneo-meta-list">
-                            <div class="meta-row">
-                                <i class="fas fa-calendar-day"></i>
-                                <span>Fecha Inicio: <strong>{{ t.fecha_inicio | date:'dd/MM/yyyy' }}</strong></span>
-                            </div>
-                            <div class="meta-row" *ngIf="t.precio">
-                                <i class="fas fa-ticket-alt"></i>
-                                <span>Inscripción: <strong>$ {{ t.precio | number:'1.0-0' }}</strong></span>
-                            </div>
-                            <div class="meta-row" *ngIf="t.cupos_maximos">
-                                <i class="fas fa-users"></i>
-                                <span>Cupos: <strong>{{ t.cupos_maximos }} Parejas</strong></span>
-                            </div>
-                        </div>
-
-                        <div class="torneo-card-footer">
-                            <button class="btn-enroll-cta" (click)="inscribirAmericano(t)">
-                                <span>Inscribir Pareja Ahora</span>
-                                <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div *ngIf="americanos.length === 0" class="empty-state-box">
-                    <div class="empty-icon-wrap">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <h3>No hay torneos o americanos programados actualmente</h3>
-                    <p>La administración del club publicará nuevos torneos próximamente.</p>
+                    <p>No se registran jugadores en el filtro seleccionado actualmente.</p>
                 </div>
             </section>
 

@@ -210,11 +210,23 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
   },
   {
+    path: 'c/:slug/:tab',
+    loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+  {
     path: 'club/:slug',
     loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
   },
   {
+    path: 'club/:slug/:tab',
+    loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+  {
     path: 'reservar/:slug',
+    loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
+  },
+  {
+    path: 'reservar/:slug/:tab',
     loadComponent: () => import('./pages/public-club-landing/public-club-landing.component').then(m => m.PublicClubLandingComponent)
   },
   {
