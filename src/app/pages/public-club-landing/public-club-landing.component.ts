@@ -28,11 +28,9 @@ export class PublicClubLandingComponent implements OnInit {
   // Active Tab
   activeTab: 'canchas' | 'torneos' | 'ranking' = 'canchas';
 
-  // Court View Modes & Filters
-  selectedCanchaId: number = 0; // 0 = Todas las canchas
-  viewModeCanchas: 'agenda' | 'tarjetas' = 'agenda';
-  filtroMomentoDia: 'todos' | 'manana' | 'tarde' | 'noche' = 'todos';
-  mostrarOcupadosEnAgenda: boolean = false;
+  // Mobile-Style Booking Flow (1° Elegir Horario -> 2° Aparecen Canchas Libres)
+  selectedHora: string = '';
+  filtroMomentoHora: 'todos' | 'manana' | 'tarde' | 'noche' = 'todos';
   unifiedTimeSlots: any[] = [];
 
   // Court Reservations Filter
@@ -105,24 +103,39 @@ export class PublicClubLandingComponent implements OnInit {
     return this.canchas.reduce((acc, c) => acc + (c.slots_disponibles_count || 0), 0);
   }
 
-  get selectedCanchaObj(): any {
-    if (!this.selectedCanchaId) return null;
-    return this.canchas.find(c => c.id === this.selectedCanchaId) || null;
+  selectHora(hora: string): void {
+    this.selectedHora = hora;
   }
 
-  get filteredUnifiedSlots(): any[] {
-    let list = this.unifiedTimeSlots;
-    if (this.filtroMomentoDia !== 'todos') {
-      list = list.filter(u => u.momento === this.filtroMomentoDia);
-    }
-    if (!this.mostrarOcupadosEnAgenda) {
-      list = list.filter(u => u.disponibles_count > 0);
+  get availableHours(): any[] {
+    // Horarios que tienen al menos 1 cancha libre
+    return this.unifiedTimeSlots.filter(u => u.disponibles_count > 0);
+  }
+
+  get filteredAvailableHours(): any[] {
+    let list = this.availableHours;
+    if (this.filtroMomentoHora !== 'todos') {
+      list = list.filter(u => u.momento === this.filtroMomentoHora);
     }
     return list;
   }
 
-  selectCanchaTab(canchaId: number): void {
-    this.selectedCanchaId = canchaId;
+  get currentSelectedSlotEntry(): any {
+    if (!this.selectedHora) return null;
+    return this.unifiedTimeSlots.find(u => u.hora_inicio === this.selectedHora) || null;
+  }
+
+  get canchasDisponiblesParaHora(): any[] {
+    const entry = this.currentSelectedSlotEntry;
+    if (!entry) return [];
+    // Retornar solo las canchas libres a esta hora seleccionada
+    return entry.courtSlots.filter((cs: any) => cs.slot.disponible);
+  }
+
+  get canchasOcupadasParaHora(): any[] {
+    const entry = this.currentSelectedSlotEntry;
+    if (!entry) return [];
+    return entry.courtSlots.filter((cs: any) => !cs.slot.disponible);
   }
 
   setActiveTab(tab: 'canchas' | 'torneos' | 'ranking'): void {
@@ -173,6 +186,17 @@ export class PublicClubLandingComponent implements OnInit {
     this.unifiedTimeSlots = Array.from(map.values()).sort((a, b) => {
       return a.hora_inicio.localeCompare(b.hora_inicio);
     });
+
+    // Auto-seleccionar primer horario libre para que aparezcan de inmediato las canchas
+    const freeHours = this.unifiedTimeSlots.filter(u => u.disponibles_count > 0);
+    if (freeHours.length > 0) {
+      const isCurrentStillFree = freeHours.some(u => u.hora_inicio === this.selectedHora);
+      if (!isCurrentStillFree || !this.selectedHora) {
+        this.selectedHora = freeHours[0].hora_inicio;
+      }
+    } else {
+      this.selectedHora = '';
+    }
   }
 
   getCourtSlotsByMomento(cancha: any, momento: 'manana' | 'tarde' | 'noche'): any[] {

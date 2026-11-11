@@ -215,303 +215,135 @@
                     <span>Consultando horarios disponibles en tiempo real...</span>
                 </div>
 
-                <!-- PESTAÑAS DE CANCHAS (COURT TABS) -->
-                <div class="court-subtabs-bar" *ngIf="canchas.length > 0 && !isLoadingDisponibilidad">
-                    <button type="button" 
-                            class="court-tab-pill" 
-                            [class.active]="selectedCanchaId === 0" 
-                            (click)="selectCanchaTab(0)">
-                        <i class="fas fa-table-cells-large"></i>
-                        <span>Todas las Pistas</span>
-                        <span class="court-tab-badge">{{ totalSlotsLibres }}</span>
-                    </button>
-
-                    <button *ngFor="let c of canchas" 
-                            type="button" 
-                            class="court-tab-pill" 
-                            [class.active]="selectedCanchaId === c.id" 
-                            (click)="selectCanchaTab(c.id)">
-                        <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
-                        <span>{{ c.nombre }}</span>
-                        <span class="court-tab-badge" [class.has-free]="(c.slots_disponibles_count || 0) > 0">
-                            {{ c.slots_disponibles_count || 0 }}
-                        </span>
-                    </button>
-                </div>
-
-                <!-- ---------------------------------------------------- -->
-                <!-- CASO A: TODAS LAS PISTAS (selectedCanchaId === 0)    -->
-                <!-- ---------------------------------------------------- -->
-                <div *ngIf="selectedCanchaId === 0 && canchas.length > 0 && !isLoadingDisponibilidad">
+                <!-- ======================================================== -->
+                <!-- FLUJO ESTILO APP MOBILE: 1° ELEGIR HORARIO -> 2° CANCHAS   -->
+                <!-- ======================================================== -->
+                <div class="mobile-booking-flow" *ngIf="canchas.length > 0 && !isLoadingDisponibilidad">
                     
-                    <!-- Barra de Controles y Filtros para Todas las Pistas -->
-                    <div class="agenda-controls-bar">
-                        <!-- Filtro por Momento del Día -->
-                        <div class="moment-filters-group">
+                    <!-- PASO 1: SELECTOR DE HORARIOS DISPONIBLES -->
+                    <div class="flow-step-box step-hours-box">
+                        <div class="step-header-row">
+                            <div class="step-num-pill">1</div>
+                            <div class="step-titles">
+                                <h3>Selecciona tu Horario</h3>
+                                <p>Toca la hora en la que deseas jugar para ver qué canchas están libres.</p>
+                            </div>
+                        </div>
+
+                        <!-- Filtro Rápido por Momento del Día -->
+                        <div class="moments-filter-bar" *ngIf="availableHours.length > 0">
                             <button type="button" 
-                                    class="moment-btn" 
-                                    [class.active]="filtroMomentoDia === 'todos'" 
-                                    (click)="filtroMomentoDia = 'todos'">
-                                Todos ({{ totalSlotsLibres }})
+                                    class="m-filter-btn" 
+                                    [class.active]="filtroMomentoHora === 'todos'" 
+                                    (click)="filtroMomentoHora = 'todos'">
+                                Todos ({{ availableHours.length }})
                             </button>
                             <button type="button" 
-                                    class="moment-btn" 
-                                    [class.active]="filtroMomentoDia === 'manana'" 
-                                    (click)="filtroMomentoDia = 'manana'">
+                                    class="m-filter-btn" 
+                                    [class.active]="filtroMomentoHora === 'manana'" 
+                                    (click)="filtroMomentoHora = 'manana'">
                                 🌅 Mañana
                             </button>
                             <button type="button" 
-                                    class="moment-btn" 
-                                    [class.active]="filtroMomentoDia === 'tarde'" 
-                                    (click)="filtroMomentoDia = 'tarde'">
+                                    class="m-filter-btn" 
+                                    [class.active]="filtroMomentoHora === 'tarde'" 
+                                    (click)="filtroMomentoHora = 'tarde'">
                                 ☀️ Tarde
                             </button>
                             <button type="button" 
-                                    class="moment-btn" 
-                                    [class.active]="filtroMomentoDia === 'noche'" 
-                                    (click)="filtroMomentoDia = 'noche'">
+                                    class="m-filter-btn" 
+                                    [class.active]="filtroMomentoHora === 'noche'" 
+                                    (click)="filtroMomentoHora = 'noche'">
                                 🌙 Noche
                             </button>
                         </div>
 
-                        <!-- Opciones de Vista y Toggle -->
-                        <div class="view-options-group">
-                            <label class="toggle-occupied-check">
-                                <input type="checkbox" [(ngModel)]="mostrarOcupadosEnAgenda">
-                                <span>Ver ocupados</span>
-                            </label>
+                        <!-- Fila / Carrusel de Horarios Disponibles -->
+                        <div class="hours-chips-carousel" *ngIf="filteredAvailableHours.length > 0">
+                            <button *ngFor="let h of filteredAvailableHours"
+                                    type="button"
+                                    class="hour-chip-btn"
+                                    [class.active]="selectedHora === h.hora_inicio"
+                                    (click)="selectHora(h.hora_inicio)">
+                                <span class="hour-time-val">{{ h.hora_inicio }}</span>
+                                <span class="hour-dur-lbl">{{ h.duracion }} min</span>
+                                <span class="hour-free-count">
+                                    {{ h.disponibles_count }} libre{{ h.disponibles_count > 1 ? 's' : '' }}
+                                </span>
+                            </button>
+                        </div>
 
-                            <div class="view-switch-btns">
-                                <button type="button" 
-                                        class="switch-btn" 
-                                        [class.active]="viewModeCanchas === 'agenda'" 
-                                        (click)="viewModeCanchas = 'agenda'" 
-                                        title="Vista de agenda para ver todas las pistas juntas por horario">
-                                    <i class="fas fa-list-timeline"></i> Agenda
-                                </button>
-                                <button type="button" 
-                                        class="switch-btn" 
-                                        [class.active]="viewModeCanchas === 'tarjetas'" 
-                                        (click)="viewModeCanchas = 'tarjetas'" 
-                                        title="Vista en tarjetas de canchas">
-                                    <i class="fas fa-grip"></i> Tarjetas
-                                </button>
-                            </div>
+                        <div *ngIf="filteredAvailableHours.length === 0 && availableHours.length > 0" class="no-hours-filtered">
+                            <span>No hay horarios libres en este momento del día. Prueba seleccionando "Todos".</span>
+                        </div>
+
+                        <div *ngIf="availableHours.length === 0" class="no-hours-filtered">
+                            <span>No quedan horarios disponibles para la fecha seleccionada.</span>
                         </div>
                     </div>
 
-                    <!-- VISTA 1: AGENDA UNIFICADA POR HORARIO (Ver todas de una) -->
-                    <div *ngIf="viewModeCanchas === 'agenda'" class="agenda-timeline-container">
-                        
-                        <div *ngIf="filteredUnifiedSlots.length > 0" class="agenda-slots-list">
-                            <div class="agenda-time-row" *ngFor="let u of filteredUnifiedSlots">
+                    <!-- PASO 2: CANCHAS DISPONIBLES EN EL HORARIO SELECCIONADO -->
+                    <div class="flow-step-box step-courts-box" *ngIf="selectedHora">
+                        <div class="step-header-row courts-header-row">
+                            <div class="step-num-pill">2</div>
+                            <div class="step-titles">
+                                <h3>Canchas Disponibles para las <span class="hour-highlight">{{ selectedHora }} hrs</span></h3>
+                                <p>{{ canchasDisponiblesParaHora.length }} pista(s) disponibles para reserva inmediata sin crear cuenta.</p>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Canchas Disponibles -->
+                        <div class="available-courts-cards" *ngIf="canchasDisponiblesParaHora.length > 0">
+                            <div class="court-card-mobile" *ngFor="let item of canchasDisponiblesParaHora">
                                 
-                                <div class="agenda-time-info">
-                                    <span class="agenda-hour-main">{{ u.hora_inicio }}</span>
-                                    <span class="agenda-hour-sub">{{ u.hora_fin }}</span>
-                                    <span class="agenda-badge-status" 
-                                          [class.free]="u.disponibles_count > 0" 
-                                          [class.full]="u.disponibles_count === 0">
-                                        {{ u.disponibles_count > 0 ? (u.disponibles_count + ' libre' + (u.disponibles_count > 1 ? 's' : '')) : 'Agotado' }}
-                                    </span>
+                                <div class="court-left-info">
+                                    <div class="court-icon-badge">
+                                        <i class="fas" [class.fa-warehouse]="item.cancha.techada" [class.fa-sun]="!item.cancha.techada"></i>
+                                    </div>
+                                    <div class="court-meta-col">
+                                        <div class="court-specs-tags">
+                                            <span class="spec-tag" [class.indoor]="item.cancha.techada">
+                                                {{ item.cancha.techada ? 'Techada (Indoor)' : 'Al Aire Libre' }}
+                                            </span>
+                                            <span class="spec-tag" *ngIf="item.cancha.superficie">
+                                                {{ item.cancha.superficie }}
+                                            </span>
+                                            <span class="spec-tag">Iluminación LED</span>
+                                            <span class="spec-tag">Cristales Templados</span>
+                                        </div>
+
+                                        <h4 class="court-name-heading">{{ item.cancha.nombre }}</h4>
+
+                                        <div class="court-time-summary">
+                                            <i class="fas fa-clock"></i>
+                                            <span>Horario: <strong>{{ item.slot.hora_inicio }} a {{ item.slot.hora_fin }} hrs</strong> ({{ item.slot.duracion }} min)</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="agenda-courts-chips">
-                                    <button *ngFor="let cs of u.courtSlots" 
-                                            type="button" 
-                                            class="agenda-court-chip" 
-                                            [class.slot-libre]="cs.slot.disponible" 
-                                            [class.slot-ocupado]="!cs.slot.disponible" 
-                                            [disabled]="!cs.slot.disponible" 
-                                            (click)="abrirReservaSlot(cs.cancha, cs.slot)" 
-                                            [title]="cs.slot.disponible ? 'Clic para reservar en ' + cs.cancha.nombre : cs.slot.motivo || 'Ocupado'">
-                                        <div class="chip-court-header">
-                                            <span class="court-chip-name">{{ cs.cancha.nombre }}</span>
-                                            <span class="court-chip-indoor" *ngIf="cs.cancha.techada">Indoor</span>
-                                        </div>
-                                        <div class="chip-slot-footer">
-                                            <span class="chip-price" *ngIf="cs.slot.disponible">{{ cs.slot.precio_formateado }}</span>
-                                            <span class="chip-occ" *ngIf="!cs.slot.disponible">{{ cs.slot.motivo || 'Ocupado' }}</span>
-                                            <i class="fas fa-check-circle" *ngIf="cs.slot.disponible"></i>
-                                        </div>
+                                <div class="court-right-action">
+                                    <div class="court-pricing-block">
+                                        <span class="price-type-lbl">Total Turno</span>
+                                        <span class="court-price-number">{{ item.slot.precio_formateado }}</span>
+                                        <span class="payment-note">En recepción o transferencia</span>
+                                    </div>
+
+                                    <button type="button" class="btn-reserve-mobile-cta" (click)="abrirReservaSlot(item.cancha, item.slot)">
+                                        <span>Reservar Turno</span>
+                                        <i class="fas fa-arrow-right"></i>
                                     </button>
                                 </div>
 
                             </div>
                         </div>
 
-                        <div *ngIf="filteredUnifiedSlots.length === 0" class="empty-state-box">
-                            <div class="empty-icon-wrap"><i class="fas fa-clock"></i></div>
-                            <h3>No hay turnos disponibles para este filtro</h3>
-                            <p>Prueba seleccionando otro momento del día o activa "Ver ocupados" para ver los horarios del club.</p>
-                        </div>
-
-                    </div>
-
-                    <!-- VISTA 2: TARJETAS DE CANCHAS -->
-                    <div *ngIf="viewModeCanchas === 'tarjetas'" class="courts-grid-layout">
-                        <div class="court-card-item" *ngFor="let c of canchas">
-                            <div class="card-header-flex">
-                                <span class="court-badge-tag" [class.indoor]="c.techada">
-                                    <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
-                                    {{ c.techada ? 'Techada (Indoor)' : 'Al Aire Libre' }}
-                                </span>
-                                <span class="court-type-lbl" *ngIf="c.tipo">{{ c.tipo }}</span>
-                            </div>
-
-                            <h3 class="court-title">{{ c.nombre }}</h3>
-
-                            <div class="court-specs">
-                                <div class="spec-row" *ngIf="c.superficie">
-                                    <i class="fas fa-layer-group"></i> Superficie: <strong>{{ c.superficie }}</strong>
-                                </div>
-                                <div class="spec-row"><i class="fas fa-bolt"></i> Iluminación LED</div>
-                                <div class="spec-row"><i class="fas fa-shield-alt"></i> Cristales Templados</div>
-                            </div>
-
-                            <div class="slots-section">
-                                <div class="slots-header-row">
-                                    <span class="slots-title"><i class="fas fa-clock"></i> Horarios Disponibles:</span>
-                                    <span class="badge-free-slots" *ngIf="c.slots_disponibles_count !== undefined">
-                                        {{ c.slots_disponibles_count }} libre(s)
-                                    </span>
-                                </div>
-
-                                <div class="slots-grid-chips" *ngIf="c.slots && c.slots.length > 0">
-                                    <button *ngFor="let slot of c.slots"
-                                            type="button"
-                                            class="slot-chip-btn"
-                                            [class.slot-libre]="slot.disponible"
-                                            [class.slot-ocupado]="!slot.disponible"
-                                            [disabled]="!slot.disponible"
-                                            (click)="abrirReservaSlot(c, slot)"
-                                            [title]="slot.disponible ? 'Clic para reservar' : (slot.motivo || 'Ocupado')">
-                                        <span class="slot-hour">{{ slot.hora_inicio }}</span>
-                                        <span class="slot-price-tag" *ngIf="slot.disponible">{{ slot.precio_formateado }}</span>
-                                        <span class="slot-occupied-lbl" *ngIf="!slot.disponible">{{ slot.motivo || 'Ocupado' }}</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="court-footer-flex">
-                                <div class="price-info">
-                                    <span class="lbl">Precio desde</span>
-                                    <span class="amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
-                                </div>
-                                <span class="hint-reserve">Toca un horario 🟢</span>
-                            </div>
+                        <div *ngIf="canchasDisponiblesParaHora.length === 0" class="empty-state-box">
+                            <div class="empty-icon-wrap"><i class="fas fa-calendar-times"></i></div>
+                            <h3>Sin canchas libres para las {{ selectedHora }} hrs</h3>
+                            <p>Todas las pistas han sido reservadas a esta hora. Por favor selecciona otro horario en la barra superior.</p>
                         </div>
                     </div>
 
-                </div>
-
-                <!-- ---------------------------------------------------- -->
-                <!-- CASO B: CANCHA INDIVIDUAL ENFOCADA (selectedCanchaId) -->
-                <!-- ---------------------------------------------------- -->
-                <div *ngIf="selectedCanchaId !== 0 && selectedCanchaObj as c" class="focused-court-container">
-                    <div class="focused-court-hero-card">
-                        <div class="focused-header-left">
-                            <div class="focused-tags-row">
-                                <span class="focused-tag" [class.indoor]="c.techada">
-                                    <i class="fas" [class.fa-warehouse]="c.techada" [class.fa-sun]="!c.techada"></i>
-                                    {{ c.techada ? 'Pista Techada (Indoor)' : 'Pista Al Aire Libre (Outdoor)' }}
-                                </span>
-                                <span class="focused-tag" *ngIf="c.superficie">
-                                    <i class="fas fa-layer-group"></i> {{ c.superficie }}
-                                </span>
-                                <span class="focused-tag"><i class="fas fa-bolt"></i> Iluminación LED</span>
-                                <span class="focused-tag"><i class="fas fa-shield-alt"></i> Cristales Templados</span>
-                            </div>
-                            <h2 class="focused-court-name">{{ c.nombre }}</h2>
-                        </div>
-
-                        <div class="focused-header-right">
-                            <div class="price-display-box">
-                                <span class="p-lbl">Tarifa estándar</span>
-                                <span class="p-amount">$ {{ (c.precio_desde || c.precio_90 || c.precio_hora) | number:'1.0-0' }} <small>/ 90 min</small></span>
-                            </div>
-                            <span class="badge-free-total" [class.has-free]="(c.slots_disponibles_count || 0) > 0">
-                                <i class="fas fa-calendar-check"></i> {{ c.slots_disponibles_count || 0 }} turnos disponibles
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Horarios agrupados por periodo del día -->
-                    <div class="periods-cards-grid">
-                        
-                        <!-- Mañana -->
-                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'manana').length > 0">
-                            <div class="period-panel-header">
-                                <div class="p-title-wrap">
-                                    <span class="p-icon">🌅</span>
-                                    <h4>Turnos de Mañana</h4>
-                                </div>
-                                <span class="p-time-range">07:00 a 13:00 hrs</span>
-                            </div>
-                            <div class="period-chips-grid">
-                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'manana')"
-                                        type="button"
-                                        class="slot-chip-btn"
-                                        [class.slot-libre]="s.disponible"
-                                        [class.slot-ocupado]="!s.disponible"
-                                        [disabled]="!s.disponible"
-                                        (click)="abrirReservaSlot(c, s)">
-                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
-                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
-                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Tarde -->
-                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'tarde').length > 0">
-                            <div class="period-panel-header">
-                                <div class="p-title-wrap">
-                                    <span class="p-icon">☀️</span>
-                                    <h4>Turnos de Tarde</h4>
-                                </div>
-                                <span class="p-time-range">13:00 a 19:00 hrs</span>
-                            </div>
-                            <div class="period-chips-grid">
-                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'tarde')"
-                                        type="button"
-                                        class="slot-chip-btn"
-                                        [class.slot-libre]="s.disponible"
-                                        [class.slot-ocupado]="!s.disponible"
-                                        [disabled]="!s.disponible"
-                                        (click)="abrirReservaSlot(c, s)">
-                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
-                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
-                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Noche -->
-                        <div class="period-panel-box" *ngIf="getCourtSlotsByMomento(c, 'noche').length > 0">
-                            <div class="period-panel-header">
-                                <div class="p-title-wrap">
-                                    <span class="p-icon">🌙</span>
-                                    <h4>Turnos de Noche</h4>
-                                </div>
-                                <span class="p-time-range">19:00 a 23:30 hrs</span>
-                            </div>
-                            <div class="period-chips-grid">
-                                <button *ngFor="let s of getCourtSlotsByMomento(c, 'noche')"
-                                        type="button"
-                                        class="slot-chip-btn"
-                                        [class.slot-libre]="s.disponible"
-                                        [class.slot-ocupado]="!s.disponible"
-                                        [disabled]="!s.disponible"
-                                        (click)="abrirReservaSlot(c, s)">
-                                    <span class="slot-hour">{{ s.hora_inicio }}</span>
-                                    <span class="slot-price-tag" *ngIf="s.disponible">{{ s.precio_formateado }}</span>
-                                    <span class="slot-occupied-lbl" *ngIf="!s.disponible">{{ s.motivo || 'Ocupado' }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
                 </div>
 
                 <!-- Estado sin canchas -->
