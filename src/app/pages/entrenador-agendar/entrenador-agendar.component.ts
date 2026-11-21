@@ -297,10 +297,10 @@ export class EntrenadorAgendarComponent implements OnInit {
 
         this.cargandoCanchas = true;
         const fecha = this.selectedSlot.dateStr;
-        const hIni = this.selectedSlot.hour;
-        const hFin = (this.showDetailModal && this.selectedSlot?.slotData?.hora_fin_reserva)
-            ? this.selectedSlot.slotData.hora_fin_reserva
-            : this.getHoraFin(hIni);
+        const hIni = (this.showDetailModal && this.selectedSlot?.slotData?.hora_inicio_reserva)
+            ? this.selectedSlot.slotData.hora_inicio_reserva
+            : this.selectedSlot.hour;
+        const hFin = this.getHoraFin(hIni, this.duracionMinutos);
 
         this.clubesService.getCanchasDisponibles(this.selectedClubId, fecha, hIni, hFin).subscribe({
             next: (canchas: any[]) => {
@@ -782,6 +782,8 @@ export class EntrenadorAgendarComponent implements OnInit {
         
         if (slotData.ocupado) {
             const effectiveHour = slotData.hora_inicio_reserva || hour;
+            const durActual = Number(slotData.duracion_total_min || 60);
+            this.duracionMinutos = (durActual === 90 || durActual === 120) ? durActual : 60;
             this.selectedSlot = { date, dateStr: this.formatDate(date), hour: effectiveHour, slotData };
             
             let clubId = Number(slotData.club_id || 0);
@@ -1369,6 +1371,8 @@ export class EntrenadorAgendarComponent implements OnInit {
         const d = this.selectedSlot.slotData;
         const mId = d.malla_id ? Number(d.malla_id) : null;
         const cId = d.clase_id ? Number(d.clase_id) : null;
+        const durActual = Number(d.duracion_total_min || 60);
+        this.duracionMinutos = (durActual === 90 || durActual === 120) ? durActual : 60;
 
         // Auto-detect category to show the malla in the dropdown
         if (mId) {
@@ -1390,6 +1394,37 @@ export class EntrenadorAgendarComponent implements OnInit {
         if (this.planificacionId) {
             this.onMallaChange(); 
         }
+    }
+
+    cambiarDuracionReservaExistente(minutos: 60 | 90 | 120): void {
+        if (!this.selectedSlot?.slotData) return;
+        const currentDur = Number(this.selectedSlot.slotData.duracion_total_min || 60);
+        if (currentDur === minutos) return;
+
+        this.duracionMinutos = minutos;
+        const d = this.selectedSlot.slotData;
+        const hIni = d.hora_inicio_reserva || this.selectedSlot.hour;
+        const hFin = this.getHoraFin(hIni, minutos);
+
+        this.isLoading = true;
+        this.entrenamientoService.updateReservaTecnica({
+            reserva_id: d.reserva_id || d.id,
+            malla_id: d.malla_id || 0,
+            clase_id: d.clase_id || 0,
+            clase_titulo: d.clase_titulo || '',
+            cancha_id: d.cancha_id ? Number(d.cancha_id) : 0,
+            duracion: minutos,
+            hora_fin: hFin
+        }).subscribe({
+            next: () => {
+                this.isLoading = false;
+                d.duracion_total_min = minutos;
+                d.hora_fin_reserva = hFin;
+                this.popupService.success('Duración Actualizada', `La sesión se actualizó a ${this.getDuracionLabel(minutos)} (${hIni} - ${hFin}).`);
+                this.loadDisponibilidad();
+            },
+            error: (err: any) => this.handleError(err)
+        });
     }
 
     toggleAssignCourtInline(): void {
@@ -1464,18 +1499,23 @@ export class EntrenadorAgendarComponent implements OnInit {
 
         const updatedClass = this.clasesDisponibles.find(c => c.id == this.claseMallaId);
         const targetCancha = this.selectedCanchaId !== null ? Number(this.selectedCanchaId) : 0;
+        const hIni = this.selectedSlot.slotData.hora_inicio_reserva || this.selectedSlot.hour;
+        const hFin = this.getHoraFin(hIni, this.duracionMinutos);
+
         const payload: any = {
-            reserva_id: this.selectedSlot.slotData.reserva_id,
+            reserva_id: this.selectedSlot.slotData.reserva_id || this.selectedSlot.slotData.id,
             malla_id: this.planificacionId,
             clase_id: this.claseMallaId,
             clase_titulo: updatedClass?.titulo || null,
-            cancha_id: targetCancha
+            cancha_id: targetCancha,
+            duracion: Number(this.duracionMinutos || 60),
+            hora_fin: hFin
         };
 
         this.entrenamientoService.updateReservaTecnica(payload).subscribe({
             next: () => {
                 this.isLoading = false;
-                this.popupService.success('Actualizado', 'La reserva y planificación técnica han sido actualizadas.');
+                this.popupService.success('Actualizado', 'La reserva, duración y planificación técnica han sido actualizadas.');
                 
                 // Update local state instantly for the detail view
                 if (this.selectedSlot?.slotData) {
@@ -1490,6 +1530,8 @@ export class EntrenadorAgendarComponent implements OnInit {
                     this.selectedSlot.slotData.clase_drills = updatedClass?.drills;
                     this.selectedSlot.slotData.clase_juego = updatedClass?.juego;
                     this.selectedSlot.slotData.clase_recursos = updatedClass?.recursos;
+                    this.selectedSlot.slotData.duracion_total_min = this.duracionMinutos;
+                    this.selectedSlot.slotData.hora_fin_reserva = hFin;
 
                     if (targetCancha > 0) {
                         const cObj = this.canchasDisponibles.find(c => c.id == targetCancha);

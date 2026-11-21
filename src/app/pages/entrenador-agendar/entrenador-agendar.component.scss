@@ -836,6 +836,49 @@
                 }
             }
 
+            .edit-duration-pills {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+
+                .edit-dur-btn {
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    border: 1.5px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #475569;
+                    font-size: 11.5px;
+                    font-weight: 850;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    transition: all 0.2s ease;
+
+                    i {
+                        font-size: 11px;
+                        color: #94a3b8;
+                    }
+
+                    &:hover:not(.active) {
+                        border-color: #0f172a;
+                        color: #0f172a;
+                    }
+
+                    &.active {
+                        background: #0f172a;
+                        color: #ccff00;
+                        border-color: #0f172a;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+
+                        i {
+                            color: #ccff00;
+                        }
+                    }
+                }
+            }
+
             .select-wrapper {
                 position: relative;
                 display: flex;
@@ -2078,6 +2121,49 @@
             display: flex;
             gap: 10px;
 
+            .edit-duration-pills {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+
+                .edit-dur-btn {
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    border: 1.5px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #475569;
+                    font-size: 11.5px;
+                    font-weight: 850;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    transition: all 0.2s ease;
+
+                    i {
+                        font-size: 11px;
+                        color: #94a3b8;
+                    }
+
+                    &:hover:not(.active) {
+                        border-color: #0f172a;
+                        color: #0f172a;
+                    }
+
+                    &.active {
+                        background: #0f172a;
+                        color: #ccff00;
+                        border-color: #0f172a;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+
+                        i {
+                            color: #ccff00;
+                        }
+                    }
+                }
+            }
+
             .select-wrapper {
                 flex: 1;
             }
@@ -2182,6 +2268,7 @@
                 &.time-icon { background: #ecfdf5; color: #059669; }
             }
             .txt {
+                flex: 1;
                 b { 
                     font-size: 8.5px; 
                     font-weight: 900; 
@@ -2197,6 +2284,43 @@
                     color: #0f172a; 
                     margin: 0; 
                     line-height: 1.2;
+                }
+
+                .detail-duration-pills {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    margin-top: 4px;
+
+                    .mini-dur-btn {
+                        flex: 1;
+                        padding: 4px 8px;
+                        border-radius: 6px;
+                        border: 1.5px solid #cbd5e1;
+                        background: #ffffff;
+                        color: #475569;
+                        font-size: 10.5px;
+                        font-weight: 850;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+
+                        &:hover:not(.active):not(:disabled) {
+                            border-color: #0f172a;
+                            color: #0f172a;
+                        }
+
+                        &.active {
+                            background: #0f172a;
+                            color: #ccff00;
+                            border-color: #0f172a;
+                            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+                        }
+
+                        &:disabled {
+                            opacity: 0.5;
+                            cursor: wait;
+                        }
+                    }
                 }
             }
         }
@@ -2705,6 +2829,49 @@
                 align-items: center;
                 gap: 5px;
                 i { color: #2563eb; }
+            }
+
+            .edit-duration-pills {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+
+                .edit-dur-btn {
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    border: 1.5px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #475569;
+                    font-size: 11.5px;
+                    font-weight: 850;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    transition: all 0.2s ease;
+
+                    i {
+                        font-size: 11px;
+                        color: #94a3b8;
+                    }
+
+                    &:hover:not(.active) {
+                        border-color: #0f172a;
+                        color: #0f172a;
+                    }
+
+                    &.active {
+                        background: #0f172a;
+                        color: #ccff00;
+                        border-color: #0f172a;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+
+                        i {
+                            color: #ccff00;
+                        }
+                    }
+                }
             }
 
             .select-wrapper {

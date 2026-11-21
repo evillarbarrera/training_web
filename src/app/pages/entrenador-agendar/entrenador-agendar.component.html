@@ -569,13 +569,13 @@
             <div class="header-main-row">
                 <div class="h-left">
                     <span class="modal-eyebrow" *ngIf="!isEditingDetail"><i class="fas fa-calendar-check"></i> SESIÓN AGENDADA</span>
-                    <span class="modal-eyebrow" *ngIf="isEditingDetail"><i class="fas fa-wand-magic-sparkles"></i> ASIGNACIÓN TÉCNICA</span>
+                    <span class="modal-eyebrow" *ngIf="isEditingDetail"><i class="fas fa-wand-magic-sparkles"></i> EDICIÓN DE RESERVA Y TÉCNICA</span>
                     <h3 *ngIf="!isEditingDetail">DETALLE DE CLASE</h3>
-                    <h3 *ngIf="isEditingDetail">PLANIFICACIÓN Y CONTENIDO</h3>
+                    <h3 *ngIf="isEditingDetail">EDITAR RESERVA Y CONTENIDO</h3>
                 </div>
                 <div class="h-right">
-                    <button class="btn-edit-tech" *ngIf="!isEditingDetail" (click)="onEditDetail()" title="Asignar o editar técnica">
-                        <i class="fas fa-wand-magic-sparkles"></i> EDITAR TÉCNICA
+                    <button class="btn-edit-tech" *ngIf="!isEditingDetail" (click)="onEditDetail()" title="Editar duración, cancha o planificación técnica">
+                        <i class="fas fa-pen-to-square"></i> EDITAR RESERVA
                     </button>
                     <button class="btn-close" (click)="closeModal()" title="Cerrar">
                         <i class="fas fa-times"></i>
@@ -591,8 +591,8 @@
                 </span>
                 <span class="schedule-pill time-pill">
                     <i class="far fa-clock"></i>
-                    {{ selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour }} - {{ selectedSlot?.slotData?.hora_fin_reserva || addMinutesToTime(selectedSlot?.hour, 60) }}
-                    <span class="pill-duration">{{ selectedSlot?.slotData?.duracion_total_min || 60 }} min</span>
+                    {{ selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour }} - {{ isEditingDetail ? getHoraFin(selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour, duracionMinutos) : (selectedSlot?.slotData?.hora_fin_reserva || addMinutesToTime(selectedSlot?.hour, 60)) }}
+                    <span class="pill-duration">{{ isEditingDetail ? duracionMinutos : (selectedSlot?.slotData?.duracion_total_min || 60) }} min</span>
                 </span>
                 <span class="status-pill confirmed">
                     <span class="dot"></span> Confirmada
@@ -707,11 +707,21 @@
                             </p>
                         </div>
                     </div>
-                    <div class="info-card">
+                    <div class="info-card duration-edit-card">
                         <div class="square-icon time-icon"><i class="fas fa-stopwatch"></i></div>
                         <div class="txt">
-                            <b>DURACIÓN DE SESIÓN</b>
-                            <p>{{ getDuracionLabel(selectedSlot?.slotData?.duracion_total_min || 60) }}</p>
+                            <b>DURACIÓN DE SESIÓN ({{ getDuracionLabel(selectedSlot?.slotData?.duracion_total_min || 60) }})</b>
+                            <div class="detail-duration-pills">
+                                <button
+                                    type="button"
+                                    *ngFor="let d of duracionesDisponibles"
+                                    class="mini-dur-btn"
+                                    [class.active]="(selectedSlot?.slotData?.duracion_total_min || 60) == d"
+                                    [disabled]="isLoading"
+                                    (click)="cambiarDuracionReservaExistente(d)">
+                                    {{ d }} min
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -840,6 +850,21 @@
                         <p class="plan-status-desc">
                             {{ selectedSlot?.slotData?.clase_titulo || 'Esta clase aún no tiene contenido táctico cargado. Selecciona una malla en el panel derecho para asignarle ejercicios y objetivos.' }}
                         </p>
+                    </div>
+
+                    <!-- Duration Selector in Edit Mode -->
+                    <div class="edit-court-box">
+                        <label><i class="fas fa-stopwatch"></i> DURACIÓN DEL ENTRENAMIENTO ({{ selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour }} - {{ getHoraFin(selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour, duracionMinutos) }})</label>
+                        <div class="edit-duration-pills">
+                            <button
+                                type="button"
+                                *ngFor="let d of duracionesDisponibles"
+                                class="edit-dur-btn"
+                                [class.active]="duracionMinutos === d"
+                                (click)="onDuracionChange(d)">
+                                <i class="far fa-clock"></i> {{ d }} min
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Court Selector in Edit Mode -->
