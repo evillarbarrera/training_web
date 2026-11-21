@@ -74,9 +74,9 @@
                                  [class.is-start-slot]="getSlotData(day, hour)?.ocupado && (getSlotData(day, hour)?.is_reserva_start || !getSlotData(day, hour)?.is_reserva_continuation)"
                                  [class.is-continuation-slot]="getSlotData(day, hour)?.ocupado && getSlotData(day, hour)?.is_reserva_continuation"
                                  [class.is-end-slot]="getSlotData(day, hour)?.ocupado && getSlotData(day, hour)?.is_reserva_end"
-                                 [class.is-manana]="getSlotData(day, hour)?.ocupado && getTimeOfDay(hour) === 'manana'"
-                                 [class.is-tarde]="getSlotData(day, hour)?.ocupado && getTimeOfDay(hour) === 'tarde'"
-                                 [class.is-noche]="getSlotData(day, hour)?.ocupado && getTimeOfDay(hour) === 'noche'"
+                                 [class.is-manana]="getSlotData(day, hour)?.ocupado && getTimeOfDay(getSlotData(day, hour)?.hora_inicio_reserva || hour) === 'manana'"
+                                 [class.is-tarde]="getSlotData(day, hour)?.ocupado && getTimeOfDay(getSlotData(day, hour)?.hora_inicio_reserva || hour) === 'tarde'"
+                                 [class.is-noche]="getSlotData(day, hour)?.ocupado && getTimeOfDay(getSlotData(day, hour)?.hora_inicio_reserva || hour) === 'noche'"
                                  (click)="openBooking(day, hour, getSlotData(day, hour))">
                                 <div class="content-box" *ngIf="getSlotData(day, hour) as slot">
                                     <ng-container *ngIf="slot.ocupado">
@@ -95,15 +95,15 @@
                                             </div>
                                         </ng-container>
 
-                                        <!-- CONTINUATION OF RESERVATION (Bottom half of 1-hour block) -->
-                                        <ng-container *ngIf="slot.is_reserva_continuation">
+                                        <!-- CONTINUATION OF RESERVATION -->
+                                        <ng-container *ngIf="slot.is_reserva_continuation && slot.slot_index_in_reserva === 1">
                                             <div class="booked-continuation-row">
                                                 <span class="booked-pack-badge">{{ (slot.reserva_tipo || slot.tipo) | uppercase }}</span>
                                                 <span class="booked-plan-badge" *ngIf="slot.clase_titulo" [title]="slot.clase_titulo">
                                                     <i class="fas fa-book-open"></i> {{ slot.clase_titulo }}
                                                 </span>
                                                 <span class="booked-duration-badge" *ngIf="!slot.clase_titulo">
-                                                    ⏱️ 1h completa
+                                                    ⏱️ {{ slot.duracion_total_min || 60 }} min
                                                 </span>
                                             </div>
                                         </ng-container>
@@ -165,7 +165,7 @@
                     <span class="schedule-pill time-pill">
                         <i class="far fa-clock"></i>
                         {{ selectedSlot.hour }} - {{ getHoraFin(selectedSlot.hour) }}
-                        <span class="pill-duration">1h</span>
+                        <span class="pill-duration">{{ duracionMinutos }} min</span>
                     </span>
                     <span class="schedule-pill mode-pill" [class.grupal]="tipoClaseSeleccionado === 'grupal'" [class.multi]="tipoClaseSeleccionado === 'multijugador'">
                         <i class="fas" [ngClass]="{'fa-user': tipoClaseSeleccionado === 'individual', 'fa-user-group': tipoClaseSeleccionado === 'multijugador', 'fa-users': tipoClaseSeleccionado === 'grupal'}"></i>
@@ -177,8 +177,23 @@
             <div class="m-body">
                 <div class="booking-flow">
                     
-                    <!-- SEDE & CANCHA SELECTOR COCKPIT -->
-                    <div class="venue-court-cockpit animate-up">
+                    <!-- SEDE, CANCHA & DURACIÓN SELECTOR COCKPIT -->
+                    <div class="venue-court-cockpit with-duration animate-up">
+                        <div class="vc-col">
+                            <label class="vc-label"><i class="fas fa-stopwatch"></i> DURACIÓN DEL ENTRENAMIENTO:</label>
+                            <div class="duration-pills-group">
+                                <button
+                                    type="button"
+                                    *ngFor="let d of duracionesDisponibles"
+                                    class="duration-pill-btn"
+                                    [class.active]="duracionMinutos === d"
+                                    (click)="onDuracionChange(d)">
+                                    <i class="far fa-clock"></i>
+                                    <span>{{ d }} min</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="vc-col">
                             <label class="vc-label"><i class="fas fa-building"></i> CLUB / SEDE:</label>
                             <div class="select-wrapper">
@@ -191,7 +206,7 @@
                         </div>
 
                         <div class="vc-col">
-                            <label class="vc-label"><i class="fas fa-table-tennis-paddle-ball"></i> CANCHA DISPONIBLE (EN ESTE HORARIO):</label>
+                            <label class="vc-label"><i class="fas fa-table-tennis-paddle-ball"></i> CANCHA DISPONIBLE ({{ selectedSlot?.hour }} - {{ getHoraFin(selectedSlot?.hour) }}):</label>
                             <div class="select-wrapper" [class.loading-select]="cargandoCanchas">
                                 <i class="fas fa-border-all select-icon"></i>
                                 <select [(ngModel)]="selectedCanchaId" class="modern-select with-icon highlight" [disabled]="!selectedClubId || cargandoCanchas">
@@ -577,7 +592,7 @@
                 <span class="schedule-pill time-pill">
                     <i class="far fa-clock"></i>
                     {{ selectedSlot?.slotData?.hora_inicio_reserva || selectedSlot?.hour }} - {{ selectedSlot?.slotData?.hora_fin_reserva || addMinutesToTime(selectedSlot?.hour, 60) }}
-                    <span class="pill-duration">1h</span>
+                    <span class="pill-duration">{{ selectedSlot?.slotData?.duracion_total_min || 60 }} min</span>
                 </span>
                 <span class="status-pill confirmed">
                     <span class="dot"></span> Confirmada
@@ -696,7 +711,7 @@
                         <div class="square-icon time-icon"><i class="fas fa-stopwatch"></i></div>
                         <div class="txt">
                             <b>DURACIÓN DE SESIÓN</b>
-                            <p>{{ selectedSlot?.slotData?.duracion_total_min || 60 }} min (1 hora completa)</p>
+                            <p>{{ getDuracionLabel(selectedSlot?.slotData?.duracion_total_min || 60) }}</p>
                         </div>
                     </div>
                 </div>

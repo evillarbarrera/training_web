@@ -315,6 +315,17 @@
                         border-top-right-radius: 0 !important;
                         border-top: none !important;
                     }
+
+                    &:not(.is-end-slot) {
+                        padding-bottom: 0;
+                        border-bottom: none !important;
+
+                        .content-box {
+                            border-bottom-left-radius: 0 !important;
+                            border-bottom-right-radius: 0 !important;
+                            border-bottom: none !important;
+                        }
+                    }
                 }
 
                 &.is-manana .content-box {
@@ -746,6 +757,15 @@
         margin-bottom: 16px;
         box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 
+        &.with-duration {
+            grid-template-columns: minmax(210px, 0.95fr) 1fr 1fr;
+
+            @media (max-width: 960px) {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
         @media (max-width: 768px) {
             grid-template-columns: 1fr;
             gap: 12px;
@@ -769,6 +789,50 @@
                 i {
                     color: #2563eb;
                     font-size: 12px;
+                }
+            }
+
+            .duration-pills-group {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                height: 40px;
+
+                .duration-pill-btn {
+                    border: 1.5px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #475569;
+                    border-radius: 10px;
+                    font-size: 12px;
+                    font-weight: 850;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 5px;
+                    transition: all 0.2s ease;
+
+                    i {
+                        font-size: 11px;
+                        color: #94a3b8;
+                    }
+
+                    &:hover:not(.active) {
+                        border-color: #0f172a;
+                        color: #0f172a;
+                        background: #f8fafc;
+                    }
+
+                    &.active {
+                        background: #0f172a;
+                        color: #ccff00;
+                        border-color: #0f172a;
+                        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.18);
+
+                        i {
+                            color: #ccff00;
+                        }
+                    }
                 }
             }
 
