@@ -109,6 +109,8 @@ export class EntrenadorAgendarComponent implements OnInit {
     showAssignCourtInline = false;
     selectedSlot: any = null;
     recurrencia: number = 1;
+    duracionMinutos: 60 | 90 | 120 = 60;
+    duracionesDisponibles: (60 | 90 | 120)[] = [60, 90, 120];
     tipoClaseSeleccionado: 'individual' | 'multijugador' | 'grupal' | 'evaluacion' = 'individual';
 
     // Clubes y Canchas Disponibles
@@ -280,6 +282,12 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.cargarCanchasDisponibles();
     }
 
+    onDuracionChange(minutos: 60 | 90 | 120): void {
+        if (this.duracionMinutos === minutos) return;
+        this.duracionMinutos = minutos;
+        this.cargarCanchasDisponibles();
+    }
+
     cargarCanchasDisponibles(): void {
         if (!this.selectedClubId || !this.selectedSlot) {
             this.canchasDisponibles = [];
@@ -290,7 +298,9 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.cargandoCanchas = true;
         const fecha = this.selectedSlot.dateStr;
         const hIni = this.selectedSlot.hour;
-        const hFin = this.getHoraFin(hIni);
+        const hFin = (this.showDetailModal && this.selectedSlot?.slotData?.hora_fin_reserva)
+            ? this.selectedSlot.slotData.hora_fin_reserva
+            : this.getHoraFin(hIni);
 
         this.clubesService.getCanchasDisponibles(this.selectedClubId, fecha, hIni, hFin).subscribe({
             next: (canchas: any[]) => {
@@ -799,6 +809,7 @@ export class EntrenadorAgendarComponent implements OnInit {
 
         this.selectedSlot = { date, dateStr: this.formatDate(date), hour, slotData };
         this.tipoClaseSeleccionado = 'individual'; // Reset to default
+        this.duracionMinutos = 60;
         this.filtroAlumnos = '';
 
         const preselectId = Number(localStorage.getItem('preselectAlumnoId') || 0);
@@ -1226,6 +1237,7 @@ export class EntrenadorAgendarComponent implements OnInit {
                     fecha: this.selectedSlot.dateStr,
                     hora_inicio: this.selectedSlot.hour,
                     hora_fin: this.getHoraFin(this.selectedSlot.hour),
+                    duracion: Number(this.duracionMinutos || 60),
                     jugador_id: String(primerJugador.jugador_id || primerJugador.id),
                     jugador_nombre: primerJugador.jugador_nombre || 'Alumno',
                     estado: 'reservado',
@@ -1288,6 +1300,7 @@ export class EntrenadorAgendarComponent implements OnInit {
             fecha: this.selectedSlot.dateStr,
             hora_inicio: this.selectedSlot.hour,
             hora_fin: this.getHoraFin(this.selectedSlot.hour),
+            duracion: Number(this.duracionMinutos || 60),
             jugador_id: 0,
             jugador_nombre: 'Clase Abierta / Grupal',
             estado: 'reservado',
@@ -1330,11 +1343,25 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.popupService.error('Error', err.error?.error || 'No se pudo completar la operación.');
     }
 
-    getHoraFin(horaInicio: string): string {
+    getHoraFin(horaInicio: string, customDuration?: number): string {
+        if (!horaInicio) return '09:00';
+        const dur = customDuration || this.duracionMinutos || 60;
         const [h, m] = horaInicio.split(':').map(Number);
-        const date = new Date();
-        date.setHours(h + 1, m);
-        return date.toTimeString().slice(0, 5);
+        const totalMinutes = h * 60 + (m || 0) + dur;
+        if (totalMinutes >= 24 * 60) {
+            return '23:59';
+        }
+        const endH = Math.floor(totalMinutes / 60);
+        const endM = totalMinutes % 60;
+        return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+    }
+
+    getDuracionLabel(minutos?: number): string {
+        const m = Number(minutos || this.duracionMinutos || 60);
+        if (m === 90) return '90 min (1h 30m)';
+        if (m === 120) return '120 min (2h)';
+        if (m === 60) return '60 min (1h)';
+        return `${m} min`;
     }
 
     onEditDetail() {
