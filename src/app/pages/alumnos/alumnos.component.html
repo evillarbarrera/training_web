@@ -18,6 +18,9 @@
           <button class="btn-help-compact" (click)="startTutorial()" title="Ver tutorial interactivo">
             💡 Ayuda
           </button>
+          <button class="btn-associate-compact" (click)="mostrarModalAsociar()" title="Vincular cuenta de un jugador ya registrado">
+            <i class="fas fa-link"></i> Asociar Jugador
+          </button>
           <button class="btn-create-compact" (click)="mostrarModalCrear()">
             <i class="fas fa-user-plus"></i> + Registrar Alumno
           </button>
@@ -76,7 +79,7 @@
         <div class="search-input-wrapper">
           <i class="fas fa-search search-icon"></i>
           <input type="text" [(ngModel)]="searchTerm" (input)="filtrarAlumnos()"
-            placeholder="Buscar alumno por nombre..." class="search-input" />
+            placeholder="Buscar alumno por nombre o correo..." class="search-input" />
           <button class="btn-clear-search" *ngIf="searchTerm" (click)="searchTerm = ''; filtrarAlumnos()">
             <i class="fas fa-times"></i>
           </button>
@@ -118,8 +121,15 @@
       <div *ngIf="!isLoading && alumnosFiltrados.length === 0" class="empty-state">
         <div class="empty-icon">📭</div>
         <h3>No se encontraron alumnos</h3>
-        <p>Prueba ajustando los filtros o registra a un nuevo alumno.</p>
-        <button class="btn-create-compact mt-3" (click)="mostrarModalCrear()">+ Registrar Alumno</button>
+        <p>Prueba ajustando los filtros, asocia un jugador con cuenta existente o registra un nuevo alumno.</p>
+        <div class="empty-actions-row">
+          <button class="btn-associate-compact" (click)="mostrarModalAsociar()">
+            <i class="fas fa-link"></i> Asociar Jugador Existente
+          </button>
+          <button class="btn-create-compact" (click)="mostrarModalCrear()">
+            <i class="fas fa-user-plus"></i> + Registrar Alumno
+          </button>
+        </div>
       </div>
 
       <!-- COMPACT ALUMNOS GRID -->
@@ -142,6 +152,9 @@
                   <span class="status-badge" [ngClass]="alumno.sesiones_pendientes <= 1 ? 'critical' : 'active'">
                     {{ alumno.sesiones_pendientes <= 1 ? '⚠️ Renovación' : 'Activo' }}
                   </span>
+                </div>
+                <div class="email-sub" *ngIf="alumno.jugador_email" [title]="alumno.jugador_email">
+                  <i class="fas fa-envelope"></i> {{ alumno.jugador_email }}
                 </div>
                 <div class="pack-sub" *ngIf="alumno.pack_nombre">
                   <i class="fas fa-box-archive"></i> {{ alumno.pack_nombre }}
@@ -171,6 +184,9 @@
 
             <!-- COMPACT ACTION BUTTONS -->
             <div class="card-actions-row">
+              <button class="btn-action-reservar" (click)="irAAgendar(alumno)" title="Agendar / Realizar Reserva">
+                <i class="fas fa-calendar-plus"></i> Reservar
+              </button>
               <button class="btn-action-main" (click)="verClases(alumno)" title="Ver Malla y Plan de Clases">
                 <i class="fas fa-clipboard-list"></i> Malla & Clases
               </button>
@@ -200,40 +216,147 @@
     </div>
   </main>
 
-  <!-- MODAL CREACIÓN ALUMNO -->
+  <!-- MODAL CREACIÓN Y ASOCIACIÓN DE ALUMNO -->
   <div class="modal-overlay" *ngIf="isCreatingAlumno" (click)="cerrarModalCrear()">
     <div class="modal-content compact-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-title-box">
-          <span class="m-kicker"><i class="fas fa-user-plus"></i> NUEVO REGISTRO</span>
-          <h3>Crear Alumno</h3>
+          <span class="m-kicker">
+            <i class="fas" [ngClass]="modalTab === 'asociar' ? 'fa-link' : 'fa-user-plus'"></i>
+            {{ modalTab === 'asociar' ? 'VINCULAR CUENTA EXISTENTE' : 'NUEVO REGISTRO' }}
+          </span>
+          <h3>{{ modalTab === 'asociar' ? 'Asociar Jugador a mis Alumnos' : 'Crear Nuevo Alumno' }}</h3>
         </div>
         <button class="close-btn" (click)="cerrarModalCrear()">×</button>
       </div>
-      <div class="modal-body">
-        <p class="modal-intro">Ingresa los datos del alumno para generar su cuenta y enviarle sus credenciales de acceso.</p>
-        
-        <div class="form-group">
-          <label><i class="fas fa-user"></i> Nombre Completo</label>
-          <input type="text" [(ngModel)]="nuevoAlumno.nombre" placeholder="Ej: Juan Pérez" class="form-input">
-        </div>
 
-        <div class="form-group">
-          <label><i class="fas fa-envelope"></i> Correo Electrónico (Será su Usuario)</label>
-          <input type="email" [(ngModel)]="nuevoAlumno.email" placeholder="alumno@correo.com" class="form-input">
-        </div>
-
-        <div class="info-callout">
-          <i class="fas fa-paper-plane"></i>
-          <p>Se enviará automáticamente un correo con una clave de acceso vinculada a tu perfil de entrenador.</p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary-compact" (click)="cerrarModalCrear()">Cancelar</button>
-        <button class="btn-primary-compact" (click)="crearAlumno()" [disabled]="!nuevoAlumno.nombre || !nuevoAlumno.email">
-          <i class="fas fa-check"></i> Crear y Notificar
+      <!-- MODAL TABS -->
+      <div class="modal-mode-tabs">
+        <button type="button" class="mode-tab-btn" [class.active]="modalTab === 'asociar'" (click)="cambiarTabModal('asociar')">
+          <i class="fas fa-link"></i> Asociar Cuenta Existente
+        </button>
+        <button type="button" class="mode-tab-btn" [class.active]="modalTab === 'crear'" (click)="cambiarTabModal('crear')">
+          <i class="fas fa-user-plus"></i> Crear Cuenta Nueva
         </button>
       </div>
+
+      <!-- TAB 1: ASOCIAR CUENTA EXISTENTE -->
+      <ng-container *ngIf="modalTab === 'asociar'">
+        <div class="modal-body">
+          <p class="modal-intro">
+            Busca por <b>nombre</b> o <b>correo electrónico</b> a un jugador que ya tenga cuenta en PadelBlox para asociarlo como tu jugador y poder realizarle reservas.
+          </p>
+
+          <div class="form-group">
+            <label><i class="fas fa-magnifying-glass"></i> Buscar Jugador Registrado</label>
+            <div class="associate-search-box">
+              <input
+                type="text"
+                [(ngModel)]="searchJugadorTerm"
+                (ngModelChange)="onSearchJugadorInput()"
+                placeholder="Escribe nombre, apellido o correo del jugador..."
+                class="form-input with-clear"
+                autofocus
+              />
+              <button
+                type="button"
+                class="clear-input-btn"
+                *ngIf="searchJugadorTerm"
+                (click)="searchJugadorTerm = ''; onSearchJugadorInput()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- LOADING SEARCH -->
+          <div class="search-loading-box" *ngIf="isSearchingJugadores">
+            <i class="fas fa-circle-notch fa-spin"></i> Buscando cuentas de jugadores...
+          </div>
+
+          <!-- RESULTS LIST -->
+          <div class="existing-players-list" *ngIf="!isSearchingJugadores && jugadoresEncontrados.length > 0">
+            <div class="player-result-row" *ngFor="let u of jugadoresEncontrados" [class.already-linked]="yaEstaAsociado(u)">
+              <div class="pr-avatar">
+                <img [src]="getAvatarJugadorBusqueda(u)" (error)="$event.target.style.display='none'" alt="Avatar" />
+                <span>{{ getNombreCompletoBusqueda(u).charAt(0) }}</span>
+              </div>
+              <div class="pr-info">
+                <div class="pr-name">{{ getNombreCompletoBusqueda(u) }}</div>
+                <div class="pr-email"><i class="fas fa-envelope"></i> {{ u.usuario }}</div>
+              </div>
+              <div class="pr-action">
+                <span class="badge-linked" *ngIf="yaEstaAsociado(u)">
+                  <i class="fas fa-check-circle"></i> Ya asociado
+                </span>
+                <button
+                  type="button"
+                  class="btn-link-player"
+                  *ngIf="!yaEstaAsociado(u)"
+                  [disabled]="asociandoId === u.id"
+                  (click)="asociarJugadorDeLista(u)">
+                  <i class="fas" [ngClass]="asociandoId === u.id ? 'fa-spinner fa-spin' : 'fa-user-check'"></i>
+                  {{ asociandoId === u.id ? 'Asociando...' : '+ Asociar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- NO RESULTS FOUND -->
+          <div class="no-players-found" *ngIf="!isSearchingJugadores && searchJugadorTerm.trim().length >= 2 && jugadoresEncontrados.length === 0">
+            <i class="fas fa-user-magnifying-glass"></i>
+            <p>No se encontraron cuentas con <b>"{{ searchJugadorTerm }}"</b>.</p>
+            <button type="button" class="btn-switch-create" (click)="cambiarTabModal('crear')">
+              <i class="fas fa-user-plus"></i> ¿No tiene cuenta? Crear cuenta nueva
+            </button>
+          </div>
+
+          <!-- INITIAL HINT -->
+          <div class="info-callout" *ngIf="searchJugadorTerm.trim().length < 2">
+            <i class="fas fa-circle-info"></i>
+            <p>Escribe al menos 2 letras del nombre o el correo del jugador para ver las cuentas existentes y asociarlas con un clic.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary-compact" (click)="cerrarModalCrear()">Cerrar</button>
+          <button
+            class="btn-primary-compact"
+            *ngIf="esEmailValido(searchJugadorTerm)"
+            [disabled]="isAsociandoEmail"
+            (click)="asociarPorCorreoDirecto()">
+            <i class="fas" [ngClass]="isAsociandoEmail ? 'fa-spinner fa-spin' : 'fa-link'"></i>
+            {{ isAsociandoEmail ? 'Verificando...' : 'Asociar por Correo' }}
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- TAB 2: CREAR CUENTA NUEVA -->
+      <ng-container *ngIf="modalTab === 'crear'">
+        <div class="modal-body">
+          <p class="modal-intro">Ingresa los datos del alumno para generar su cuenta nueva y enviarle sus credenciales de acceso.</p>
+          
+          <div class="form-group">
+            <label><i class="fas fa-user"></i> Nombre Completo</label>
+            <input type="text" [(ngModel)]="nuevoAlumno.nombre" placeholder="Ej: Juan Pérez" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label><i class="fas fa-envelope"></i> Correo Electrónico (Será su Usuario)</label>
+            <input type="email" [(ngModel)]="nuevoAlumno.email" placeholder="alumno@correo.com" class="form-input">
+          </div>
+
+          <div class="info-callout">
+            <i class="fas fa-paper-plane"></i>
+            <p>Se enviará automáticamente un correo con una clave de acceso vinculada a tu perfil de entrenador. Si el correo ya existe, se asociará a tu lista.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary-compact" (click)="cerrarModalCrear()">Cancelar</button>
+          <button class="btn-primary-compact" (click)="crearAlumno()" [disabled]="!nuevoAlumno.nombre || !nuevoAlumno.email">
+            <i class="fas fa-check"></i> Crear y Notificar
+          </button>
+        </div>
+      </ng-container>
     </div>
   </div>
 </div>

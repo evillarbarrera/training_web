@@ -22,11 +22,29 @@ export class AlumnoService {
 
   constructor(private http: HttpClient) { }
 
-  crearAlumno(data: { nombre: string, email: string, entrenador_id: number }): Observable<any> {
+  crearAlumno(data: { nombre: string, email: string, entrenador_id: number, alumno_id?: number, only_associate?: boolean }): Observable<any> {
     const token = localStorage.getItem('token');
     return this.http.post(`${this.apiUrl}/alumno/create_alumno.php?token=${token}`, data, {
       headers: this.getHeaders()
     });
+  }
+
+  asociarJugadorExistente(data: { entrenador_id: number, alumno_id?: number, nombre?: string, email: string }): Observable<any> {
+    const token = localStorage.getItem('token');
+    return this.http.post(`${this.apiUrl}/alumno/create_alumno.php?token=${token}`, {
+      ...data,
+      only_associate: true
+    }, {
+      headers: this.getHeaders()
+    });
+  }
+
+  buscarJugadoresExistentes(term: string): Observable<any[]> {
+    const token = localStorage.getItem('token');
+    return this.http.get<any[]>(
+      `${this.apiUrl}/user/get_users.php?search=${encodeURIComponent(term)}&limit=15&token=${token}`,
+      { headers: this.getHeaders() }
+    );
   }
 
   getAlumnos(entrenadorId: number): Observable<any[]> {

@@ -27,9 +27,18 @@ export class AlumnosComponent implements OnInit {
   coachFoto: string | null = null;
   loadingMessage = 'Cargando alumnos...';
 
-  // Creación de Alumno
+  // Creación y Asociación de Alumno
   nuevoAlumno = { nombre: '', email: '' };
   isCreatingAlumno = false;
+  modalTab: 'asociar' | 'crear' = 'asociar';
+
+  // Búsqueda de Jugadores Existentes para Asociar
+  searchJugadorTerm = '';
+  jugadoresEncontrados: any[] = [];
+  isSearchingJugadores = false;
+  asociandoId: number | null = null;
+  isAsociandoEmail = false;
+  private searchTimeout: any = null;
 
   // Interactive Tutorial State
   showTutorial = false;
@@ -163,8 +172,10 @@ export class AlumnosComponent implements OnInit {
     let filtered = this.alumnos;
 
     if (this.searchTerm) {
+      const term = this.searchTerm.toLowerCase();
       filtered = filtered.filter(a =>
-        a.jugador_nombre.toLowerCase().includes(this.searchTerm.toLowerCase())
+        (a.jugador_nombre || '').toLowerCase().includes(term) ||
+        (a.jugador_email || '').toLowerCase().includes(term)
       );
     }
 
@@ -240,13 +251,199 @@ export class AlumnosComponent implements OnInit {
     this.router.navigate(['/progreso', alumno.jugador_id]);
   }
 
+  irAAgendar(alumno: any): void {
+    if (alumno?.jugador_nombre) {
+      localStorage.setItem('preselectAlumnoNombre', alumno.jugador_nombre);
+    }
+    if (alumno?.jugador_id) {
+      localStorage.setItem('preselectAlumnoId', String(alumno.jugador_id));
+    }
+    this.router.navigate(['/entrenador-agendar']);
+  }
+
+  mostrarModalAsociar(): void {
+    this.isCreatingAlumno = true;
+    this.modalTab = 'asociar';
+    this.searchJugadorTerm = '';
+    this.jugadoresEncontrados = [];
+    this.isSearchingJugadores = false;
+  }
+
   mostrarModalCrear(): void {
     this.isCreatingAlumno = true;
+    this.modalTab = 'crear';
     this.nuevoAlumno = { nombre: '', email: '' }; // Reset
+  }
+
+  cambiarTabModal(tab: 'asociar' | 'crear'): void {
+    this.modalTab = tab;
+    if (tab === 'asociar' && this.nuevoAlumno.email && !this.searchJugadorTerm) {
+      this.searchJugadorTerm = this.nuevoAlumno.email;
+      this.onSearchJugadorInput();
+    } else if (tab === 'crear' && this.searchJugadorTerm && this.searchJugadorTerm.includes('@') && !this.nuevoAlumno.email) {
+      this.nuevoAlumno.email = this.searchJugadorTerm.trim();
+    }
   }
 
   cerrarModalCrear(): void {
     this.isCreatingAlumno = false;
+    this.searchJugadorTerm = '';
+    this.jugadoresEncontrados = [];
+    this.isSearchingJugadores = false;
+    this.asociandoId = null;
+    this.isAsociandoEmail = false;
+  }
+
+  onSearchJugadorInput(): void {
+    if (this.searchTimeout) {
+      clearTimeout(this.searchTimeout);
+    }
+    const term = (this.searchJugadorTerm || '').trim();
+    if (term.length < 2) {
+      this.jugadoresEncontrados = [];
+      this.isSearchingJugadores = false;
+      return;
+    }
+
+    this.isSearchingJugadores = true;
+    this.searchTimeout = setTimeout(() => {
+      this.alumnoService.buscarJugadoresExistentes(term).subscribe({
+        next: (res: any[]) => {
+          this.jugadoresEncontrados = (res || []).filter(u => Number(u.id) !== Number(this.userId));
+          this.isSearchingJugadores = false;
+        },
+        error: () => {
+          this.jugadoresEncontrados = [];
+          this.isSearchingJugadores = false;
+        }
+      });
+    }, 250);
+  }
+
+  yaEstaAsociado(jugador: any): boolean {
+    if (!jugador) return false;
+    const jId = Number(jugador.id || jugador.jugador_id || 0);
+    const jEmail = (jugador.usuario || jugador.email || '').trim().toLowerCase();
+    return this.alumnos.some(a =>
+      (jId > 0 && Number(a.jugador_id) === jId) ||
+      (jEmail && (a.jugador_email || '').trim().toLowerCase() === jEmail)
+    );
+  }
+
+  esEmailValido(text: string): boolean {
+    const clean = (text || '').trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean);
+  }
+
+  getNombreCompletoBusqueda(u: any): string {
+    const n = (u?.nombre || '').trim();
+    const ap = (u?.apellido || '').trim();
+    if (ap && !n.toLowerCase().includes(ap.toLowerCase())) {
+      return `${n} ${ap}`.trim();
+    }
+    return n || u?.usuario || 'Jugador';
+  }
+
+  getAvatarJugadorBusqueda(u: any): string {
+    const p1 = u?.foto_perfil && String(u.foto_perfil).length > 5 ? u.foto_perfil : null;
+    const p2 = u?.foto && String(u.foto).length > 5 ? u.foto : null;
+    const fotoRaw = p1 || p2;
+    const fullName = this.getNombreCompletoBusqueda(u);
+
+    if (fotoRaw && !fotoRaw.includes('imagen_defecto')) {
+      if (!fotoRaw.startsWith('http')) {
+        let cleanPath = fotoRaw.startsWith('/') ? fotoRaw.substring(1) : fotoRaw;
+        if (!cleanPath.includes('/')) {
+          cleanPath = `uploads/perfiles/${cleanPath}`;
+        }
+        if (!cleanPath.startsWith('prd/') && !cleanPath.startsWith('dev/')) {
+          cleanPath = `prd/${cleanPath}`;
+        }
+        return `https://api.padelmanager.cl/${cleanPath}`;
+      }
+      return fotoRaw;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=ccff00&color=000`;
+  }
+
+  asociarJugadorDeLista(jugador: any): void {
+    if (!this.userId || !jugador) return;
+    if (this.yaEstaAsociado(jugador)) {
+      this.popupService.info('Ya asociado', 'Este jugador ya forma parte de tu lista de alumnos.');
+      return;
+    }
+
+    const nombreCompleto = this.getNombreCompletoBusqueda(jugador);
+    const emailJugador = (jugador.usuario || jugador.email || '').trim();
+    this.asociandoId = Number(jugador.id);
+
+    this.alumnoService.crearAlumno({
+      nombre: nombreCompleto,
+      email: emailJugador,
+      alumno_id: Number(jugador.id),
+      entrenador_id: this.userId,
+      only_associate: true
+    }).subscribe({
+      next: (res) => {
+        this.asociandoId = null;
+        if (res.success) {
+          this.analyticsService.trackEvent('associate_player', { rol: 'alumno', origin: 'entrenador' });
+          this.popupService.success(
+            '¡Jugador Asociado!',
+            `${nombreCompleto} fue vinculado a tu lista de jugadores. Ya puedes realizar reservas y asignarle packs.`
+          );
+          this.loadAlumnos();
+        }
+      },
+      error: (err) => {
+        this.asociandoId = null;
+        const msg = err.error?.error || 'No se pudo asociar la cuenta del jugador';
+        this.popupService.error('Error', msg);
+      }
+    });
+  }
+
+  asociarPorCorreoDirecto(): void {
+    const email = (this.searchJugadorTerm || '').trim();
+    if (!this.esEmailValido(email) || !this.userId) {
+      this.popupService.error('Correo inválido', 'Ingresa un correo electrónico válido para buscar y asociar la cuenta.');
+      return;
+    }
+
+    // Si está en los resultados ya cargados, usamos ese registro
+    const matchInResults = this.jugadoresEncontrados.find(
+      u => (u.usuario || '').trim().toLowerCase() === email.toLowerCase()
+    );
+    if (matchInResults) {
+      this.asociarJugadorDeLista(matchInResults);
+      return;
+    }
+
+    // Si no está aún en la lista local, consultamos primero get_users para confirmar que existe
+    this.isAsociandoEmail = true;
+    this.alumnoService.buscarJugadoresExistentes(email).subscribe({
+      next: (users: any[]) => {
+        const exactMatch = (users || []).find(
+          u => (u.usuario || '').trim().toLowerCase() === email.toLowerCase()
+        );
+
+        if (!exactMatch) {
+          this.isAsociandoEmail = false;
+          this.popupService.error(
+            'Cuenta no encontrada',
+            `No existe ningún jugador registrado con el correo "${email}". Puedes cambiar a la pestaña "Crear Cuenta Nueva" para registrarlo.`
+          );
+          return;
+        }
+
+        this.isAsociandoEmail = false;
+        this.asociarJugadorDeLista(exactMatch);
+      },
+      error: () => {
+        this.isAsociandoEmail = false;
+        this.popupService.error('Error', 'No se pudo verificar el correo del jugador.');
+      }
+    });
   }
 
   crearAlumno(): void {
@@ -267,8 +464,15 @@ export class AlumnosComponent implements OnInit {
       next: (res) => {
         if (res.success) {
           this.analyticsService.trackEvent('create_player', { rol: 'alumno', origin: 'entrenador' });
-          const mailMsg = res.mail_sent ? 'y se ha enviado el correo de bienvenida.' : 'pero ha fallado el envío del correo (revisar configuración).';
-          this.popupService.success('Alumno Creado', `El alumno se registró con éxito ${mailMsg}`);
+          if (res.already_exists) {
+            this.popupService.success(
+              '¡Jugador Asociado!',
+              'La cuenta ya existía en PadelBlox y ha sido asociada a tu lista de jugadores para realizar reservas.'
+            );
+          } else {
+            const mailMsg = res.mail_sent ? 'y se ha enviado el correo de bienvenida.' : 'pero ha fallado el envío del correo (revisar configuración).';
+            this.popupService.success('Alumno Creado', `El alumno se registró con éxito ${mailMsg}`);
+          }
           this.cerrarModalCrear();
           this.loadAlumnos(); // Refrescar lista
         }
