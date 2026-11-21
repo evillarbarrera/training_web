@@ -180,9 +180,10 @@ export class EntrenadorAgendarComponent implements OnInit {
     }
 
     filtrarListaAlumnos() {
-        // PERF: Do not render full list. Only render if they type something.
-        if (!this.filtroAlumnos || this.filtroAlumnos.trim().length < 2) {
-            this.alumnosFiltradosList = this.alumnos.filter(a => this.isAlumnoSelected(a));
+        if (!this.filtroAlumnos || this.filtroAlumnos.trim().length === 0) {
+            const selected = this.alumnos.filter(a => this.isAlumnoSelected(a));
+            const rest = this.alumnos.filter(a => !this.isAlumnoSelected(a)).slice(0, 25);
+            this.alumnosFiltradosList = [...selected, ...rest];
             return;
         }
         
@@ -190,6 +191,7 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.alumnosFiltradosList = this.alumnos.filter(a =>
             this.isAlumnoSelected(a) ||
             (a.jugador_nombre || '').toLowerCase().includes(f) ||
+            (a.jugador_email || '').toLowerCase().includes(f) ||
             (a.pack_nombre || '').toLowerCase().includes(f)
         );
     }
@@ -798,6 +800,17 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.selectedSlot = { date, dateStr: this.formatDate(date), hour, slotData };
         this.tipoClaseSeleccionado = 'individual'; // Reset to default
         this.filtroAlumnos = '';
+
+        const preselectId = Number(localStorage.getItem('preselectAlumnoId') || 0);
+        if (preselectId > 0) {
+            const foundPre = this.alumnos.find(a => Number(a.jugador_id || a.id) === preselectId);
+            if (foundPre) {
+                this.seleccionarAlumno(foundPre);
+            }
+            localStorage.removeItem('preselectAlumnoId');
+            localStorage.removeItem('preselectAlumnoNombre');
+        }
+
         this.filtrarListaAlumnos();
 
         // Inicializar Club y cargar canchas disponibles
