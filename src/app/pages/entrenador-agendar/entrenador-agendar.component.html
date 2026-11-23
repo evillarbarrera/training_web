@@ -533,6 +533,30 @@
                                     </button>
                                 </div>
                             </div>
+
+                            <!-- Step 4: Notificación y Correo al Alumno -->
+                            <div class="notification-card-box" [class.is-checked]="enviarNotificacion" [class.is-silent]="!enviarNotificacion">
+                                <label class="notif-chk-row">
+                                    <input type="checkbox" [(ngModel)]="enviarNotificacion" class="notif-checkbox-input">
+                                    <div class="notif-icon-badge">
+                                        <i class="fas" [ngClass]="enviarNotificacion ? 'fa-bell' : 'fa-bell-slash'"></i>
+                                    </div>
+                                    <div class="notif-content">
+                                        <div class="notif-title-line">
+                                            <span class="notif-title">Enviar notificación y correo del entrenamiento</span>
+                                            <span class="notif-status-pill" [class.active]="enviarNotificacion" [class.silent]="!enviarNotificacion">
+                                                {{ enviarNotificacion ? 'ACTIVO' : 'SILENCIOSO' }}
+                                            </span>
+                                        </div>
+                                        <p class="notif-desc" *ngIf="enviarNotificacion">
+                                            Se notificará al alumno por correo y app al confirmar la reserva. Quita el ticket si solo estás ordenando clases pendientes.
+                                        </p>
+                                        <p class="notif-desc silent-text" *ngIf="!enviarNotificacion">
+                                            Modo orden de clases pendientes: no se enviarán notificaciones ni correos al agendar.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -546,7 +570,8 @@
                         (click)="confirmarAgenda()" 
                         [disabled]="isLoading || cargandoPacks || !selectedSlot">
                     <span *ngIf="!isLoading && !cargandoPacks">
-                        <i class="fas fa-calendar-check"></i> CONFIRMAR Y AGENDAR
+                        <i class="fas" [ngClass]="enviarNotificacion ? 'fa-calendar-check' : 'fa-bell-slash'"></i>
+                        {{ enviarNotificacion ? 'CONFIRMAR Y NOTIFICAR' : 'CONFIRMAR SIN NOTIFICAR' }}
                     </span>
                     <span *ngIf="cargandoPacks" class="loader-flex">
                         <i class="fas fa-sync fa-spin"></i> CARGANDO DATOS...

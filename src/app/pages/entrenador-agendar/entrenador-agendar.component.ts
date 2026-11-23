@@ -112,6 +112,7 @@ export class EntrenadorAgendarComponent implements OnInit {
     duracionMinutos: 60 | 90 | 120 = 60;
     duracionesDisponibles: (60 | 90 | 120)[] = [60, 90, 120];
     tipoClaseSeleccionado: 'individual' | 'multijugador' | 'grupal' | 'evaluacion' = 'individual';
+    enviarNotificacion: boolean = true;
 
     // Clubes y Canchas Disponibles
     clubesList: any[] = [];
@@ -812,6 +813,7 @@ export class EntrenadorAgendarComponent implements OnInit {
         this.selectedSlot = { date, dateStr: this.formatDate(date), hour, slotData };
         this.tipoClaseSeleccionado = 'individual'; // Reset to default
         this.duracionMinutos = 60;
+        this.enviarNotificacion = true; // Por defecto marcado para enviar notificación y correo
         this.filtroAlumnos = '';
 
         const preselectId = Number(localStorage.getItem('preselectAlumnoId') || 0);
@@ -945,7 +947,8 @@ export class EntrenadorAgendarComponent implements OnInit {
         const payload = {
             reserva_id: reservaId,
             jugador_id: jugadorId,
-            pack_id: slot.pack_id // Referencia opcional
+            pack_id: slot.pack_id, // Referencia opcional
+            enviar_notificacion: this.enviarNotificacion
         };
 
         // Usamos un endpoint que maneje la inscripción a la RESERVA específica
@@ -1249,7 +1252,8 @@ export class EntrenadorAgendarComponent implements OnInit {
                     cancha_id: Number(this.selectedCanchaId || 0),
                     malla_id: String(this.planificacionId || 0),
                     clase_id: String(this.claseMallaId || 0),
-                    clase_titulo: this.selectedClaseToPreview?.titulo || ''
+                    clase_titulo: this.selectedClaseToPreview?.titulo || '',
+                    enviar_notificacion: this.enviarNotificacion
                 };
 
                 // For multi/grupal, send all player IDs
@@ -1313,7 +1317,8 @@ export class EntrenadorAgendarComponent implements OnInit {
             cancha_id: Number(this.selectedCanchaId || 0),
             malla_id: Number(this.planificacionId || 0),
             clase_id: Number(this.claseMallaId || 0),
-            clase_titulo: this.selectedClaseToPreview?.titulo || ''
+            clase_titulo: this.selectedClaseToPreview?.titulo || '',
+            enviar_notificacion: this.enviarNotificacion
         };
 
         // Si ya hay alumnos seleccionados en el modal, los incluimos
@@ -1333,8 +1338,14 @@ export class EntrenadorAgendarComponent implements OnInit {
 
     private postReservaExito() {
         this.isLoading = false;
-        this.analyticsService.trackEvent('create_reservation', { tipo: this.tipoClaseSeleccionado });
-        this.popupService.success('¡Agendado!', 'La clase se ha guardado correctamente.');
+        this.analyticsService.trackEvent('create_reservation', {
+            tipo: this.tipoClaseSeleccionado,
+            notificar: this.enviarNotificacion
+        });
+        const msgExito = this.enviarNotificacion
+            ? 'La clase se ha guardado y se envió la notificación y correo al alumno.'
+            : 'La clase se ha guardado correctamente sin enviar notificaciones ni correo.';
+        this.popupService.success('¡Agendado!', msgExito);
         this.closeModal();
         this.loadDisponibilidad();
         this.loadAlumnos();

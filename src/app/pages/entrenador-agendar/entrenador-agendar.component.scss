@@ -1678,6 +1678,109 @@
         }
     }
 
+    // Notification Checkbox Card Box
+    .notification-card-box {
+        border-radius: 12px;
+        padding: 11px 13px;
+        border: 1.5px solid #bbf7d0;
+        background: #f0fdf4;
+        transition: all 0.2s ease;
+
+        &.is-silent {
+            border-color: #fde68a;
+            background: #fffbeb;
+        }
+
+        .notif-chk-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            margin: 0;
+            user-select: none;
+
+            .notif-checkbox-input {
+                width: 18px;
+                height: 18px;
+                margin-top: 2px;
+                accent-color: #0f172a;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+
+            .notif-icon-badge {
+                width: 30px;
+                height: 30px;
+                border-radius: 8px;
+                background: #0f172a;
+                color: #ccff00;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13px;
+                flex-shrink: 0;
+                transition: all 0.2s ease;
+            }
+
+            .notif-content {
+                flex: 1;
+                min-width: 0;
+
+                .notif-title-line {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    margin-bottom: 3px;
+
+                    .notif-title {
+                        font-size: 12px;
+                        font-weight: 850;
+                        color: #0f172a;
+                        line-height: 1.25;
+                    }
+
+                    .notif-status-pill {
+                        font-size: 9px;
+                        font-weight: 900;
+                        padding: 2px 7px;
+                        border-radius: 6px;
+                        letter-spacing: 0.5px;
+                        flex-shrink: 0;
+
+                        &.active {
+                            background: #16a34a;
+                            color: #ffffff;
+                        }
+
+                        &.silent {
+                            background: #d97706;
+                            color: #ffffff;
+                        }
+                    }
+                }
+
+                .notif-desc {
+                    margin: 0;
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: #334155;
+                    line-height: 1.35;
+
+                    &.silent-text {
+                        color: #92400e;
+                    }
+                }
+            }
+        }
+
+        &.is-silent .notif-chk-row .notif-icon-badge {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+    }
+
     // No packs alert
     .no-packs-alert {
         background: #fef3c7; 
