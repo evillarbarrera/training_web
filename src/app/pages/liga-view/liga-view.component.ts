@@ -684,92 +684,254 @@ export class LigaViewComponent implements OnInit {
     const cat = this.categoriaActual;
     if (!cat || !cat.id) return;
 
-    const totalParejas = cat.parejas?.length || 17;
+    const totalParejas = cat.parejas?.length || 12;
     const defaultClasifican = cat.parejas_clasifican_playoff || (totalParejas >= 12 ? 12 : (totalParejas >= 8 ? 8 : totalParejas));
     const defaultDirectos = defaultClasifican >= 12 ? 4 : (defaultClasifican === 10 ? 6 : (defaultClasifican === 14 ? 2 : 0));
 
-    Swal.fire({
-      title: '🏆 Configurar Fase Final (Playoffs)',
-      html: `
-        <div style="text-align: left; font-size: 0.9rem; color: #334155; font-family: inherit;">
-          <p style="margin-bottom: 14px; font-size: 0.88rem; color: #64748b;">
-            Configura el cuadro de eliminación directa para <strong>${cat.nombre}</strong> (${totalParejas} parejas registradas):
-          </p>
-          
-          <div style="margin-bottom: 16px;">
-            <label style="font-weight: 800; font-size: 0.82rem; color: #0f172a; display: block; margin-bottom: 6px;">
-              1️⃣ Parejas que Clasifican a la Fase Final:
-            </label>
-            <select id="swal-total-clasifican" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.88rem; height: 42px; border-radius: 10px; border-color: #cbd5e1;">
-              <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 Parejas (Recomendado con Previa)</option>
-              <option value="999" ${defaultClasifican >= 999 || defaultClasifican === totalParejas ? 'selected' : ''}>Todas las parejas de la categoría (${totalParejas})</option>
-              <option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 Parejas (Octavos de Final completos)</option>
-              <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 Parejas (6 directos + 2 cruces previa)</option>
-              <option value="8" ${defaultClasifican === 8 ? 'selected' : ''}>Top 8 Parejas (Cuartos de Final directos)</option>
-              <option value="4" ${defaultClasifican === 4 ? 'selected' : ''}>Top 4 Parejas (Semifinales directas)</option>
-            </select>
-          </div>
+    // Asegurar que tenemos la tabla de posiciones consolidada de la categoría
+    const abrirModalConRanking = (rankingList: any[]) => {
+      const construirSimulacionHtml = (reqClasificados: number, reqDirectos: number): string => {
+        const list = rankingList && rankingList.length > 0 ? rankingList : (cat.parejas || []);
+        const total = list.length;
+        if (total < 2) {
+          return `<div style="color: #dc2626; font-weight: 700;">Se necesitan al menos 2 parejas inscritas para simular el cuadro.</div>`;
+        }
 
-          <div style="margin-bottom: 16px;">
-            <label style="font-weight: 800; font-size: 0.82rem; color: #0f172a; display: block; margin-bottom: 6px;">
-              2️⃣ ¿Cuántos Primeros Lugares Pasan DIRECTO a Cuartos (BYE)?
-            </label>
-            <select id="swal-directos-cuartos" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.88rem; height: 42px; border-radius: 10px; border-color: #cbd5e1;">
-              <option value="4" ${defaultDirectos === 4 ? 'selected' : ''}>👑 Primeros 4 lugares (1º al 4º directo a 4tos; 5º al 12º a Previa)</option>
-              <option value="2" ${defaultDirectos === 2 ? 'selected' : ''}>👑 Primeros 2 lugares (1º y 2º directo a 4tos; 3º al 14º a Previa)</option>
-              <option value="6" ${defaultDirectos === 6 ? 'selected' : ''}>👑 Primeros 6 lugares (1º al 6º directo a 4tos; 7º al 10º a Previa)</option>
-              <option value="0" ${defaultDirectos === 0 ? 'selected' : ''}>⚡ Ninguno (Todos arrancan en la misma ronda inicial)</option>
-            </select>
-          </div>
+        let n = reqClasificados >= 999 || reqClasificados > total ? total : reqClasificados;
+        let directos = reqDirectos;
+        if (n <= 8) {
+          directos = 0;
+        }
+        let previaCount = n - directos;
+        if (previaCount % 2 !== 0) {
+          n = n - 1;
+          previaCount = n - directos;
+        }
 
-          <div id="swal-preview-box" style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px; font-size: 0.8rem; color: #1e40af; line-height: 1.45;">
-            <strong>ℹ️ Resumen del Cuadro:</strong><br>
-            • Se ordenarán automáticamente por la <strong>Tabla de Posiciones Consolidada</strong>.<br>
-            • Los cabezas de serie con pase directo esperarán en Cuartos de Final.<br>
-            • Los demás jugarán la Ronda Previa (Octavos) cruzándose el mejor contra el peor clasificado.
+        const clasificados = list.slice(0, n).map((p: any, idx: number) => ({
+          seed: idx + 1,
+          nombre: p.nombre_pareja || `${p.p1_nombre || p.nombre_externo1 || 'J1'} / ${p.p2_nombre || p.nombre_externo2 || 'J2'}`,
+          puntos: p.puntos !== undefined ? `${p.puntos} pts` : ''
+        }));
+
+        const badgeSeed = (s: number, isBye: boolean = false) =>
+          `<span style="display:inline-block; min-width:22px; text-align:center; padding:1px 5px; border-radius:5px; font-weight:800; font-size:0.72rem; background:${isBye ? '#fef3c7' : '#e2e8f0'}; color:${isBye ? '#b45309' : '#1e293b'}; border:1px solid ${isBye ? '#fde68a' : '#cbd5e1'}; margin-right:5px;">${s}º</span>`;
+
+        const rowMatch = (label: string, p1Html: string, p2Html: string, dest: string = '') => `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; margin-bottom:5px; font-size:0.78rem;">
+            <span style="font-weight:800; color:#475569; min-width:58px; font-size:0.72rem;">${label}</span>
+            <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; overflow:hidden;">
+              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44%;">${p1Html}</span>
+              <span style="font-weight:800; color:#94a3b8; font-size:0.7rem;">VS</span>
+              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44%; text-align:right;">${p2Html}</span>
+            </div>
+            ${dest ? `<span style="font-size:0.68rem; font-weight:700; color:#2563eb; background:#eff6ff; padding:2px 6px; border-radius:5px; white-space:nowrap;">→ ${dest}</span>` : ''}
           </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonColor: '#0f172a',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: '⚡ Generar Cuadro de Playoffs',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      preConfirm: () => {
-        const totalVal = (document.getElementById('swal-total-clasifican') as HTMLSelectElement).value;
-        const directosVal = (document.getElementById('swal-directos-cuartos') as HTMLSelectElement).value;
-        return {
-          total: totalVal === '999' ? 999 : parseInt(totalVal, 10),
-          directos: parseInt(directosVal, 10)
-        };
-      }
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        const { total, directos } = result.value;
-        this.ligaService.generarPlayoffs(cat.id, total, directos).subscribe({
-          next: (res) => {
-            if (res.success) {
-              Swal.fire({
-                title: '🏆 ¡Playoffs Generados!',
-                text: res.mensaje || 'Cuadro de Playoffs creado exitosamente.',
-                icon: 'success',
-                timer: 2500,
-                showConfirmButton: false
+        `;
+
+        let html = `
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <strong style="color:#1e3a8a; font-size:0.82rem;">🔮 Simulación en Vivo con Ranking Actual (${n} clasificadas)</strong>
+            <span style="font-size:0.72rem; font-weight:700; color:#1d4ed8; background:#dbeafe; padding:2px 8px; border-radius:99px;">
+              ${directos > 0 ? `${directos} Directos (BYE) + ${previaCount} a Previa` : 'Cuadro Directo'}
+            </span>
+          </div>
+        `;
+
+        if (n > 8 && directos > 0) {
+          const pPrevia = (n - directos) / 2;
+          let prevMatches: { label: string; t1: any; t2: any; next: string }[] = [];
+
+          if (directos === 4 && n === 12) {
+            prevMatches = [
+              { label: 'Previa 1', t1: clasificados[7], t2: clasificados[8], next: 'Q1' },
+              { label: 'Previa 2', t1: clasificados[4], t2: clasificados[11], next: 'Q2' },
+              { label: 'Previa 3', t1: clasificados[5], t2: clasificados[10], next: 'Q3' },
+              { label: 'Previa 4', t1: clasificados[6], t2: clasificados[9], next: 'Q4' }
+            ];
+          } else if (directos === 6 && n === 10) {
+            prevMatches = [
+              { label: 'Previa 1', t1: clasificados[7], t2: clasificados[8], next: 'Q1' },
+              { label: 'Previa 2', t1: clasificados[6], t2: clasificados[9], next: 'Q4' }
+            ];
+          } else {
+            for (let k = 0; k < pPrevia; k++) {
+              const idx1 = directos + k;
+              const idx2 = n - 1 - k;
+              prevMatches.push({
+                label: `Previa ${k + 1}`,
+                t1: clasificados[idx1],
+                t2: clasificados[idx2],
+                next: `Q${(k % 4) + 1}`
               });
-              this.cargarLiga();
-              this.activeTab = 'playoffs';
-            } else {
-              Swal.fire('Atención', res.error || 'Error al generar playoffs', 'warning');
             }
-          },
-          error: (err) => {
-            console.error(err);
-            Swal.fire('Error', 'Error de servidor al generar playoffs', 'error');
           }
-        });
-      }
-    });
+
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">⚡ Ronda Previa (Octavos de Final)</div>`;
+          prevMatches.forEach(pm => {
+            if (pm.t1 && pm.t2) {
+              html += rowMatch(
+                pm.label,
+                `${badgeSeed(pm.t1.seed)}${pm.t1.nombre}`,
+                `${badgeSeed(pm.t2.seed)}${pm.t2.nombre}`,
+                pm.next
+              );
+            }
+          });
+
+          const d1 = clasificados[0];
+          const d2 = directos >= 2 ? clasificados[1] : null;
+          const d3 = directos >= 3 ? clasificados[2] : null;
+          const d4 = directos >= 4 ? clasificados[3] : null;
+          const d5 = directos >= 5 ? clasificados[4] : null;
+          const d6 = directos >= 6 ? clasificados[5] : null;
+
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#b45309; text-transform:uppercase; letter-spacing:0.03em; margin:10px 0 4px;">👑 Cuartos de Final (Esperan con BYE)</div>`;
+          html += rowMatch('Cuartos Q1', d1 ? `${badgeSeed(1, true)}${d1.nombre}` : 'Por definir', `<span style="color:#64748b; font-style:italic;">Ganador Previa 1 (${prevMatches[0]?.t1?.seed || 8}º/${prevMatches[0]?.t2?.seed || 9}º)</span>`, 'S1');
+          html += rowMatch('Cuartos Q2', d4 ? `${badgeSeed(4, true)}${d4.nombre}` : 'Ganador Previa 2A', d5 ? `${badgeSeed(5, true)}${d5.nombre}` : `<span style="color:#64748b; font-style:italic;">Ganador Previa 2 (${prevMatches[1]?.t1?.seed || 5}º/${prevMatches[1]?.t2?.seed || 12}º)</span>`, 'S1');
+          html += rowMatch('Cuartos Q3', d3 ? `${badgeSeed(3, true)}${d3.nombre}` : 'Ganador Previa 3A', d6 ? `${badgeSeed(6, true)}${d6.nombre}` : `<span style="color:#64748b; font-style:italic;">Ganador Previa 3 (${prevMatches[2]?.t1?.seed || 6}º/${prevMatches[2]?.t2?.seed || 11}º)</span>`, 'S2');
+          html += rowMatch('Cuartos Q4', d2 ? `${badgeSeed(2, true)}${d2.nombre}` : 'Por definir', `<span style="color:#64748b; font-style:italic;">Ganador Previa 4 (${prevMatches[prevMatches.length - 1]?.t1?.seed || 7}º/${prevMatches[prevMatches.length - 1]?.t2?.seed || 10}º)</span>`, 'S2');
+
+        } else if (n >= 8) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🏆 Cuartos de Final Directos (Top 8)</div>`;
+          html += rowMatch('Cuartos Q1', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(8)}${clasificados[7].nombre}`, 'S1');
+          html += rowMatch('Cuartos Q2', `${badgeSeed(4, true)}${clasificados[3].nombre}`, `${badgeSeed(5)}${clasificados[4].nombre}`, 'S1');
+          html += rowMatch('Cuartos Q3', `${badgeSeed(3, true)}${clasificados[2].nombre}`, `${badgeSeed(6)}${clasificados[5].nombre}`, 'S2');
+          html += rowMatch('Cuartos Q4', `${badgeSeed(2, true)}${clasificados[1].nombre}`, `${badgeSeed(7)}${clasificados[6].nombre}`, 'S2');
+        } else if (n >= 4) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🏆 Semifinales Directas (Top 4)</div>`;
+          html += rowMatch('Semifinal S1', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(4)}${clasificados[3].nombre}`, 'Final');
+          html += rowMatch('Semifinal S2', `${badgeSeed(2, true)}${clasificados[1].nombre}`, `${badgeSeed(3)}${clasificados[2].nombre}`, 'Final');
+        } else {
+          html += rowMatch('Final Directa', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(2)}${clasificados[1].nombre}`);
+        }
+
+        if (total > n) {
+          const eliminadas = list.slice(n).map((p: any, i: number) => `${n + i + 1}º ${p.nombre_pareja || 'Pareja'}`).join(' · ');
+          html += `<div style="margin-top:6px; font-size:0.72rem; color:#64748b;"><strong>Fuera del corte (${total - n}):</strong> ${eliminadas}</div>`;
+        }
+
+        return html;
+      };
+
+      Swal.fire({
+        title: '🏆 Configurar Fase Final (Playoffs)',
+        width: '640px',
+        html: `
+          <div style="text-align: left; font-size: 0.9rem; color: #334155; font-family: inherit;">
+            <p style="margin-bottom: 14px; font-size: 0.88rem; color: #64748b;">
+              Configura y simula el cuadro de eliminación directa para <strong>${cat.nombre}</strong> (${totalParejas} parejas registradas):
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+              <div>
+                <label style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block; margin-bottom: 5px;">
+                  1️⃣ Parejas que Clasifican:
+                </label>
+                <select id="swal-total-clasifican" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
+                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (Con Previa)</option>
+                  <option value="999" ${defaultClasifican >= 999 ? 'selected' : ''}>Todas las parejas (${totalParejas})</option>
+                  <option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 (Octavos completos)</option>
+                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 directos + 2 previa)</option>
+                  <option value="8" ${defaultClasifican === 8 ? 'selected' : ''}>Top 8 (Cuartos directos)</option>
+                  <option value="4" ${defaultClasifican === 4 ? 'selected' : ''}>Top 4 (Semifinales directas)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block; margin-bottom: 5px;">
+                  2️⃣ Pasan DIRECTO a 4tos (BYE):
+                </label>
+                <select id="swal-directos-cuartos" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
+                  <option value="4" ${defaultDirectos === 4 ? 'selected' : ''}>👑 Primeros 4 (1º al 4º BYE)</option>
+                  <option value="2" ${defaultDirectos === 2 ? 'selected' : ''}>👑 Primeros 2 (1º y 2º BYE)</option>
+                  <option value="6" ${defaultDirectos === 6 ? 'selected' : ''}>👑 Primeros 6 (1º al 6º BYE)</option>
+                  <option value="0" ${defaultDirectos === 0 ? 'selected' : ''}>⚡ Ninguno (Sin BYE)</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="swal-preview-box" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; font-size: 0.8rem; color: #1e293b; line-height: 1.4; max-height: 350px; overflow-y: auto;">
+              ${construirSimulacionHtml(defaultClasifican, defaultDirectos)}
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#0f172a',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: '⚡ Generar Cuadro de Playoffs',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        didOpen: () => {
+          const selTotal = document.getElementById('swal-total-clasifican') as HTMLSelectElement;
+          const selDirectos = document.getElementById('swal-directos-cuartos') as HTMLSelectElement;
+          const previewBox = document.getElementById('swal-preview-box');
+
+          const actualizarVistaPrevia = (autoAdjustDirectos: boolean = false) => {
+            if (!selTotal || !selDirectos || !previewBox) return;
+            const tVal = selTotal.value === '999' ? totalParejas : parseInt(selTotal.value, 10);
+            if (autoAdjustDirectos) {
+              if (tVal === 12) selDirectos.value = '4';
+              else if (tVal === 10) selDirectos.value = '6';
+              else if (tVal <= 8) selDirectos.value = '0';
+            }
+            const dVal = parseInt(selDirectos.value, 10);
+            previewBox.innerHTML = construirSimulacionHtml(tVal, dVal);
+          };
+
+          selTotal?.addEventListener('change', () => actualizarVistaPrevia(true));
+          selDirectos?.addEventListener('change', () => actualizarVistaPrevia(false));
+        },
+        preConfirm: () => {
+          const totalVal = (document.getElementById('swal-total-clasifican') as HTMLSelectElement).value;
+          const directosVal = (document.getElementById('swal-directos-cuartos') as HTMLSelectElement).value;
+          return {
+            total: totalVal === '999' ? 999 : parseInt(totalVal, 10),
+            directos: parseInt(directosVal, 10)
+          };
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const { total, directos } = result.value;
+          this.ligaService.generarPlayoffs(cat.id, total, directos).subscribe({
+            next: (res) => {
+              if (res.success) {
+                Swal.fire({
+                  title: '🏆 ¡Playoffs Generados!',
+                  text: res.mensaje || 'Cuadro de Playoffs creado exitosamente.',
+                  icon: 'success',
+                  timer: 2500,
+                  showConfirmButton: false
+                });
+                this.cargarLiga();
+                this.activeTab = 'playoffs';
+              } else {
+                Swal.fire('Atención', res.error || 'Error al generar playoffs', 'warning');
+              }
+            },
+            error: (err) => {
+              console.error(err);
+              Swal.fire('Error', 'Error de servidor al generar playoffs', 'error');
+            }
+          });
+        }
+      });
+    };
+
+    if (this.posicionesGrupo && this.posicionesGrupo.length > 0 && !this.grupoSeleccionadoId) {
+      abrirModalConRanking(this.posicionesGrupo);
+    } else {
+      this.ligaService.obtenerTablaPosiciones(null, cat.id).subscribe({
+        next: (res) => {
+          const pos = (res && res.success && res.posiciones) ? res.posiciones : [];
+          this.posicionesGrupo = pos;
+          abrirModalConRanking(pos);
+        },
+        error: () => {
+          abrirModalConRanking([]);
+        }
+      });
+    }
   }
 
   editarLiga(): void {

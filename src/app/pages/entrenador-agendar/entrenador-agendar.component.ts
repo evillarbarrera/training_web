@@ -842,27 +842,45 @@ export class EntrenadorAgendarComponent implements OnInit {
 
     confirmarCancelacion() {
         if (!this.selectedSlot?.slotData) return;
-        this.popupService.confirm('¿Cancelar Clase?', `¿Deseas eliminar TODA la clase y liberar el horario?`)
-            .then(confirmed => {
-                if (confirmed) {
-                    this.cancelarClase(this.selectedSlot.slotData);
-                    this.showDetailModal = false;
-                }
-            });
+        this.popupService.open({
+            title: '¿Cancelar Clase?',
+            message: '¿Cómo deseas proceder con la cancelación de esta clase y liberación del horario?',
+            icon: 'question',
+            buttons: [
+                { text: 'Cancelar y Notificar', value: 'notify', type: 'primary' },
+                { text: 'Solo Cancelar (Sin Notificar)', value: 'silent', type: 'secondary' },
+                { text: 'Cerrar', value: null, type: 'danger' }
+            ]
+        }).then((action) => {
+            if (action) {
+                const enviarNotif = action !== 'silent';
+                this.cancelarClase(this.selectedSlot.slotData, undefined, enviarNotif);
+                this.showDetailModal = false;
+            }
+        });
     }
 
     quitarJugador(p: any) {
         if (!this.selectedSlot?.slotData) return;
         const nombre = p.nombre || p.jugador_nombre;
-        this.popupService.confirm('Quitar Alumno', `¿Deseas quitar a ${nombre} de esta clase?`)
-            .then(confirmed => {
-                if (confirmed) {
-                    this.cancelarClase(this.selectedSlot.slotData, p.id || p.jugador_id);
-                }
-            });
+        this.popupService.open({
+            title: 'Quitar Alumno',
+            message: `¿Cómo deseas quitar a ${nombre} de esta clase?`,
+            icon: 'question',
+            buttons: [
+                { text: 'Quitar y Notificar', value: 'notify', type: 'primary' },
+                { text: 'Solo Quitar (Sin Notificar)', value: 'silent', type: 'secondary' },
+                { text: 'Cerrar', value: null, type: 'danger' }
+            ]
+        }).then((action) => {
+            if (action) {
+                const enviarNotif = action !== 'silent';
+                this.cancelarClase(this.selectedSlot.slotData, p.id || p.jugador_id, enviarNotif);
+            }
+        });
     }
 
-    cancelarClase(slot: any, jugadorId?: number) {
+    cancelarClase(slot: any, jugadorId?: number, enviarNotificacion: boolean = true) {
         this.isLoading = true;
         const resId = slot.reserva_id || slot.id;
         if (!resId) {
@@ -885,11 +903,16 @@ export class EntrenadorAgendarComponent implements OnInit {
                 error: (err: any) => this.handleError(err)
             });
         } else {
-            this.entrenamientoService.cancelarReserva(resId, jugadorId).subscribe({
+            this.entrenamientoService.cancelarReserva(resId, jugadorId, enviarNotificacion).subscribe({
                 next: () => {
                     this.isLoading = false;
                     if (jugadorId) {
-                        this.popupService.success('Removido', 'El alumno ha sido quitado de la clase.');
+                        this.popupService.success(
+                            'Removido',
+                            enviarNotificacion
+                                ? 'El alumno ha sido quitado de la clase y notificado.'
+                                : 'El alumno ha sido quitado de la clase sin enviar notificaciones.'
+                        );
                         // Actualización local de inscritos
                         if (slot.inscritos) {
                             slot.inscritos = slot.inscritos.filter((i: any) => (i.id || i.jugador_id) !== jugadorId);
@@ -899,7 +922,12 @@ export class EntrenadorAgendarComponent implements OnInit {
                             this.loadDisponibilidad();
                         }
                     } else {
-                        this.popupService.success('Cancelada', 'La clase ha sido eliminada.');
+                        this.popupService.success(
+                            'Cancelada',
+                            enviarNotificacion
+                                ? 'La clase ha sido eliminada y se notificó al alumno.'
+                                : 'La clase ha sido eliminada sin enviar notificaciones.'
+                        );
                         this.loadDisponibilidad();
                         this.showDetailModal = false;
                     }
