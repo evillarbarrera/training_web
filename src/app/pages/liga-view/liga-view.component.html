@@ -249,7 +249,7 @@
         <app-tabla-posiciones 
           [posiciones]="posicionesGrupo"
           [criteriosDesempate]="liga.reglas_puntos_json?.criterios_desempate || []"
-          [cuposPlayoff]="categoriaActual?.parejas_clasifican_playoff || 2">
+          [cuposPlayoff]="posicionesGrupo.length || categoriaActual?.parejas_clasifican_playoff || 16">
         </app-tabla-posiciones>
       </div>
 
@@ -1279,7 +1279,7 @@
           
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <!-- View Mode Switcher -->
-            <div class="playoff-view-toggle" *ngIf="tienePlayoffs" style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 12px; border: 1px solid #cbd5e1;">
+            <div class="playoff-view-toggle" *ngIf="tienePlayoffs || modoSimulacionPlayoffs" style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 12px; border: 1px solid #cbd5e1;">
               <button class="toggle-pill-btn" [class.active]="vistaPlayoffs === 'bracket'" (click)="vistaPlayoffs = 'bracket'" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 800; border: none; border-radius: 9px; cursor: pointer; transition: all 0.15s ease;">
                 🌳 Cuadro Visual
               </button>
@@ -1288,21 +1288,119 @@
               </button>
             </div>
 
+            <button type="button" (click)="toggleSimulacionPlayoffs()" style="background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; font-weight: 800; font-size: 0.85rem; padding: 9px 16px; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              🔮 {{ modoSimulacionPlayoffs ? 'Cerrar Simulación' : 'Simular Fase Final (Ranking Actual)' }}
+            </button>
+
+            <button *ngIf="tienePlayoffs" type="button" (click)="borrarPlayoffsCategoria()" style="background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; font-weight: 800; font-size: 0.85rem; padding: 9px 14px; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              🗑️ Borrar Cuadro
+            </button>
+
             <button class="btn-primary-neon-hero" style="font-size: 0.85rem; padding: 9px 18px;" (click)="generarPlayoffsCategoria()">
               ⚡ Configurar y Generar Playoffs
             </button>
           </div>
         </div>
 
+        <!-- BARRA DE CONTROL DE SIMULACIÓN EN VIVO -->
+        <div *ngIf="modoSimulacionPlayoffs" class="animate-in" style="background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border: 1.5px solid #93c5fd; border-radius: 16px; padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">🔮</span>
+            <div>
+              <div style="font-weight: 800; color: #1e3a8a; font-size: 0.92rem;">Modo Simulación en Vivo — {{ categoriaActual?.nombre }}</div>
+              <div style="font-size: 0.78rem; color: #475569; font-weight: 600;">Vista previa del cuadro eliminatorio con el ranking actual consolidado (no guarda cambios hasta que confirmes).</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div>
+              <label style="display:block; font-size:0.7rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">Clasifican:</label>
+              <select [(ngModel)]="simTotalClasifican" (ngModelChange)="onSimTotalChange()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
+                <option [ngValue]="999">Todas las parejas ({{ categoriaActual?.parejas?.length || 12 }})</option>
+                <option [ngValue]="16">Top 16 (Octavos Completos)</option>
+                <option [ngValue]="14">Top 14 (2 BYE + 6 Previa)</option>
+                <option [ngValue]="12">Top 12 (4 BYE + 4 Previa)</option>
+                <option [ngValue]="10">Top 10 (6 BYE + 2 Previa)</option>
+                <option [ngValue]="8">Top 8 (Cuartos Directos)</option>
+                <option [ngValue]="4">Top 4 (Semifinales Directas)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.7rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">Pases Directos (BYE a siguiente fase):</label>
+              <select [(ngModel)]="simDirectosCuartos" (ngModelChange)="recalcularBracketSimulado()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
+                <option [ngValue]="-1">⭐ Estándar Oficial FIP (Automático)</option>
+                <option [ngValue]="1">👑 1º lugar directo a 4tos (1 BYE)</option>
+                <option [ngValue]="2">👑 Primeros 2 directo a 4tos (2 BYE)</option>
+                <option [ngValue]="3">👑 Primeros 3 directo a 4tos (3 BYE)</option>
+                <option [ngValue]="4">👑 Primeros 4 directo a 4tos (4 BYE)</option>
+                <option [ngValue]="5">👑 Primeros 5 directo a 4tos (5 BYE)</option>
+                <option [ngValue]="6">👑 Primeros 6 directo a 4tos (6 BYE)</option>
+                <option [ngValue]="7">👑 Primeros 7 directo a 4tos (7 BYE)</option>
+                <option [ngValue]="0">⚡ Ninguno a 4tos (Octavos completos)</option>
+              </select>
+            </div>
+
+            <button type="button" (click)="confirmarPlayoffsDesdeSimulacion()" style="background: #0f172a; color: #ccff00; border: none; border-radius: 10px; padding: 9px 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; margin-top: 14px;">
+              ✅ Crear Este Cuadro Oficial
+            </button>
+          </div>
+        </div>
+
         <!-- VISTA 1: CUADRO VISUAL (BRACKET INTERACTIVO) -->
-        <div *ngIf="tienePlayoffs && vistaPlayoffs === 'bracket'" class="playoff-bracket-card animate-in">
+        <div *ngIf="(tienePlayoffs || modoSimulacionPlayoffs) && vistaPlayoffs === 'bracket'" class="playoff-bracket-card animate-in">
           <div class="bracket-rounds-wrapper">
+
+            <!-- COLUMNA 0: DIECISEISAVOS DE FINAL (Cuando hay 17+ parejas o BYEs extra) -->
+            <div class="bracket-column" *ngIf="playoffsRounds.playin.length > 0">
+              <div class="column-header-pill previa" style="background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span>🔥 Dieciseisavos de Final</span>
+                  <small style="display:block;">{{ playoffsRounds.playin.length }} partido{{ playoffsRounds.playin.length > 1 ? 's' : '' }}</small>
+                </div>
+                <button *ngIf="tienePlayoffs && !modoSimulacionPlayoffs" type="button" (click)="programarFasePlayoff('Dieciseisavos de Final', playoffsRounds.playin)" style="background:#6b21a8; color:#fff; border:none; border-radius:7px; padding:4px 8px; font-size:0.7rem; font-weight:800; cursor:pointer;" title="Definir días, horario y cancha para Dieciseisavos de Final">
+                  📅 Programar Fase
+                </button>
+              </div>
+              <div class="column-matches-stack">
+                <div *ngFor="let m of playoffsRounds.playin" class="bracket-match-node">
+                  <div class="match-mini-meta">
+                    <span class="badge-tag" style="background: #f3e8ff; color: #6b21a8;">16avos</span>
+                    <span *ngIf="m.cancha_nombre" class="court-tag">📍 {{ m.cancha_nombre }}</span>
+                    <span *ngIf="m.fecha_hora" class="time-tag">⏰ {{ m.fecha_hora | date:'dd/MM HH:mm' }}</span>
+                  </div>
+                  
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Por definir' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
+                  </div>
+                  <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
+                    <div class="team-name-box">
+                      <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Por definir' }}</span>
+                    </div>
+                    <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
+                  </div>
+
+                  <div class="bracket-match-actions">
+                    <button class="btn-micro-action" (click)="abrirModalProgramar(m)" title="Programar Horario">📅</button>
+                    <button class="btn-micro-action edit" (click)="abrirModalResultado(m)" title="Cargar / Editar Score">✏️ Score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <!-- COLUMNA 1: OCTAVOS / PREVIA -->
             <div class="bracket-column" *ngIf="playoffsRounds.octavos.length > 0">
-              <div class="column-header-pill previa">
-                <span>1️⃣ Octavos / Previa</span>
-                <small>{{ playoffsRounds.octavos.length }} partidos</small>
+              <div class="column-header-pill previa" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span>1️⃣ Octavos / Previa</span>
+                  <small style="display:block;">{{ playoffsRounds.octavos.length }} partidos</small>
+                </div>
+                <button *ngIf="tienePlayoffs && !modoSimulacionPlayoffs" type="button" (click)="programarFasePlayoff('Octavos de Final', playoffsRounds.octavos)" style="background:#0f172a; color:#ccff00; border:none; border-radius:7px; padding:4px 8px; font-size:0.7rem; font-weight:800; cursor:pointer;" title="Definir días, horario y cancha para Octavos / Previa">
+                  📅 Programar Fase
+                </button>
               </div>
               <div class="column-matches-stack">
                 <div *ngFor="let m of playoffsRounds.octavos" class="bracket-match-node">
@@ -1335,9 +1433,14 @@
 
             <!-- COLUMNA 2: CUARTOS DE FINAL -->
             <div class="bracket-column" *ngIf="playoffsRounds.cuartos.length > 0">
-              <div class="column-header-pill cuartos">
-                <span>2️⃣ Cuartos de Final</span>
-                <small>{{ playoffsRounds.cuartos.length }} partidos</small>
+              <div class="column-header-pill cuartos" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span>2️⃣ Cuartos de Final</span>
+                  <small style="display:block;">{{ playoffsRounds.cuartos.length }} partidos</small>
+                </div>
+                <button *ngIf="tienePlayoffs && !modoSimulacionPlayoffs" type="button" (click)="programarFasePlayoff('Cuartos de Final', playoffsRounds.cuartos)" style="background:#0f172a; color:#38bdf8; border:none; border-radius:7px; padding:4px 8px; font-size:0.7rem; font-weight:800; cursor:pointer;" title="Definir días, horario y cancha para Cuartos de Final">
+                  📅 Programar Fase
+                </button>
               </div>
               <div class="column-matches-stack">
                 <div *ngFor="let m of playoffsRounds.cuartos" class="bracket-match-node">
@@ -1372,9 +1475,14 @@
 
             <!-- COLUMNA 3: SEMIFINALES -->
             <div class="bracket-column" *ngIf="playoffsRounds.semifinales.length > 0">
-              <div class="column-header-pill semis">
-                <span>3️⃣ Semifinales</span>
-                <small>{{ playoffsRounds.semifinales.length }} partidos</small>
+              <div class="column-header-pill semis" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span>3️⃣ Semifinales</span>
+                  <small style="display:block;">{{ playoffsRounds.semifinales.length }} partidos</small>
+                </div>
+                <button *ngIf="tienePlayoffs && !modoSimulacionPlayoffs" type="button" (click)="programarFasePlayoff('Semifinales', playoffsRounds.semifinales)" style="background:#0f172a; color:#c084fc; border:none; border-radius:7px; padding:4px 8px; font-size:0.7rem; font-weight:800; cursor:pointer;" title="Definir días, horario y cancha para Semifinales">
+                  📅 Programar Fase
+                </button>
               </div>
               <div class="column-matches-stack semis-stack">
                 <div *ngFor="let m of playoffsRounds.semifinales" class="bracket-match-node">
@@ -1407,9 +1515,14 @@
 
             <!-- COLUMNA 4: GRAN FINAL -->
             <div class="bracket-column" *ngIf="playoffsRounds.final.length > 0">
-              <div class="column-header-pill final">
-                <span>🏆 Gran Final</span>
-                <small>Definición del Título</small>
+              <div class="column-header-pill final" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span>🏆 Gran Final</span>
+                  <small style="display:block;">Definición del Título</small>
+                </div>
+                <button *ngIf="tienePlayoffs && !modoSimulacionPlayoffs" type="button" (click)="programarFasePlayoff('Final', playoffsRounds.final)" style="background:#0f172a; color:#fbbf24; border:none; border-radius:7px; padding:4px 8px; font-size:0.7rem; font-weight:800; cursor:pointer;" title="Definir días, horario y cancha para la Gran Final">
+                  📅 Programar Fase
+                </button>
               </div>
               <div class="column-matches-stack final-stack">
                 <div *ngFor="let m of playoffsRounds.final" class="bracket-match-node final-node">
@@ -1444,14 +1557,14 @@
         </div>
 
         <!-- VISTA 2: LISTA TRADICIONAL DE PARTIDOS DE PLAYOFF -->
-        <div *ngIf="tienePlayoffs && vistaPlayoffs === 'lista'" class="jornada-card animate-in">
+        <div *ngIf="(tienePlayoffs || modoSimulacionPlayoffs) && vistaPlayoffs === 'lista'" class="jornada-card animate-in">
           <div class="jornada-header">
-            <h4>LLAVES DE ELIMINACIÓN DIRECTA</h4>
-            <span class="category-pill" style="background: #fef3c7; color: #b45309; font-weight: 800; padding: 4px 10px; border-radius: 10px; font-size: 0.75rem;">Fase Final</span>
+            <h4>LLAVES DE ELIMINACIÓN DIRECTA {{ modoSimulacionPlayoffs ? '(SIMULACIÓN)' : '' }}</h4>
+            <span class="category-pill" style="background: #fef3c7; color: #b45309; font-weight: 800; padding: 4px 10px; border-radius: 10px; font-size: 0.75rem;">{{ modoSimulacionPlayoffs ? '🔮 Simulación' : 'Fase Final' }}</span>
           </div>
 
           <div class="matches-grid">
-            <div *ngFor="let m of categoriaActual.playoffs" class="match-card" style="border-left: 4px solid #f59e0b;">
+            <div *ngFor="let m of (modoSimulacionPlayoffs ? playoffsSimuladosList : categoriaActual.playoffs)" class="match-card" style="border-left: 4px solid #f59e0b;">
               <div class="match-meta">
                 <span class="cancha-tag" style="background: #fef3c7; color: #b45309; font-weight: 800;">🏆 {{ m.ronda_playoff || 'Playoff' }}</span>
                 <span class="cancha-tag" *ngIf="m.cancha_nombre">📍 {{ m.cancha_nombre }}</span>
@@ -1482,15 +1595,20 @@
           </div>
         </div>
 
-        <div *ngIf="!tienePlayoffs" class="fixture-config-card" style="text-align: center; padding: 40px 20px;">
+        <div *ngIf="!tienePlayoffs && !modoSimulacionPlayoffs" class="fixture-config-card" style="text-align: center; padding: 40px 20px;">
           <div style="font-size: 3rem; margin-bottom: 12px;">🏆</div>
           <h3 style="margin: 0 0 8px 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">No se ha generado el cuadro de Playoffs</h3>
           <p style="color: #64748b; font-size: 0.9rem; max-width: 500px; margin: 0 auto 20px auto; font-weight: 600;">
             Configura cuántas parejas avanzan y cuántos de los primeros lugares pasan directamente a Cuartos de Final (BYE).
           </p>
-          <button class="btn-primary-neon-hero" (click)="generarPlayoffsCategoria()">
-            ⚡ Configurar y Generar Cuadro de Playoffs
-          </button>
+          <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" (click)="toggleSimulacionPlayoffs()" style="background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; font-weight: 800; font-size: 0.92rem; padding: 12px 22px; border-radius: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+              🔮 Simular Cuadro con Ranking Actual
+            </button>
+            <button class="btn-primary-neon-hero" (click)="generarPlayoffsCategoria()">
+              ⚡ Configurar y Generar Cuadro de Playoffs
+            </button>
+          </div>
         </div>
       </div>
 
