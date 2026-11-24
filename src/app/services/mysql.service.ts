@@ -102,10 +102,13 @@ export class MysqlService {
     }, { headers: this.getHeaders() });
   }
 
-  cancelarReservaEntrenador(reservaId: number, entrenadorId: number): Observable<any> {
+  cancelarReservaEntrenador(reservaId: number, entrenadorId: number, enviarNotificacion: boolean = true): Observable<any> {
     return this.http.post(`${this.apiUrl}/entrenador/cancelar_reserva.php`, {
       reserva_id: reservaId,
-      entrenador_id: entrenadorId
+      entrenador_id: entrenadorId,
+      enviar_notificacion: enviarNotificacion,
+      notificar: enviarNotificacion,
+      action: enviarNotificacion ? 'notify' : 'silent'
     }, { headers: this.getHeaders() });
   }
 

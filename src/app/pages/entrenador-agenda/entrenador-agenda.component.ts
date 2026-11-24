@@ -239,12 +239,13 @@ export class EntrenadorAgendaComponent implements OnInit {
       ]
     }).then((action) => {
       if (action) {
-        this.ejecutarCancelacion(item);
+        const enviarNotificacion = action !== 'silent';
+        this.ejecutarCancelacion(item, enviarNotificacion);
       }
     });
   }
 
-  ejecutarCancelacion(item: any) {
+  ejecutarCancelacion(item: any, enviarNotificacion: boolean = true) {
     const isGrupal = item.tipo === 'grupal_template' || item.tipo === 'grupal_fecha' || item.tipo === 'pack_grupal';
     const endpoint = isGrupal ? 'packs/eliminar_pack.php' : 'entrenador/cancelar_reserva.php';
 
@@ -252,12 +253,17 @@ export class EntrenadorAgendaComponent implements OnInit {
       reserva_id: item.reserva_id,
       pack_id: item.reserva_id,
       id: item.reserva_id,
-      entrenador_id: this.userId!
+      entrenador_id: this.userId!,
+      enviar_notificacion: enviarNotificacion,
+      notificar: enviarNotificacion,
+      action: enviarNotificacion ? 'notify' : 'silent'
     }).subscribe({
       next: () => {
         this.popupService.success(
           'Eliminado',
-          'El entrenamiento ha sido eliminado correctamente.'
+          enviarNotificacion
+            ? 'El entrenamiento ha sido eliminado y se notificó al alumno.'
+            : 'El entrenamiento ha sido eliminado sin enviar notificaciones.'
         );
         this.loadAgenda();
       },

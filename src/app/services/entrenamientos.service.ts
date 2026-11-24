@@ -205,8 +205,13 @@ export class EntrenamientoService {
     return this.http.post(`${this.apiUrl}/alumno/insert_pack.php`, data, { headers: this.getHeaders() });
   }
 
-  cancelarReserva(reservaId: number, jugadorId?: number): Observable<any> {
-    const payload: any = { id: reservaId };
+  cancelarReserva(reservaId: number, jugadorId?: number, enviarNotificacion: boolean = true): Observable<any> {
+    const payload: any = {
+      id: reservaId,
+      enviar_notificacion: enviarNotificacion,
+      notificar: enviarNotificacion,
+      action: enviarNotificacion ? 'notify' : 'silent'
+    };
     if (jugadorId) payload.jugador_id = jugadorId;
     return this.http.post(`${this.apiUrl}/disponibilidad/cancelar_reserva.php`, payload, { headers: this.getHeaders() });
   }
