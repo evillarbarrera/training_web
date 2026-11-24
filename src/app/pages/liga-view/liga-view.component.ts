@@ -665,10 +665,15 @@ export class LigaViewComponent implements OnInit {
   }
 
   vistaPlayoffs: 'bracket' | 'lista' = 'bracket';
+  modoSimulacionPlayoffs: boolean = false;
+  simTotalClasifican: number = 12;
+  simDirectosCuartos: number = 4;
+  playoffsSimuladosList: any[] = [];
 
-  get playoffsRounds(): { octavos: any[], cuartos: any[], semifinales: any[], final: any[] } {
-    const list = this.categoriaActual?.playoffs || [];
+  get playoffsRounds(): { playin: any[], octavos: any[], cuartos: any[], semifinales: any[], final: any[] } {
+    const list = this.modoSimulacionPlayoffs ? this.playoffsSimuladosList : (this.categoriaActual?.playoffs || []);
     return {
+      playin: list.filter((m: any) => m.ronda_playoff === 'Dieciseisavos de Final' || m.ronda_playoff === 'Repechaje (Play-In)'),
       octavos: list.filter((m: any) => m.ronda_playoff === 'Octavos de Final' || m.ronda_playoff === 'Ronda Previa'),
       cuartos: list.filter((m: any) => m.ronda_playoff === 'Cuartos de Final'),
       semifinales: list.filter((m: any) => m.ronda_playoff === 'Semifinales'),
@@ -680,50 +685,529 @@ export class LigaViewComponent implements OnInit {
     return !!(this.categoriaActual?.playoffs && this.categoriaActual.playoffs.length > 0);
   }
 
-  generarPlayoffsCategoria(): void {
+  calcularDirectosOptimos(n: number): number {
+    // Estándar Oficial FIP (potencia de 2 más cercana):
+    // - Si N <= 8: 0 BYEs (directo a Cuartos o Semis)
+    // - Si 9 <= N <= 15: (16 - N) BYEs a Cuartos (ej. 12 -> 4 BYEs, 14 -> 2 BYEs, 15 -> 1 BYE)
+    // - Si N >= 16: 0 BYEs a Cuartos (los 16 cupos de Octavos se juegan completos; si N=17, 1 partido de Dieciseisavos 16º vs 17º y los primeros 15 directo a Octavos)
+    if (n <= 8) return 0;
+    if (n >= 16) return 0;
+    return 16 - n;
+  }
+
+  toggleSimulacionPlayoffs(): void {
     const cat = this.categoriaActual;
     if (!cat || !cat.id) return;
 
+    if (this.modoSimulacionPlayoffs) {
+      this.modoSimulacionPlayoffs = false;
+      return;
+    }
+
     const totalParejas = cat.parejas?.length || 12;
-    const defaultClasifican = cat.parejas_clasifican_playoff || (totalParejas >= 12 ? 12 : (totalParejas >= 8 ? 8 : totalParejas));
-    const defaultDirectos = defaultClasifican >= 12 ? 4 : (defaultClasifican === 10 ? 6 : (defaultClasifican === 14 ? 2 : 0));
+    this.simTotalClasifican = 999; // Por defecto simular con TODAS las parejas de la categoría
+    this.simDirectosCuartos = -1;  // -1 = Estándar Oficial FIP automático
+
+    if (this.posicionesGrupo && this.posicionesGrupo.length > 0 && !this.grupoSeleccionadoId) {
+      this.modoSimulacionPlayoffs = true;
+      this.recalcularBracketSimulado();
+    } else {
+      this.ligaService.obtenerTablaPosiciones(null, cat.id).subscribe({
+        next: (res) => {
+          this.posicionesGrupo = (res && res.success && res.posiciones) ? res.posiciones : [];
+          this.modoSimulacionPlayoffs = true;
+          this.recalcularBracketSimulado();
+        },
+        error: () => {
+          this.modoSimulacionPlayoffs = true;
+          this.recalcularBracketSimulado();
+        }
+      });
+    }
+  }
+
+  onSimTotalChange(): void {
+    this.simDirectosCuartos = -1; // Volver al Estándar Oficial FIP al cambiar cantidad de clasificados
+    this.recalcularBracketSimulado();
+  }
+
+  generarEstructuraPlayoffs(list: any[], reqClasificados: number, reqDirectos: number): {
+    n: number;
+    directos: number;
+    matches: any[];
+    eliminadas: any[];
+  } {
+    const total = list.length;
+    if (total < 2) {
+      return { n: total, directos: 0, matches: [], eliminadas: [] };
+    }
+
+    let n = +reqClasificados >= 999 || +reqClasificados > total ? total : +reqClasificados;
+    let directos = +reqDirectos;
+    if (n <= 8) {
+      directos = 0;
+    } else if (directos < 0) {
+      // Estándar Oficial FIP
+      directos = this.calcularDirectosOptimos(n);
+    } else if (directos > 7) {
+      directos = 7;
+    }
+
+    const clasificados = list.slice(0, n).map((p: any, idx: number) => {
+      const rawName = p.nombre_pareja || `${p.p1_nombre || p.nombre_externo1 || 'J1'} / ${p.p2_nombre || p.nombre_externo2 || 'J2'}`;
+      return {
+        id: p.id || p.pareja_id || (idx + 1),
+        seed: idx + 1,
+        rawName,
+        nombre: `${idx + 1}º ${rawName}`,
+        puntos: p.puntos
+      };
+    });
+
+    const eliminadas = list.slice(n).map((p: any, idx: number) => ({
+      seed: n + idx + 1,
+      nombre: p.nombre_pareja || 'Pareja'
+    }));
+
+    const simMatches: any[] = [];
+
+    if (n > 8) {
+      // Cuántos cupos quedan en Cuartos de Final después de los `directos` que tienen BYE:
+      const qOpenSlots = 8 - directos; // Ej: si directos=4 -> quedan 4 cupos en Cuartos -> 4 partidos de Octavos (8 cupos en Octavos)
+      const octavosCapacity = qOpenSlots * 2; // Ej: si directos=4 -> 8 cupos en Octavos; si directos=0 -> 16 cupos en Octavos
+      const remainingTeamsCount = n - directos; // Parejas que no tienen BYE directo a Cuartos (seeds directos+1 .. n)
+
+      // Si `remainingTeamsCount > octavosCapacity` (ej. N=17 y directos=4 -> 13 parejas para 8 cupos de Octavos),
+      // entonces hay `numPlayIn = remainingTeamsCount - octavosCapacity` partidos de Repechaje (Play-In).
+      // Si `remainingTeamsCount < octavosCapacity` (ej. N=12 y directos=0 -> 12 parejas para 16 cupos),
+      // ajustamos `directos = 16 - n` para que no falten parejas en Cuartos.
+      if (remainingTeamsCount < octavosCapacity) {
+        directos = Math.max(0, 16 - n);
+      }
+
+      const finalQOpenSlots = 8 - directos;
+      const finalOctavosCapacity = finalQOpenSlots * 2;
+      const finalRemainingCount = n - directos;
+      const numPlayIn = Math.max(0, finalRemainingCount - finalOctavosCapacity);
+
+      // En Octavos hay `finalQOpenSlots` partidos (uno por cada cupo libre de Cuartos: para los seeds directos+1 .. 8).
+      // De las `finalRemainingCount` parejas que no van directo a Cuartos:
+      // - Las últimas `2 * numPlayIn` parejas juegan `numPlayIn` partidos de Repechaje (Play-In) por los últimos `numPlayIn` cupos de Octavos.
+      // - Las primeras `finalRemainingCount - 2 * numPlayIn` parejas entran directo a Octavos.
+      const octavosEntries: {
+        id: number | null;
+        seed: number;
+        nombre: string;
+        isPlayInWinner?: boolean;
+        playInCode?: string;
+        playInLabel?: string;
+      }[] = [];
+
+      const directToOctavosCount = finalOctavosCapacity - numPlayIn;
+      for (let i = 0; i < directToOctavosCount; i++) {
+        const team = clasificados[directos + i];
+        if (team) {
+          octavosEntries.push({ id: team.id, seed: team.seed, nombre: team.nombre });
+        }
+      }
+
+      // Construir los `numPlayIn` partidos de Repechaje (Play-In) emparejando los extremos del grupo de Play-In
+      const playInStartSeedIdx = directos + directToOctavosCount; // índice 0-based en `clasificados`
+      const playInTeams = clasificados.slice(playInStartSeedIdx); // longitud = 2 * numPlayIn
+      const playInMatchesCreated: {
+        code: string;
+        p1: any;
+        p2: any;
+        targetOctavosCode: string;
+        targetOctavosSlot: 1 | 2;
+      }[] = [];
+
+      for (let pIdx = 0; pIdx < numPlayIn; pIdx++) {
+        const tA = playInTeams[pIdx];
+        const tB = playInTeams[playInTeams.length - 1 - pIdx];
+        const piCode = `PI${pIdx + 1}`;
+        // El ganador de PI(pIdx+1) ocupa el slot virtual `finalOctavosCapacity - pIdx` de Octavos
+        // (de modo que PI1 que tiene al peor seed va contra el mejor seed de Octavos en PREV1)
+        octavosEntries.push({
+          id: null,
+          seed: tA?.seed || (directos + directToOctavosCount + pIdx + 1),
+          nombre: `Ganador 16avos ${pIdx + 1} (${tA?.seed}º vs ${tB?.seed}º)`,
+          isPlayInWinner: true,
+          playInCode: piCode,
+          playInLabel: `${tA?.seed}º/${tB?.seed}º`
+        });
+        playInMatchesCreated.push({
+          code: piCode,
+          p1: tA,
+          p2: tB,
+          targetOctavosCode: '',
+          targetOctavosSlot: 2
+        });
+      }
+
+      // Ordenar `octavosEntries` por seed ascendente para que los ganadores de Play-In queden al final
+      // (el Play-In con los seeds más bajos queda en la última posición y se cruza con el seed más alto de Octavos)
+      // Nota: como pIdx=0 tiene el mejor de los de Play-In (ej. 8º vs 17º), queremos que el Play-In que enfrenta al mejor de Octavos (5º) sea el último:
+      const directOct = octavosEntries.filter(e => !e.isPlayInWinner);
+      const playInOct = octavosEntries.filter(e => e.isPlayInWinner).reverse();
+      const orderedOctavosSlots = [...directOct, ...playInOct];
+
+      // Mapa de posiciones de Cuartos para cada seed del 1 al 8:
+      const quarterSlotForTop8: { [seedPos: number]: { q: 'Q1' | 'Q2' | 'Q3' | 'Q4'; slot: 1 | 2 } } = {
+        1: { q: 'Q1', slot: 1 },
+        2: { q: 'Q4', slot: 1 },
+        3: { q: 'Q3', slot: 1 },
+        4: { q: 'Q2', slot: 1 },
+        5: { q: 'Q2', slot: 2 },
+        6: { q: 'Q3', slot: 2 },
+        7: { q: 'Q4', slot: 2 },
+        8: { q: 'Q1', slot: 2 }
+      };
+
+      const quartersMap: {
+        [key in 'Q1' | 'Q2' | 'Q3' | 'Q4']: {
+          p1_id: number | null;
+          p1_nombre: string;
+          p1_bye: boolean;
+          p2_id: number | null;
+          p2_nombre: string;
+          p2_bye: boolean;
+          next: string;
+        }
+      } = {
+        Q1: { p1_id: null, p1_nombre: 'Por definir', p1_bye: false, p2_id: null, p2_nombre: 'Por definir', p2_bye: false, next: 'S1' },
+        Q2: { p1_id: null, p1_nombre: 'Por definir', p1_bye: false, p2_id: null, p2_nombre: 'Por definir', p2_bye: false, next: 'S1' },
+        Q3: { p1_id: null, p1_nombre: 'Por definir', p1_bye: false, p2_id: null, p2_nombre: 'Por definir', p2_bye: false, next: 'S2' },
+        Q4: { p1_id: null, p1_nombre: 'Por definir', p1_bye: false, p2_id: null, p2_nombre: 'Por definir', p2_bye: false, next: 'S2' }
+      };
+
+      // 1. Asignar los BYEs directos (seeds 1..directos) a su llave de Cuartos
+      for (let s = 1; s <= directos; s++) {
+        const team = clasificados[s - 1];
+        const target = quarterSlotForTop8[s];
+        if (team && target) {
+          if (target.slot === 1) {
+            quartersMap[target.q].p1_id = team.id;
+            quartersMap[target.q].p1_nombre = team.nombre;
+            quartersMap[target.q].p1_bye = true;
+          } else {
+            quartersMap[target.q].p2_id = team.id;
+            quartersMap[target.q].p2_nombre = team.nombre;
+            quartersMap[target.q].p2_bye = true;
+          }
+        }
+      }
+
+      // 2. Construir partidos de Octavos / Previa (total = finalQOpenSlots partidos)
+      const octavosMatchesTemp: any[] = [];
+      for (let k = 0; k < finalQOpenSlots; k++) {
+        const top8SlotNum = directos + 1 + k; // Va desde (directos+1) hasta 8
+        const entry1 = orderedOctavosSlots[k];
+        const entry2 = orderedOctavosSlots[orderedOctavosSlots.length - 1 - k];
+        const target = quarterSlotForTop8[top8SlotNum] || { q: 'Q1', slot: 2 };
+        const prevNum = k + 1;
+        const code = `PREV${prevNum}`;
+
+        if (entry1?.isPlayInWinner && entry1.playInCode) {
+          const pi = playInMatchesCreated.find(x => x.code === entry1.playInCode);
+          if (pi) { pi.targetOctavosCode = code; pi.targetOctavosSlot = 1; }
+        }
+        if (entry2?.isPlayInWinner && entry2.playInCode) {
+          const pi = playInMatchesCreated.find(x => x.code === entry2.playInCode);
+          if (pi) { pi.targetOctavosCode = code; pi.targetOctavosSlot = 2; }
+        }
+
+        octavosMatchesTemp.push({
+          es_simulacion: true,
+          ronda_playoff: 'Octavos de Final',
+          pareja1_id: entry1?.id || null,
+          pareja2_id: entry2?.id || null,
+          pareja1_nombre: entry1?.nombre || 'Por definir',
+          pareja2_nombre: entry2?.nombre || 'Por definir',
+          meta_playoff: {
+            bracket_code: code,
+            next_bracket: target.q,
+            next_slot: target.slot,
+            seed1_label: entry1?.nombre,
+            seed2_label: entry2?.nombre
+          }
+        });
+
+        const s1Short = entry1?.isPlayInWinner ? `16avos (${entry1.playInLabel})` : `${entry1?.seed}º`;
+        const s2Short = entry2?.isPlayInWinner ? `16avos (${entry2.playInLabel})` : `${entry2?.seed}º`;
+        const winnerLabel = `Ganador Octavos ${prevNum} (${s1Short} vs ${s2Short})`;
+
+        if (target.slot === 1) {
+          quartersMap[target.q].p1_nombre = winnerLabel;
+        } else {
+          quartersMap[target.q].p2_nombre = winnerLabel;
+        }
+      }
+
+      // Insertar primero los partidos de Dieciseisavos de Final con su destino de Octavos ya vinculado
+      playInMatchesCreated.forEach(pi => {
+        simMatches.push({
+          es_simulacion: true,
+          ronda_playoff: 'Dieciseisavos de Final',
+          pareja1_id: pi.p1?.id || null,
+          pareja2_id: pi.p2?.id || null,
+          pareja1_nombre: pi.p1?.nombre || 'Por definir',
+          pareja2_nombre: pi.p2?.nombre || 'Por definir',
+          meta_playoff: {
+            bracket_code: pi.code,
+            next_bracket: pi.targetOctavosCode || 'PREV1',
+            next_slot: pi.targetOctavosSlot,
+            seed1_label: pi.p1?.nombre,
+            seed2_label: pi.p2?.nombre
+          }
+        });
+      });
+
+      // Luego insertar los partidos de Octavos
+      simMatches.push(...octavosMatchesTemp);
+
+      // 3. Agregar los 4 partidos de Cuartos de Final (Q1, Q2, Q3, Q4)
+      (['Q1', 'Q2', 'Q3', 'Q4'] as const).forEach((qCode) => {
+        const q = quartersMap[qCode];
+        simMatches.push({
+          es_simulacion: true,
+          ronda_playoff: 'Cuartos de Final',
+          pareja1_id: q.p1_id,
+          pareja2_id: q.p2_id,
+          pareja1_nombre: q.p1_nombre,
+          pareja2_nombre: q.p2_nombre,
+          meta_playoff: {
+            bracket_code: qCode,
+            next_bracket: q.next,
+            seed1_label: q.p1_bye ? q.p1_nombre : '',
+            seed2_label: q.p2_bye ? q.p2_nombre : ''
+          }
+        });
+      });
+
+      // 4. Semifinales y Final
+      simMatches.push(
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
+        { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+      );
+    } else if (n >= 8) {
+      simMatches.push(
+        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[0]?.id, pareja2_id: clasificados[7]?.id, pareja1_nombre: clasificados[0]?.nombre, pareja2_nombre: clasificados[7]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[3]?.id, pareja2_id: clasificados[4]?.id, pareja1_nombre: clasificados[3]?.nombre, pareja2_nombre: clasificados[4]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[2]?.id, pareja2_id: clasificados[5]?.id, pareja1_nombre: clasificados[2]?.nombre, pareja2_nombre: clasificados[5]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[1]?.id, pareja2_id: clasificados[6]?.id, pareja1_nombre: clasificados[1]?.nombre, pareja2_nombre: clasificados[6]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
+        { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+      );
+    } else if (n >= 4) {
+      simMatches.push(
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_id: clasificados[0]?.id, pareja2_id: clasificados[3]?.id, pareja1_nombre: clasificados[0]?.nombre, pareja2_nombre: clasificados[3]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_id: clasificados[1]?.id, pareja2_id: clasificados[2]?.id, pareja1_nombre: clasificados[1]?.nombre, pareja2_nombre: clasificados[2]?.nombre },
+        { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+      );
+    } else {
+      simMatches.push({
+        es_simulacion: true,
+        ronda_playoff: 'Final',
+        pareja1_id: clasificados[0]?.id,
+        pareja2_id: clasificados[1]?.id,
+        pareja1_nombre: clasificados[0]?.nombre,
+        pareja2_nombre: clasificados[1]?.nombre
+      });
+    }
+
+    return { n, directos, matches: simMatches, eliminadas };
+  }
+
+  recalcularBracketSimulado(): void {
+    const cat = this.categoriaActual;
+    const list = (this.posicionesGrupo && this.posicionesGrupo.length > 0) ? this.posicionesGrupo : (cat?.parejas || []);
+    const res = this.generarEstructuraPlayoffs(list, +this.simTotalClasifican, +this.simDirectosCuartos);
+    this.playoffsSimuladosList = res.matches;
+  }
+
+  programarFasePlayoff(ronda: 'Dieciseisavos de Final' | 'Repechaje (Play-In)' | 'Octavos de Final' | 'Cuartos de Final' | 'Semifinales' | 'Final', matches?: any[]): void {
+    const cat = this.categoriaActual;
+    if (!cat || !cat.id) return;
+
+    const listaPartidos = matches || (cat.playoffs || []).filter((m: any) =>
+      m.ronda_playoff === ronda ||
+      (ronda === 'Dieciseisavos de Final' && m.ronda_playoff === 'Repechaje (Play-In)') ||
+      (ronda === 'Octavos de Final' && m.ronda_playoff === 'Ronda Previa')
+    );
+    const partidoIds = listaPartidos.map((m: any) => +m.id).filter((id: number) => id > 0);
+
+    this.jornadaParaProgramarSemanal = {
+      es_playoff: true,
+      categoria_id: cat.id,
+      ronda_playoff: ronda,
+      nombre: `${ronda} — ${cat.nombre}`,
+      numero_jornada: 1,
+      partido_ids: partidoIds,
+      dias_preferidos: (cat.dias_juego && cat.dias_juego.length > 0) ? cat.dias_juego : []
+    };
+  }
+
+  async ejecutarGeneracionYProgramacionPlayoffs(
+    catId: number,
+    total: number,
+    directos: number,
+    programacionConfig?: {
+      programarAhora: boolean;
+      fases: { ronda: string; fecha_inicio: string; dias_semana: string[] }[];
+      horarios: string[];
+      canchas_ids: number[];
+    }
+  ): Promise<void> {
+    Swal.fire({
+      title: '🏆 Generando Cuadro y Programando...',
+      text: 'Creando llaves eliminatorias y asignando canchas y horarios.',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+      const res: any = await this.ligaService.generarPlayoffs(catId, total, directos).toPromise();
+      if (!res || !res.success) {
+        Swal.fire('Atención', res?.error || 'Error al generar playoffs', 'warning');
+        return;
+      }
+
+      let msgExtra = '';
+      if (programacionConfig && programacionConfig.programarAhora && programacionConfig.fases.length > 0) {
+        let totalProg = 0;
+        for (const f of programacionConfig.fases) {
+          if (!f.fecha_inicio || !f.dias_semana || f.dias_semana.length === 0) continue;
+          const resProg: any = await this.ligaService.programarJornadaSemanal({
+            categoria_id: catId,
+            ronda_playoff: f.ronda,
+            fecha_inicio: f.fecha_inicio,
+            dias_semana: f.dias_semana,
+            horarios: programacionConfig.horarios,
+            canchas_ids: programacionConfig.canchas_ids,
+            respetar_restricciones: true,
+            max_partidos_por_pareja: 0,
+            duracion_minutos: 90
+          }).toPromise();
+          if (resProg && resProg.success) {
+            totalProg += (resProg.programados || 0);
+          }
+        }
+        if (totalProg > 0) {
+          msgExtra = ` Se asignaron automáticamente horario y cancha a ${totalProg} partido(s) en la semana definida.`;
+        }
+      }
+
+      this.modoSimulacionPlayoffs = false;
+      Swal.fire({
+        title: '🏆 ¡Playoffs Creados y Programados!',
+        text: (res.mensaje || 'Cuadro de Playoffs creado exitosamente.') + msgExtra,
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+      });
+      this.cargarLiga();
+      this.activeTab = 'playoffs';
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'Error de servidor al generar o programar los playoffs.', 'error');
+      this.cargarLiga();
+    }
+  }
+
+  confirmarPlayoffsDesdeSimulacion(): void {
+    this.generarPlayoffsCategoria(+this.simTotalClasifican, +this.simDirectosCuartos);
+  }
+
+  borrarPlayoffsCategoria(): void {
+    const cat = this.categoriaActual;
+    if (!cat || !cat.playoffs || cat.playoffs.length === 0) return;
+
+    Swal.fire({
+      title: '¿Borrar Cuadro de Playoffs?',
+      html: `<p style="color:#334155; font-size:0.92rem;">Se eliminarán únicamente los <strong>${cat.playoffs.length} partidos de Fase Final (Playoffs)</strong> de <strong>${cat.nombre}</strong>.</p><div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; padding:10px 12px; border-radius:10px; font-size:0.82rem; font-weight:700;">✅ Todos los partidos, resultados y posiciones de la Fase Regular se mantienen 100% intactos.</div>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: '🗑️ Sí, borrar cuadro de Playoffs',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Eliminando cuadro de Playoffs...',
+          text: 'Por favor espera un momento.',
+          allowOutsideClick: false,
+          didOpen: () => { Swal.showLoading(); }
+        });
+        try {
+          for (const m of cat.playoffs) {
+            if (m && m.id) {
+              await this.ligaService.eliminarPartido(+m.id).toPromise();
+            }
+          }
+          Swal.fire({
+            title: '¡Cuadro de Playoffs Eliminado!',
+            text: 'Se eliminaron las llaves de Fase Final sin afectar los partidos regulares.',
+            icon: 'success',
+            timer: 2200,
+            showConfirmButton: false
+          });
+          this.cargarLiga();
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'Ocurrió un problema al eliminar los partidos de playoffs.', 'error');
+          this.cargarLiga();
+        }
+      }
+    });
+  }
+
+  generarPlayoffsCategoria(initTotal?: number, initDirectos?: number): void {
+    const cat = this.categoriaActual;
+    if (!cat || !cat.id) return;
 
     // Asegurar que tenemos la tabla de posiciones consolidada de la categoría
     const abrirModalConRanking = (rankingList: any[]) => {
+      const list = rankingList && rankingList.length > 0 ? rankingList : (cat.parejas || []);
+      const totalParejas = list.length || (cat.parejas?.length || 12);
+      const defaultClasifican = initTotal !== undefined ? initTotal : 999; // Por defecto clasificar a TODAS las parejas inscritas
+      const defaultDirectos = initDirectos !== undefined ? initDirectos : -1; // -1 = Estándar Oficial FIP
+
+      const catDias = (cat.dias_juego && Array.isArray(cat.dias_juego) && cat.dias_juego.length > 0)
+        ? cat.dias_juego
+        : ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      const diasTodos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+      const addDaysIso = (baseIso: string, add: number): string => {
+        const dt = new Date(baseIso + 'T12:00:00');
+        dt.setDate(dt.getDate() + add);
+        return dt.toISOString().split('T')[0];
+      };
+      const baseTodayIso = new Date().toISOString().split('T')[0];
+      const canchasClub = this.liga?.canchas || [];
+
       const construirSimulacionHtml = (reqClasificados: number, reqDirectos: number): string => {
-        const list = rankingList && rankingList.length > 0 ? rankingList : (cat.parejas || []);
-        const total = list.length;
-        if (total < 2) {
+        if (list.length < 2) {
           return `<div style="color: #dc2626; font-weight: 700;">Se necesitan al menos 2 parejas inscritas para simular el cuadro.</div>`;
         }
 
-        let n = reqClasificados >= 999 || reqClasificados > total ? total : reqClasificados;
-        let directos = reqDirectos;
-        if (n <= 8) {
-          directos = 0;
-        }
-        let previaCount = n - directos;
-        if (previaCount % 2 !== 0) {
-          n = n - 1;
-          previaCount = n - directos;
-        }
-
-        const clasificados = list.slice(0, n).map((p: any, idx: number) => ({
-          seed: idx + 1,
-          nombre: p.nombre_pareja || `${p.p1_nombre || p.nombre_externo1 || 'J1'} / ${p.p2_nombre || p.nombre_externo2 || 'J2'}`,
-          puntos: p.puntos !== undefined ? `${p.puntos} pts` : ''
-        }));
-
-        const badgeSeed = (s: number, isBye: boolean = false) =>
-          `<span style="display:inline-block; min-width:22px; text-align:center; padding:1px 5px; border-radius:5px; font-weight:800; font-size:0.72rem; background:${isBye ? '#fef3c7' : '#e2e8f0'}; color:${isBye ? '#b45309' : '#1e293b'}; border:1px solid ${isBye ? '#fde68a' : '#cbd5e1'}; margin-right:5px;">${s}º</span>`;
+        const est = this.generarEstructuraPlayoffs(list, reqClasificados, reqDirectos);
+        const playInMatches = est.matches.filter(m => m.ronda_playoff === 'Dieciseisavos de Final' || m.ronda_playoff === 'Repechaje (Play-In)');
+        const octavosMatches = est.matches.filter(m => m.ronda_playoff === 'Octavos de Final');
+        const cuartosMatches = est.matches.filter(m => m.ronda_playoff === 'Cuartos de Final');
+        const semisMatches = est.matches.filter(m => m.ronda_playoff === 'Semifinales');
 
         const rowMatch = (label: string, p1Html: string, p2Html: string, dest: string = '') => `
           <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; margin-bottom:5px; font-size:0.78rem;">
-            <span style="font-weight:800; color:#475569; min-width:58px; font-size:0.72rem;">${label}</span>
+            <span style="font-weight:800; color:#475569; min-width:64px; font-size:0.72rem;">${label}</span>
             <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:6px; overflow:hidden;">
-              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44%;">${p1Html}</span>
+              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%;">${p1Html}</span>
               <span style="font-weight:800; color:#94a3b8; font-size:0.7rem;">VS</span>
-              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44%; text-align:right;">${p2Html}</span>
+              <span style="font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; text-align:right;">${p2Html}</span>
             </div>
             ${dest ? `<span style="font-size:0.68rem; font-weight:700; color:#2563eb; background:#eff6ff; padding:2px 6px; border-radius:5px; white-space:nowrap;">→ ${dest}</span>` : ''}
           </div>
@@ -731,108 +1215,130 @@ export class LigaViewComponent implements OnInit {
 
         let html = `
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <strong style="color:#1e3a8a; font-size:0.82rem;">🔮 Simulación en Vivo con Ranking Actual (${n} clasificadas)</strong>
+            <strong style="color:#1e3a8a; font-size:0.82rem;">🔮 Simulación en Vivo con Ranking Actual (${est.n} de ${totalParejas} parejas)</strong>
             <span style="font-size:0.72rem; font-weight:700; color:#1d4ed8; background:#dbeafe; padding:2px 8px; border-radius:99px;">
-              ${directos > 0 ? `${directos} Directos (BYE) + ${previaCount} a Previa` : 'Cuadro Directo'}
+              ${est.directos > 0 ? `${est.directos} Directos a 4tos (BYE) + ${octavosMatches.length} llaves Octavos` : (playInMatches.length > 0 ? `${playInMatches.length} llave(s) 16avos + 8 Octavos` : (octavosMatches.length > 0 ? `${octavosMatches.length} llaves de Octavos` : 'Cuadro Directo'))}
             </span>
           </div>
         `;
 
-        if (n > 8 && directos > 0) {
-          const pPrevia = (n - directos) / 2;
-          let prevMatches: { label: string; t1: any; t2: any; next: string }[] = [];
-
-          if (directos === 4 && n === 12) {
-            prevMatches = [
-              { label: 'Previa 1', t1: clasificados[7], t2: clasificados[8], next: 'Q1' },
-              { label: 'Previa 2', t1: clasificados[4], t2: clasificados[11], next: 'Q2' },
-              { label: 'Previa 3', t1: clasificados[5], t2: clasificados[10], next: 'Q3' },
-              { label: 'Previa 4', t1: clasificados[6], t2: clasificados[9], next: 'Q4' }
-            ];
-          } else if (directos === 6 && n === 10) {
-            prevMatches = [
-              { label: 'Previa 1', t1: clasificados[7], t2: clasificados[8], next: 'Q1' },
-              { label: 'Previa 2', t1: clasificados[6], t2: clasificados[9], next: 'Q4' }
-            ];
-          } else {
-            for (let k = 0; k < pPrevia; k++) {
-              const idx1 = directos + k;
-              const idx2 = n - 1 - k;
-              prevMatches.push({
-                label: `Previa ${k + 1}`,
-                t1: clasificados[idx1],
-                t2: clasificados[idx2],
-                next: `Q${(k % 4) + 1}`
-              });
-            }
-          }
-
-          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">⚡ Ronda Previa (Octavos de Final)</div>`;
-          prevMatches.forEach(pm => {
-            if (pm.t1 && pm.t2) {
-              html += rowMatch(
-                pm.label,
-                `${badgeSeed(pm.t1.seed)}${pm.t1.nombre}`,
-                `${badgeSeed(pm.t2.seed)}${pm.t2.nombre}`,
-                pm.next
-              );
-            }
+        if (playInMatches.length > 0) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#7c3aed; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🔥 Dieciseisavos de Final (${playInMatches.length} partido${playInMatches.length > 1 ? 's' : ''})</div>`;
+          playInMatches.forEach((m, i) => {
+            html += rowMatch(`16avos #${i + 1}`, m.pareja1_nombre, m.pareja2_nombre, m.meta_playoff?.next_bracket || 'Octavos');
           });
-
-          const d1 = clasificados[0];
-          const d2 = directos >= 2 ? clasificados[1] : null;
-          const d3 = directos >= 3 ? clasificados[2] : null;
-          const d4 = directos >= 4 ? clasificados[3] : null;
-          const d5 = directos >= 5 ? clasificados[4] : null;
-          const d6 = directos >= 6 ? clasificados[5] : null;
-
-          html += `<div style="font-weight:800; font-size:0.73rem; color:#b45309; text-transform:uppercase; letter-spacing:0.03em; margin:10px 0 4px;">👑 Cuartos de Final (Esperan con BYE)</div>`;
-          html += rowMatch('Cuartos Q1', d1 ? `${badgeSeed(1, true)}${d1.nombre}` : 'Por definir', `<span style="color:#64748b; font-style:italic;">Ganador Previa 1 (${prevMatches[0]?.t1?.seed || 8}º/${prevMatches[0]?.t2?.seed || 9}º)</span>`, 'S1');
-          html += rowMatch('Cuartos Q2', d4 ? `${badgeSeed(4, true)}${d4.nombre}` : 'Ganador Previa 2A', d5 ? `${badgeSeed(5, true)}${d5.nombre}` : `<span style="color:#64748b; font-style:italic;">Ganador Previa 2 (${prevMatches[1]?.t1?.seed || 5}º/${prevMatches[1]?.t2?.seed || 12}º)</span>`, 'S1');
-          html += rowMatch('Cuartos Q3', d3 ? `${badgeSeed(3, true)}${d3.nombre}` : 'Ganador Previa 3A', d6 ? `${badgeSeed(6, true)}${d6.nombre}` : `<span style="color:#64748b; font-style:italic;">Ganador Previa 3 (${prevMatches[2]?.t1?.seed || 6}º/${prevMatches[2]?.t2?.seed || 11}º)</span>`, 'S2');
-          html += rowMatch('Cuartos Q4', d2 ? `${badgeSeed(2, true)}${d2.nombre}` : 'Por definir', `<span style="color:#64748b; font-style:italic;">Ganador Previa 4 (${prevMatches[prevMatches.length - 1]?.t1?.seed || 7}º/${prevMatches[prevMatches.length - 1]?.t2?.seed || 10}º)</span>`, 'S2');
-
-        } else if (n >= 8) {
-          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🏆 Cuartos de Final Directos (Top 8)</div>`;
-          html += rowMatch('Cuartos Q1', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(8)}${clasificados[7].nombre}`, 'S1');
-          html += rowMatch('Cuartos Q2', `${badgeSeed(4, true)}${clasificados[3].nombre}`, `${badgeSeed(5)}${clasificados[4].nombre}`, 'S1');
-          html += rowMatch('Cuartos Q3', `${badgeSeed(3, true)}${clasificados[2].nombre}`, `${badgeSeed(6)}${clasificados[5].nombre}`, 'S2');
-          html += rowMatch('Cuartos Q4', `${badgeSeed(2, true)}${clasificados[1].nombre}`, `${badgeSeed(7)}${clasificados[6].nombre}`, 'S2');
-        } else if (n >= 4) {
-          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🏆 Semifinales Directas (Top 4)</div>`;
-          html += rowMatch('Semifinal S1', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(4)}${clasificados[3].nombre}`, 'Final');
-          html += rowMatch('Semifinal S2', `${badgeSeed(2, true)}${clasificados[1].nombre}`, `${badgeSeed(3)}${clasificados[2].nombre}`, 'Final');
-        } else {
-          html += rowMatch('Final Directa', `${badgeSeed(1, true)}${clasificados[0].nombre}`, `${badgeSeed(2)}${clasificados[1].nombre}`);
         }
 
-        if (total > n) {
-          const eliminadas = list.slice(n).map((p: any, i: number) => `${n + i + 1}º ${p.nombre_pareja || 'Pareja'}`).join(' · ');
-          html += `<div style="margin-top:6px; font-size:0.72rem; color:#64748b;"><strong>Fuera del corte (${total - n}):</strong> ${eliminadas}</div>`;
+        if (octavosMatches.length > 0) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">⚡ Octavos de Final / Ronda Previa (${octavosMatches.length} partidos)</div>`;
+          octavosMatches.forEach((m, i) => {
+            html += rowMatch(`Octavos #${i + 1}`, m.pareja1_nombre, m.pareja2_nombre, m.meta_playoff?.next_bracket || '4tos');
+          });
+        }
+
+        if (cuartosMatches.length > 0) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#b45309; text-transform:uppercase; letter-spacing:0.03em; margin:10px 0 4px;">👑 Cuartos de Final (4 llaves)</div>`;
+          cuartosMatches.forEach((m, i) => {
+            html += rowMatch(`Cuartos Q${i + 1}`, m.pareja1_nombre, m.pareja2_nombre, m.meta_playoff?.next_bracket || 'Semis');
+          });
+        } else if (semisMatches.length > 0) {
+          html += `<div style="font-weight:800; font-size:0.73rem; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin:6px 0 4px;">🏆 Semifinales Directas</div>`;
+          semisMatches.forEach((m, i) => {
+            html += rowMatch(`Semifinal S${i + 1}`, m.pareja1_nombre, m.pareja2_nombre, 'Final');
+          });
+        }
+
+        if (est.eliminadas.length > 0) {
+          const elimStr = est.eliminadas.map(e => `${e.seed}º ${e.nombre}`).join(' · ');
+          html += `<div style="margin-top:6px; font-size:0.72rem; color:#dc2626;"><strong>Fuera del corte (${est.eliminadas.length}):</strong> ${elimStr}</div>`;
+        } else {
+          html += `<div style="margin-top:6px; font-size:0.72rem; color:#15803d; font-weight:700;">✅ ¡Las ${est.n} parejas entran al cuadro eliminatorio!</div>`;
         }
 
         return html;
       };
 
+      const renderFaseRow = (idx: number, rondaKey: string, label: string, defaultDate: string) => {
+        const diasChecks = diasTodos.map(d => {
+          const checked = catDias.includes(d) ? 'checked' : '';
+          return `
+            <label style="display:inline-flex; align-items:center; gap:3px; font-size:0.72rem; font-weight:700; background:#ffffff; border:1px solid #cbd5e1; border-radius:7px; padding:3px 7px; cursor:pointer;">
+              <input type="checkbox" class="swal-fase-dia-${idx}" value="${d}" ${checked} style="margin:0;" />
+              ${d.slice(0, 3)}
+            </label>
+          `;
+        }).join('');
+
+        return `
+          <div class="swal-fase-row" data-ronda="${rondaKey}" data-idx="${idx}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:9px 11px; margin-bottom:7px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+              <strong style="font-size:0.78rem; color:#0f172a;">${label}</strong>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:0.72rem; font-weight:700; color:#475569;">Semana / Inicio:</span>
+                <input type="date" id="swal-fase-fecha-${idx}" value="${defaultDate}" style="height:28px; border-radius:7px; border:1px solid #cbd5e1; padding:0 8px; font-size:0.75rem; font-weight:700; color:#0f172a;" />
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+              <span style="font-size:0.7rem; font-weight:800; color:#64748b; margin-right:3px;">Días:</span>
+              ${diasChecks}
+            </div>
+          </div>
+        `;
+      };
+
+      const construirFasesProgramacionHtml = (reqClasificados: number, reqDirectos: number): string => {
+        const est = this.generarEstructuraPlayoffs(list, reqClasificados, reqDirectos);
+        const fasesActivas: { ronda: string; label: string }[] = [];
+        if (est.matches.some(m => m.ronda_playoff === 'Dieciseisavos de Final' || m.ronda_playoff === 'Repechaje (Play-In)')) {
+          fasesActivas.push({ ronda: 'Dieciseisavos de Final', label: '🔥 Fase 0: Dieciseisavos de Final' });
+        }
+        if (est.matches.some(m => m.ronda_playoff === 'Octavos de Final')) {
+          fasesActivas.push({ ronda: 'Octavos de Final', label: '1️⃣ Fase 1: Octavos de Final / Ronda Previa' });
+        }
+        if (est.matches.some(m => m.ronda_playoff === 'Cuartos de Final')) {
+          fasesActivas.push({ ronda: 'Cuartos de Final', label: '2️⃣ Fase 2: Cuartos de Final' });
+        }
+        if (est.matches.some(m => m.ronda_playoff === 'Semifinales')) {
+          fasesActivas.push({ ronda: 'Semifinales', label: '3️⃣ Fase 3: Semifinales' });
+        }
+        if (est.matches.some(m => m.ronda_playoff === 'Final')) {
+          fasesActivas.push({ ronda: 'Final', label: '🏆 Fase 4: Gran Final' });
+        }
+
+        return fasesActivas.map((f, i) => renderFaseRow(i, f.ronda, f.label, addDaysIso(baseTodayIso, i * 7))).join('');
+      };
+
+      const canchasChecksHtml = canchasClub.length > 0
+        ? canchasClub.map((c: any) => `
+            <label style="display:inline-flex; align-items:center; gap:4px; font-size:0.74rem; font-weight:700; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:4px 8px; cursor:pointer;">
+              <input type="checkbox" class="swal-playoff-cancha" value="${c.id}" checked style="margin:0;" />
+              📍 ${c.nombre}
+            </label>
+          `).join('')
+        : `<span style="font-size:0.74rem; color:#64748b;">Se asignarán automáticamente las canchas activas del club.</span>`;
+
+      const fipAutoByes = this.calcularDirectosOptimos(totalParejas);
+
       Swal.fire({
-        title: '🏆 Configurar Fase Final (Playoffs)',
-        width: '640px',
+        title: '🏆 Configurar y Programar Fase Final',
+        width: '720px',
         html: `
           <div style="text-align: left; font-size: 0.9rem; color: #334155; font-family: inherit;">
-            <p style="margin-bottom: 14px; font-size: 0.88rem; color: #64748b;">
-              Configura y simula el cuadro de eliminación directa para <strong>${cat.nombre}</strong> (${totalParejas} parejas registradas):
+            <p style="margin-bottom: 12px; font-size: 0.85rem; color: #64748b;">
+              Configura el cuadro de eliminación directa y define los días, horarios y canchas de cada fase para <strong>${cat.nombre}</strong> (${totalParejas} parejas):
             </p>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
               <div>
                 <label style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block; margin-bottom: 5px;">
                   1️⃣ Parejas que Clasifican:
                 </label>
                 <select id="swal-total-clasifican" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
-                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (Con Previa)</option>
                   <option value="999" ${defaultClasifican >= 999 ? 'selected' : ''}>Todas las parejas (${totalParejas})</option>
                   <option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 (Octavos completos)</option>
-                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 directos + 2 previa)</option>
+                  <option value="14" ${defaultClasifican === 14 ? 'selected' : ''}>Top 14 (2 BYE + 6 Previa)</option>
+                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (4 BYE + 4 Previa)</option>
+                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 BYE + 2 Previa)</option>
                   <option value="8" ${defaultClasifican === 8 ? 'selected' : ''}>Top 8 (Cuartos directos)</option>
                   <option value="4" ${defaultClasifican === 4 ? 'selected' : ''}>Top 4 (Semifinales directas)</option>
                 </select>
@@ -840,18 +1346,49 @@ export class LigaViewComponent implements OnInit {
 
               <div>
                 <label style="font-weight: 800; font-size: 0.78rem; color: #0f172a; display: block; margin-bottom: 5px;">
-                  2️⃣ Pasan DIRECTO a 4tos (BYE):
+                  2️⃣ Pases Directos (BYE a siguiente fase):
                 </label>
                 <select id="swal-directos-cuartos" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
-                  <option value="4" ${defaultDirectos === 4 ? 'selected' : ''}>👑 Primeros 4 (1º al 4º BYE)</option>
-                  <option value="2" ${defaultDirectos === 2 ? 'selected' : ''}>👑 Primeros 2 (1º y 2º BYE)</option>
-                  <option value="6" ${defaultDirectos === 6 ? 'selected' : ''}>👑 Primeros 6 (1º al 6º BYE)</option>
-                  <option value="0" ${defaultDirectos === 0 ? 'selected' : ''}>⚡ Ninguno (Sin BYE)</option>
+                  <option value="-1" ${defaultDirectos === -1 ? 'selected' : ''}>⭐ Estándar Oficial FIP (${fipAutoByes > 0 ? fipAutoByes + ' BYE a 4tos' : (totalParejas > 16 ? '16avos + Octavos' : 'Octavos completos')})</option>
+                  <option value="1" ${defaultDirectos === 1 ? 'selected' : ''}>👑 1º lugar directo a 4tos (1 BYE)</option>
+                  <option value="2" ${defaultDirectos === 2 ? 'selected' : ''}>👑 Primeros 2 directo a 4tos (2 BYE)</option>
+                  <option value="3" ${defaultDirectos === 3 ? 'selected' : ''}>👑 Primeros 3 directo a 4tos (3 BYE)</option>
+                  <option value="4" ${defaultDirectos === 4 ? 'selected' : ''}>👑 Primeros 4 directo a 4tos (4 BYE)</option>
+                  <option value="5" ${defaultDirectos === 5 ? 'selected' : ''}>👑 Primeros 5 directo a 4tos (5 BYE)</option>
+                  <option value="6" ${defaultDirectos === 6 ? 'selected' : ''}>👑 Primeros 6 directo a 4tos (6 BYE)</option>
+                  <option value="0" ${defaultDirectos === 0 ? 'selected' : ''}>⚡ Ninguno a 4tos (Octavos completos)</option>
                 </select>
               </div>
             </div>
 
-            <div id="swal-preview-box" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; font-size: 0.8rem; color: #1e293b; line-height: 1.4; max-height: 350px; overflow-y: auto;">
+            <!-- SECCIÓN 3: PROGRAMACIÓN DE SEMANA, DÍAS, HORARIOS Y CANCHAS POR FASE -->
+            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+              <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:8px;">
+                <span style="font-weight:800; font-size:0.83rem; color:#14532d;">📅 3️⃣ Definir Semana, Días, Horarios y Canchas por cada Fase</span>
+                <input type="checkbox" id="swal-programar-ahora" checked style="width:18px; height:18px; accent-color:#16a34a;" />
+              </label>
+
+              <div id="swal-programacion-container">
+                <div id="swal-fases-list">
+                  ${construirFasesProgramacionHtml(defaultClasifican, defaultDirectos)}
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:9px 11px;">
+                  <div>
+                    <label style="font-weight:800; font-size:0.73rem; color:#0f172a; display:block; margin-bottom:4px;">⏰ Horarios (bloques de 90 min):</label>
+                    <input type="text" id="swal-playoff-horarios" value="18:00, 19:30, 21:00" style="width:100%; height:32px; border-radius:7px; border:1px solid #cbd5e1; padding:0 8px; font-size:0.76rem; font-weight:700; color:#0f172a; box-sizing:border-box;" />
+                  </div>
+                  <div>
+                    <label style="font-weight:800; font-size:0.73rem; color:#0f172a; display:block; margin-bottom:4px;">🏟️ Canchas a utilizar:</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:4px; max-height:60px; overflow-y:auto;">
+                      ${canchasChecksHtml}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="swal-preview-box" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; font-size: 0.8rem; color: #1e293b; line-height: 1.4; max-height: 230px; overflow-y: auto;">
               ${construirSimulacionHtml(defaultClasifican, defaultDirectos)}
             </div>
           </div>
@@ -859,24 +1396,35 @@ export class LigaViewComponent implements OnInit {
         showCancelButton: true,
         confirmButtonColor: '#0f172a',
         cancelButtonColor: '#94a3b8',
-        confirmButtonText: '⚡ Generar Cuadro de Playoffs',
+        confirmButtonText: '⚡ Confirmar Cuadro y Agendar Canchas',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
         didOpen: () => {
           const selTotal = document.getElementById('swal-total-clasifican') as HTMLSelectElement;
           const selDirectos = document.getElementById('swal-directos-cuartos') as HTMLSelectElement;
           const previewBox = document.getElementById('swal-preview-box');
+          const fasesListBox = document.getElementById('swal-fases-list');
+          const chkProg = document.getElementById('swal-programar-ahora') as HTMLInputElement;
+          const progContainer = document.getElementById('swal-programacion-container');
+
+          chkProg?.addEventListener('change', () => {
+            if (progContainer) {
+              progContainer.style.display = chkProg.checked ? 'block' : 'none';
+            }
+          });
 
           const actualizarVistaPrevia = (autoAdjustDirectos: boolean = false) => {
             if (!selTotal || !selDirectos || !previewBox) return;
             const tVal = selTotal.value === '999' ? totalParejas : parseInt(selTotal.value, 10);
             if (autoAdjustDirectos) {
-              if (tVal === 12) selDirectos.value = '4';
-              else if (tVal === 10) selDirectos.value = '6';
-              else if (tVal <= 8) selDirectos.value = '0';
+              selDirectos.value = '-1';
             }
             const dVal = parseInt(selDirectos.value, 10);
+            const est = this.generarEstructuraPlayoffs(list, tVal, dVal);
             previewBox.innerHTML = construirSimulacionHtml(tVal, dVal);
+            if (fasesListBox) {
+              fasesListBox.innerHTML = construirFasesProgramacionHtml(tVal, dVal);
+            }
           };
 
           selTotal?.addEventListener('change', () => actualizarVistaPrevia(true));
@@ -885,35 +1433,46 @@ export class LigaViewComponent implements OnInit {
         preConfirm: () => {
           const totalVal = (document.getElementById('swal-total-clasifican') as HTMLSelectElement).value;
           const directosVal = (document.getElementById('swal-directos-cuartos') as HTMLSelectElement).value;
+          const programarAhora = (document.getElementById('swal-programar-ahora') as HTMLInputElement)?.checked ?? false;
+          const horariosRaw = (document.getElementById('swal-playoff-horarios') as HTMLInputElement)?.value || '18:00, 19:30, 21:00';
+          const horarios = horariosRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+          const canchas_ids: number[] = [];
+          document.querySelectorAll('.swal-playoff-cancha:checked').forEach((el: any) => {
+            const cid = parseInt(el.value, 10);
+            if (cid > 0) canchas_ids.push(cid);
+          });
+
+          const fases: { ronda: string; fecha_inicio: string; dias_semana: string[] }[] = [];
+          document.querySelectorAll('.swal-fase-row').forEach((rowEl: any) => {
+            const ronda = rowEl.getAttribute('data-ronda');
+            const idx = rowEl.getAttribute('data-idx');
+            const fechaInput = document.getElementById(`swal-fase-fecha-${idx}`) as HTMLInputElement;
+            const fecha_inicio = fechaInput?.value || baseTodayIso;
+            const dias_semana: string[] = [];
+            document.querySelectorAll(`.swal-fase-dia-${idx}:checked`).forEach((dEl: any) => {
+              if (dEl.value) dias_semana.push(dEl.value);
+            });
+            if (ronda) {
+              fases.push({ ronda, fecha_inicio, dias_semana });
+            }
+          });
+
           return {
             total: totalVal === '999' ? 999 : parseInt(totalVal, 10),
-            directos: parseInt(directosVal, 10)
+            directos: parseInt(directosVal, 10),
+            programacionConfig: {
+              programarAhora,
+              fases,
+              horarios,
+              canchas_ids
+            }
           };
         }
       }).then((result) => {
         if (result.isConfirmed && result.value) {
-          const { total, directos } = result.value;
-          this.ligaService.generarPlayoffs(cat.id, total, directos).subscribe({
-            next: (res) => {
-              if (res.success) {
-                Swal.fire({
-                  title: '🏆 ¡Playoffs Generados!',
-                  text: res.mensaje || 'Cuadro de Playoffs creado exitosamente.',
-                  icon: 'success',
-                  timer: 2500,
-                  showConfirmButton: false
-                });
-                this.cargarLiga();
-                this.activeTab = 'playoffs';
-              } else {
-                Swal.fire('Atención', res.error || 'Error al generar playoffs', 'warning');
-              }
-            },
-            error: (err) => {
-              console.error(err);
-              Swal.fire('Error', 'Error de servidor al generar playoffs', 'error');
-            }
-          });
+          const { total, directos, programacionConfig } = result.value;
+          this.ejecutarGeneracionYProgramacionPlayoffs(cat.id, total, directos, programacionConfig);
         }
       });
     };
@@ -1071,6 +1630,7 @@ export class LigaViewComponent implements OnInit {
     this.paginaActualInscritos = 1;
     this.searchTermInscritos = '';
     this.grupoSeleccionadoId = null;
+    this.modoSimulacionPlayoffs = false;
     this.cargarPosiciones();
   }
 

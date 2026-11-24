@@ -20,8 +20,8 @@ import Swal from 'sweetalert2';
             <div>
               <h3>⚡ Programar Semana — {{ jornada?.nombre || ('Jornada #' + jornada?.numero_jornada) }}</h3>
               <div class="header-subtitle-row">
-                <span class="category-pill">Jornada #{{ jornada?.numero_jornada || 1 }}</span>
-                <span class="jornada-subtext">Asigna fecha de inicio, días, canchas y bloques de 60 min para esta jornada</span>
+                <span class="category-pill">{{ jornada?.es_playoff ? ('🏆 ' + (jornada?.ronda_playoff || 'Fase Final')) : ('Jornada #' + (jornada?.numero_jornada || 1)) }}</span>
+                <span class="jornada-subtext">Asigna fecha de inicio, días, canchas y horarios para {{ jornada?.es_playoff ? 'esta fase eliminatoria' : 'esta jornada' }}</span>
               </div>
             </div>
           </div>
@@ -641,7 +641,13 @@ export class ProgramarJornadaSemanalModalComponent implements OnInit {
     if (this.canchas && this.canchas.length > 0) {
       this.canchasSeleccionadas = this.canchas.map(c => c.id);
     }
-    this.horarios = ['18:00', '19:00', '20:00', '21:00', '22:00'];
+    this.horarios = ['18:00', '19:30', '21:00'];
+
+    if (this.jornada?.dias_preferidos && Array.isArray(this.jornada.dias_preferidos) && this.jornada.dias_preferidos.length > 0) {
+      this.diasSemanaList.forEach(d => {
+        d.selected = this.jornada.dias_preferidos.includes(d.nombre);
+      });
+    }
 
     const numJ = parseInt(this.jornada?.numero_jornada || 1, 10);
     if (this.jornada?.fecha_inicio) {
@@ -711,6 +717,9 @@ export class ProgramarJornadaSemanalModalComponent implements OnInit {
     const payload = {
       jornada_id: this.jornada?.id,
       jornada_ids: this.jornada?.jornada_ids || (this.jornada?.id ? [this.jornada.id] : []),
+      partido_ids: this.jornada?.partido_ids || [],
+      categoria_id: this.jornada?.categoria_id || null,
+      ronda_playoff: this.jornada?.ronda_playoff || null,
       fecha_inicio: this.fechaInicio,
       dias_semana: dias,
       horarios: this.horarios,
