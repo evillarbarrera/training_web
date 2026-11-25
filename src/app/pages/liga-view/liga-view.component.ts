@@ -726,54 +726,68 @@ export class LigaViewComponent implements OnInit {
   generarOpcionesDirectos(n: number): { value: number; label: string }[] {
     const fip = this.calcularDirectosOptimos(n);
     const options: { value: number; label: string }[] = [];
+    const totalCat = this.totalParejasCategoria || n;
 
     if (n > 16) {
-      // Siguiente fase: Octavos de Final (Fase inicial: 16avos)
-      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a Octavos)` : '⭐ Estándar Oficial FIP (16avos completos)';
+      // 17 a 32 parejas (Fase inicial: Dieciseisavos de Final)
+      const numPartidos16 = 16 - fip;
+      const fipLabel = fip > 0
+        ? `⭐ Estándar Oficial FIP (${fip} directo a Octavos — ${numPartidos16} partido${numPartidos16 > 1 ? 's' : ''} en 16avos)`
+        : '⭐ Estándar Oficial FIP (16avos completos — 16 partidos)';
       options.push({ value: -1, label: fipLabel });
 
-      // Opciones manuales de BYEs a Octavos (1..15)
-      const candidatas = [1, 2, 3, 4, 6, 8, 10, 12, 14, 15, fip].filter((v, idx, arr) => v > 0 && v <= 15 && arr.indexOf(v) === idx).sort((a, b) => a - b);
-      candidatas.forEach(k => {
-        options.push({
-          value: k,
-          label: k === 1 ? '👑 1º lugar directo a Octavos (1 BYE)' : `👑 Primeros ${k} directo a Octavos (${k} BYE)`
-        });
-      });
-      options.push({ value: 0, label: '⚡ Ninguno a Octavos (16avos completos)' });
+      // Opciones directas para adaptar el cuadro eliminatorio
+      if (totalCat >= 16) {
+        options.push({ value: -160, label: '⚡ Octavos completos sin previa (Top 16 clasifican — 8 partidos)' });
+      }
+      if (totalCat >= 12) {
+        options.push({ value: -124, label: '👑 4 directo a 4tos (Top 12 clasifican — igual a 4ª Cat)' });
+      }
+      if (totalCat >= 8) {
+        options.push({ value: -108, label: '👑 Cuartos directos (Top 8 clasifican — 4 partidos)' });
+      }
     } else if (n > 8) {
-      // Siguiente fase: Cuartos de Final (4tos) (Fase inicial: Octavos)
-      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a 4tos)` : '⭐ Estándar Oficial FIP (Octavos completos)';
+      // 9 a 16 parejas (Fase inicial: Octavos de Final)
+      const numPartidosOct = 8 - fip;
+      const fipLabel = fip > 0
+        ? `⭐ Estándar Oficial FIP (${fip} directo a 4tos — ${numPartidosOct} partido${numPartidosOct > 1 ? 's' : ''} de Octavos)`
+        : '⭐ Estándar Oficial FIP (Octavos completos — 8 partidos)';
       options.push({ value: -1, label: fipLabel });
 
-      const maxDirectos = Math.min(7, n - 2);
-      for (let k = 1; k <= maxDirectos; k++) {
-        options.push({
-          value: k,
-          label: k === 1 ? '👑 1º lugar directo a 4tos (1 BYE)' : `👑 Primeros ${k} directo a 4tos (${k} BYE)`
-        });
+      if (fip > 0) {
+        options.push({ value: fip, label: `👑 Primeros ${fip} directo a 4tos (${fip} BYE)` });
       }
-      options.push({ value: 0, label: '⚡ Ninguno a 4tos (Octavos completos)' });
+      if (n !== 16 && totalCat >= 16) {
+        options.push({ value: -160, label: '⚡ Octavos completos (Top 16 clasifican — 8 partidos)' });
+      }
+      if (n !== 12 && totalCat >= 12) {
+        options.push({ value: -124, label: '👑 4 directo a 4tos (Top 12 clasifican — 4 partidos Octavos)' });
+      }
+      if (totalCat >= 8) {
+        options.push({ value: -108, label: '👑 Cuartos directos (Top 8 clasifican — 4 partidos)' });
+      }
+      if (totalCat > 16) {
+        options.push({ value: -999, label: `🔄 Todas las parejas (${totalCat} parejas con previa 16avos)` });
+      }
     } else if (n > 4) {
-      // Siguiente fase: Semifinales (Fase inicial: Cuartos)
-      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a Semis)` : '⭐ Estándar Oficial FIP (Cuartos completos)';
+      // 5 a 8 parejas (Fase inicial: Cuartos de Final)
+      const numPartidosCuartos = 4 - fip;
+      const fipLabel = fip > 0
+        ? `⭐ Estándar Oficial FIP (${fip} directo a Semis — ${numPartidosCuartos} partido${numPartidosCuartos > 1 ? 's' : ''} de 4tos)`
+        : '⭐ Estándar Oficial FIP (Cuartos completos — 4 partidos)';
       options.push({ value: -1, label: fipLabel });
 
-      const maxDirectos = Math.min(3, n - 2);
-      for (let k = 1; k <= maxDirectos; k++) {
-        options.push({
-          value: k,
-          label: k === 1 ? '👑 1º lugar directo a Semis (1 BYE)' : `👑 Primeros ${k} directo a Semis (${k} BYE)`
-        });
+      if (fip > 0) {
+        options.push({ value: fip, label: `👑 Primeros ${fip} directo a Semis (${fip} BYE)` });
       }
-      options.push({ value: 0, label: '⚡ Ninguno a Semis (Cuartos completos)' });
+      if (totalCat >= 4) {
+        options.push({ value: -104, label: '👑 Semifinales directas (Top 4 clasifican — 2 partidos)' });
+      }
     } else {
-      // Siguiente fase: Final
       options.push({ value: -1, label: '⭐ Estándar Oficial FIP (Automático)' });
       if (n === 3) {
         options.push({ value: 1, label: '👑 1º lugar directo a la Final (1 BYE)' });
       }
-      options.push({ value: 0, label: '⚡ Semifinales completas' });
     }
 
     return options;
@@ -812,6 +826,27 @@ export class LigaViewComponent implements OnInit {
 
   onSimTotalChange(): void {
     this.simDirectosCuartos = -1; // Volver al Estándar Oficial FIP al cambiar cantidad de clasificados
+    this.recalcularBracketSimulado();
+  }
+
+  onSimDirectosChange(): void {
+    const val = +this.simDirectosCuartos;
+    if (val === -160) {
+      this.simTotalClasifican = 16;
+      this.simDirectosCuartos = -1;
+    } else if (val === -124) {
+      this.simTotalClasifican = 12;
+      this.simDirectosCuartos = 4;
+    } else if (val === -108) {
+      this.simTotalClasifican = 8;
+      this.simDirectosCuartos = -1;
+    } else if (val === -104) {
+      this.simTotalClasifican = 4;
+      this.simDirectosCuartos = -1;
+    } else if (val === -999) {
+      this.simTotalClasifican = 999;
+      this.simDirectosCuartos = -1;
+    }
     this.recalcularBracketSimulado();
   }
 
@@ -883,7 +918,7 @@ export class LigaViewComponent implements OnInit {
             id: team.id,
             seed: team.seed,
             nombre: team.nombre,
-            isBye: true
+            isBye: false // En Octavos juegan su partido regular, no llevan badge de BYE
           });
         }
       }

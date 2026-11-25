@@ -1333,7 +1333,7 @@
 
             <div>
               <label style="display:block; font-size:0.7rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">Pases Directos (BYE a siguiente fase):</label>
-              <select [(ngModel)]="simDirectosCuartos" (ngModelChange)="recalcularBracketSimulado()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
+              <select [(ngModel)]="simDirectosCuartos" (ngModelChange)="onSimDirectosChange()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
                 <option *ngFor="let opt of opcionesDirectosSimulacion" [ngValue]="opt.value">{{ opt.label }}</option>
               </select>
             </div>
@@ -1454,14 +1454,14 @@
                   <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
                     <div class="team-name-box">
                       <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Por definir' }}</span>
-                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed1_label?.includes('1º') || m.meta_playoff?.seed1_label?.includes('2º') || m.meta_playoff?.seed1_label?.includes('3º') || m.meta_playoff?.seed1_label?.includes('4º')">BYE DIRECTO</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed1_is_bye">BYE DIRECTO</span>
                     </div>
                     <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
                   </div>
                   <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
                     <div class="team-name-box">
                       <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Por definir' }}</span>
-                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed2_label?.includes('5º') || m.meta_playoff?.seed2_label?.includes('6º')">BYE DIRECTO</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed2_is_bye">BYE DIRECTO</span>
                     </div>
                     <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
                   </div>
