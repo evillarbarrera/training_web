@@ -687,12 +687,92 @@ export class LigaViewComponent implements OnInit {
 
   calcularDirectosOptimos(n: number): number {
     // Estándar Oficial FIP (potencia de 2 más cercana):
-    // - Si N <= 8: 0 BYEs (directo a Cuartos o Semis)
+    // - Si N <= 2: 0 (Final)
+    // - Si N == 3: 1 BYE a la Final
+    // - Si N == 4: 0 (Semis completas)
+    // - Si 5 <= N <= 7: (8 - N) BYEs a Semis
+    // - Si N == 8: 0 (Cuartos completos)
     // - Si 9 <= N <= 15: (16 - N) BYEs a Cuartos (ej. 12 -> 4 BYEs, 14 -> 2 BYEs, 15 -> 1 BYE)
-    // - Si N >= 16: 0 BYEs a Cuartos (los 16 cupos de Octavos se juegan completos; si N=17, 1 partido de Dieciseisavos 16º vs 17º y los primeros 15 directo a Octavos)
-    if (n <= 8) return 0;
-    if (n >= 16) return 0;
-    return 16 - n;
+    // - Si N == 16: 0 (Octavos completos)
+    // - Si 17 <= N <= 31: (32 - N) BYEs a Octavos (ej. 17 -> 15 BYEs, 20 -> 12 BYEs, 24 -> 8 BYEs)
+    // - Si N >= 32: 0 (Dieciseisavos completos)
+    if (n <= 2) return 0;
+    if (n === 3) return 1;
+    if (n === 4) return 0;
+    if (n <= 7) return 8 - n;
+    if (n === 8) return 0;
+    if (n <= 15) return 16 - n;
+    if (n === 16) return 0;
+    if (n <= 31) return 32 - n;
+    return 0;
+  }
+
+  getSimTotalClasificadosEfectivos(): number {
+    const total = this.categoriaActual?.parejas?.length || 12;
+    return +this.simTotalClasifican >= 999 || +this.simTotalClasifican > total
+      ? total
+      : +this.simTotalClasifican;
+  }
+
+  get opcionesDirectosSimulacion(): { value: number; label: string }[] {
+    const n = this.getSimTotalClasificadosEfectivos();
+    return this.generarOpcionesDirectos(n);
+  }
+
+  generarOpcionesDirectos(n: number): { value: number; label: string }[] {
+    const fip = this.calcularDirectosOptimos(n);
+    const options: { value: number; label: string }[] = [];
+
+    if (n > 16) {
+      // Siguiente fase: Octavos de Final (Fase inicial: 16avos)
+      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a Octavos)` : '⭐ Estándar Oficial FIP (16avos completos)';
+      options.push({ value: -1, label: fipLabel });
+
+      // Opciones manuales de BYEs a Octavos (1..15)
+      const candidatas = [1, 2, 3, 4, 6, 8, 10, 12, 14, 15, fip].filter((v, idx, arr) => v > 0 && v <= 15 && arr.indexOf(v) === idx).sort((a, b) => a - b);
+      candidatas.forEach(k => {
+        options.push({
+          value: k,
+          label: k === 1 ? '👑 1º lugar directo a Octavos (1 BYE)' : `👑 Primeros ${k} directo a Octavos (${k} BYE)`
+        });
+      });
+      options.push({ value: 0, label: '⚡ Ninguno a Octavos (16avos completos)' });
+    } else if (n > 8) {
+      // Siguiente fase: Cuartos de Final (4tos) (Fase inicial: Octavos)
+      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a 4tos)` : '⭐ Estándar Oficial FIP (Octavos completos)';
+      options.push({ value: -1, label: fipLabel });
+
+      const maxDirectos = Math.min(7, n - 2);
+      for (let k = 1; k <= maxDirectos; k++) {
+        options.push({
+          value: k,
+          label: k === 1 ? '👑 1º lugar directo a 4tos (1 BYE)' : `👑 Primeros ${k} directo a 4tos (${k} BYE)`
+        });
+      }
+      options.push({ value: 0, label: '⚡ Ninguno a 4tos (Octavos completos)' });
+    } else if (n > 4) {
+      // Siguiente fase: Semifinales (Fase inicial: Cuartos)
+      const fipLabel = fip > 0 ? `⭐ Estándar Oficial FIP (Automático: ${fip} BYE a Semis)` : '⭐ Estándar Oficial FIP (Cuartos completos)';
+      options.push({ value: -1, label: fipLabel });
+
+      const maxDirectos = Math.min(3, n - 2);
+      for (let k = 1; k <= maxDirectos; k++) {
+        options.push({
+          value: k,
+          label: k === 1 ? '👑 1º lugar directo a Semis (1 BYE)' : `👑 Primeros ${k} directo a Semis (${k} BYE)`
+        });
+      }
+      options.push({ value: 0, label: '⚡ Ninguno a Semis (Cuartos completos)' });
+    } else {
+      // Siguiente fase: Final
+      options.push({ value: -1, label: '⭐ Estándar Oficial FIP (Automático)' });
+      if (n === 3) {
+        options.push({ value: 1, label: '👑 1º lugar directo a la Final (1 BYE)' });
+      }
+      options.push({ value: 0, label: '⚡ Semifinales completas' });
+    }
+
+    return options;
   }
 
   toggleSimulacionPlayoffs(): void {
@@ -734,24 +814,17 @@ export class LigaViewComponent implements OnInit {
   generarEstructuraPlayoffs(list: any[], reqClasificados: number, reqDirectos: number): {
     n: number;
     directos: number;
+    targetFase: string;
     matches: any[];
     eliminadas: any[];
   } {
     const total = list.length;
     if (total < 2) {
-      return { n: total, directos: 0, matches: [], eliminadas: [] };
+      return { n: total, directos: 0, targetFase: '4tos', matches: [], eliminadas: [] };
     }
 
     let n = +reqClasificados >= 999 || +reqClasificados > total ? total : +reqClasificados;
     let directos = +reqDirectos;
-    if (n <= 8) {
-      directos = 0;
-    } else if (directos < 0) {
-      // Estándar Oficial FIP
-      directos = this.calcularDirectosOptimos(n);
-    } else if (directos > 7) {
-      directos = 7;
-    }
 
     const clasificados = list.slice(0, n).map((p: any, idx: number) => {
       const rawName = p.nombre_pareja || `${p.p1_nombre || p.nombre_externo1 || 'J1'} / ${p.p2_nombre || p.nombre_externo2 || 'J2'}`;
@@ -770,30 +843,25 @@ export class LigaViewComponent implements OnInit {
     }));
 
     const simMatches: any[] = [];
+    let targetFase = '4tos';
 
-    if (n > 8) {
-      // Cuántos cupos quedan en Cuartos de Final después de los `directos` que tienen BYE:
-      const qOpenSlots = 8 - directos; // Ej: si directos=4 -> quedan 4 cupos en Cuartos -> 4 partidos de Octavos (8 cupos en Octavos)
-      const octavosCapacity = qOpenSlots * 2; // Ej: si directos=4 -> 8 cupos en Octavos; si directos=0 -> 16 cupos en Octavos
-      const remainingTeamsCount = n - directos; // Parejas que no tienen BYE directo a Cuartos (seeds directos+1 .. n)
-
-      // Si `remainingTeamsCount > octavosCapacity` (ej. N=17 y directos=4 -> 13 parejas para 8 cupos de Octavos),
-      // entonces hay `numPlayIn = remainingTeamsCount - octavosCapacity` partidos de Repechaje (Play-In).
-      // Si `remainingTeamsCount < octavosCapacity` (ej. N=12 y directos=0 -> 12 parejas para 16 cupos),
-      // ajustamos `directos = 16 - n` para que no falten parejas en Cuartos.
-      if (remainingTeamsCount < octavosCapacity) {
-        directos = Math.max(0, 16 - n);
+    if (n > 16) {
+      // ==========================================
+      // CASO 1: DIECISEISAVOS DE FINAL (17 a 32 parejas)
+      // Los BYEs van DIRECTOS A OCTAVOS (nadie pasa directo a Cuartos desde 16avos)
+      // ==========================================
+      targetFase = 'Octavos';
+      const fipOptimo = this.calcularDirectosOptimos(n); // 32 - n
+      if (directos < 0) {
+        directos = fipOptimo;
+      } else {
+        directos = Math.max(directos, Math.max(0, 32 - n));
       }
+      directos = Math.min(directos, 15);
 
-      const finalQOpenSlots = 8 - directos;
-      const finalOctavosCapacity = finalQOpenSlots * 2;
-      const finalRemainingCount = n - directos;
-      const numPlayIn = Math.max(0, finalRemainingCount - finalOctavosCapacity);
+      const num16avos = 16 - directos;
+      const directToOctavosCount = directos;
 
-      // En Octavos hay `finalQOpenSlots` partidos (uno por cada cupo libre de Cuartos: para los seeds directos+1 .. 8).
-      // De las `finalRemainingCount` parejas que no van directo a Cuartos:
-      // - Las últimas `2 * numPlayIn` parejas juegan `numPlayIn` partidos de Repechaje (Play-In) por los últimos `numPlayIn` cupos de Octavos.
-      // - Las primeras `finalRemainingCount - 2 * numPlayIn` parejas entran directo a Octavos.
       const octavosEntries: {
         id: number | null;
         seed: number;
@@ -801,19 +869,22 @@ export class LigaViewComponent implements OnInit {
         isPlayInWinner?: boolean;
         playInCode?: string;
         playInLabel?: string;
+        isBye?: boolean;
       }[] = [];
 
-      const directToOctavosCount = finalOctavosCapacity - numPlayIn;
       for (let i = 0; i < directToOctavosCount; i++) {
-        const team = clasificados[directos + i];
+        const team = clasificados[i];
         if (team) {
-          octavosEntries.push({ id: team.id, seed: team.seed, nombre: team.nombre });
+          octavosEntries.push({
+            id: team.id,
+            seed: team.seed,
+            nombre: team.nombre,
+            isBye: true
+          });
         }
       }
 
-      // Construir los `numPlayIn` partidos de Repechaje (Play-In) emparejando los extremos del grupo de Play-In
-      const playInStartSeedIdx = directos + directToOctavosCount; // índice 0-based en `clasificados`
-      const playInTeams = clasificados.slice(playInStartSeedIdx); // longitud = 2 * numPlayIn
+      const playInTeams = clasificados.slice(directToOctavosCount, directToOctavosCount + 2 * num16avos);
       const playInMatchesCreated: {
         code: string;
         p1: any;
@@ -822,15 +893,13 @@ export class LigaViewComponent implements OnInit {
         targetOctavosSlot: 1 | 2;
       }[] = [];
 
-      for (let pIdx = 0; pIdx < numPlayIn; pIdx++) {
+      for (let pIdx = 0; pIdx < num16avos; pIdx++) {
         const tA = playInTeams[pIdx];
         const tB = playInTeams[playInTeams.length - 1 - pIdx];
         const piCode = `PI${pIdx + 1}`;
-        // El ganador de PI(pIdx+1) ocupa el slot virtual `finalOctavosCapacity - pIdx` de Octavos
-        // (de modo que PI1 que tiene al peor seed va contra el mejor seed de Octavos en PREV1)
         octavosEntries.push({
           id: null,
-          seed: tA?.seed || (directos + directToOctavosCount + pIdx + 1),
+          seed: tA?.seed || (directToOctavosCount + pIdx + 1),
           nombre: `Ganador 16avos ${pIdx + 1} (${tA?.seed}º vs ${tB?.seed}º)`,
           isPlayInWinner: true,
           playInCode: piCode,
@@ -845,14 +914,153 @@ export class LigaViewComponent implements OnInit {
         });
       }
 
-      // Ordenar `octavosEntries` por seed ascendente para que los ganadores de Play-In queden al final
-      // (el Play-In con los seeds más bajos queda en la última posición y se cruza con el seed más alto de Octavos)
-      // Nota: como pIdx=0 tiene el mejor de los de Play-In (ej. 8º vs 17º), queremos que el Play-In que enfrenta al mejor de Octavos (5º) sea el último:
       const directOct = octavosEntries.filter(e => !e.isPlayInWinner);
       const playInOct = octavosEntries.filter(e => e.isPlayInWinner).reverse();
       const orderedOctavosSlots = [...directOct, ...playInOct];
 
-      // Mapa de posiciones de Cuartos para cada seed del 1 al 8:
+      const octavosConfig = [
+        { code: 'PREV1', q: 'Q1' as const, slot: 1 as const },
+        { code: 'PREV2', q: 'Q1' as const, slot: 2 as const },
+        { code: 'PREV3', q: 'Q2' as const, slot: 1 as const },
+        { code: 'PREV4', q: 'Q2' as const, slot: 2 as const },
+        { code: 'PREV5', q: 'Q3' as const, slot: 1 as const },
+        { code: 'PREV6', q: 'Q3' as const, slot: 2 as const },
+        { code: 'PREV7', q: 'Q4' as const, slot: 1 as const },
+        { code: 'PREV8', q: 'Q4' as const, slot: 2 as const },
+      ];
+
+      const quartersMap: {
+        [key in 'Q1' | 'Q2' | 'Q3' | 'Q4']: {
+          p1_id: number | null;
+          p1_nombre: string;
+          p1_bye: boolean;
+          p2_id: number | null;
+          p2_nombre: string;
+          p2_bye: boolean;
+          next: string;
+        }
+      } = {
+        Q1: { p1_id: null, p1_nombre: 'Ganador Octavos 1', p1_bye: false, p2_id: null, p2_nombre: 'Ganador Octavos 2', p2_bye: false, next: 'S1' },
+        Q2: { p1_id: null, p1_nombre: 'Ganador Octavos 3', p1_bye: false, p2_id: null, p2_nombre: 'Ganador Octavos 4', p2_bye: false, next: 'S1' },
+        Q3: { p1_id: null, p1_nombre: 'Ganador Octavos 5', p1_bye: false, p2_id: null, p2_nombre: 'Ganador Octavos 6', p2_bye: false, next: 'S2' },
+        Q4: { p1_id: null, p1_nombre: 'Ganador Octavos 7', p1_bye: false, p2_id: null, p2_nombre: 'Ganador Octavos 8', p2_bye: false, next: 'S2' }
+      };
+
+      const octavosMatchesTemp: any[] = [];
+      for (let k = 0; k < 8; k++) {
+        const cfg = octavosConfig[k];
+        const entry1 = orderedOctavosSlots[k];
+        const entry2 = orderedOctavosSlots[15 - k];
+
+        if (entry1?.isPlayInWinner && entry1.playInCode) {
+          const pi = playInMatchesCreated.find(x => x.code === entry1.playInCode);
+          if (pi) { pi.targetOctavosCode = cfg.code; pi.targetOctavosSlot = 1; }
+        }
+        if (entry2?.isPlayInWinner && entry2.playInCode) {
+          const pi = playInMatchesCreated.find(x => x.code === entry2.playInCode);
+          if (pi) { pi.targetOctavosCode = cfg.code; pi.targetOctavosSlot = 2; }
+        }
+
+        octavosMatchesTemp.push({
+          es_simulacion: true,
+          ronda_playoff: 'Octavos de Final',
+          pareja1_id: entry1?.id || null,
+          pareja2_id: entry2?.id || null,
+          pareja1_nombre: entry1?.nombre || 'Por definir',
+          pareja2_nombre: entry2?.nombre || 'Por definir',
+          meta_playoff: {
+            bracket_code: cfg.code,
+            next_bracket: cfg.q,
+            next_slot: cfg.slot,
+            seed1_label: entry1?.nombre,
+            seed2_label: entry2?.nombre,
+            seed1_is_bye: entry1?.isBye || false,
+            seed2_is_bye: entry2?.isBye || false
+          }
+        });
+
+        const s1Short = entry1?.isPlayInWinner ? `16avos (${entry1.playInLabel})` : `${entry1?.seed}º`;
+        const s2Short = entry2?.isPlayInWinner ? `16avos (${entry2.playInLabel})` : `${entry2?.seed}º`;
+        const winnerLabel = `Ganador Octavos ${k + 1} (${s1Short} vs ${s2Short})`;
+        if (cfg.slot === 1) {
+          quartersMap[cfg.q].p1_nombre = winnerLabel;
+        } else {
+          quartersMap[cfg.q].p2_nombre = winnerLabel;
+        }
+      }
+
+      playInMatchesCreated.forEach(pi => {
+        simMatches.push({
+          es_simulacion: true,
+          ronda_playoff: 'Dieciseisavos de Final',
+          pareja1_id: pi.p1?.id || null,
+          pareja2_id: pi.p2?.id || null,
+          pareja1_nombre: pi.p1?.nombre || 'Por definir',
+          pareja2_nombre: pi.p2?.nombre || 'Por definir',
+          meta_playoff: {
+            bracket_code: pi.code,
+            next_bracket: pi.targetOctavosCode || 'PREV1',
+            next_slot: pi.targetOctavosSlot,
+            seed1_label: pi.p1?.nombre,
+            seed2_label: pi.p2?.nombre
+          }
+        });
+      });
+
+      simMatches.push(...octavosMatchesTemp);
+
+      (['Q1', 'Q2', 'Q3', 'Q4'] as const).forEach((qCode) => {
+        const q = quartersMap[qCode];
+        simMatches.push({
+          es_simulacion: true,
+          ronda_playoff: 'Cuartos de Final',
+          pareja1_id: null,
+          pareja2_id: null,
+          pareja1_nombre: q.p1_nombre,
+          pareja2_nombre: q.p2_nombre,
+          meta_playoff: {
+            bracket_code: qCode,
+            next_bracket: q.next
+          }
+        });
+      });
+
+      simMatches.push(
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
+        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
+        { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+      );
+
+    } else if (n > 8) {
+      // ==========================================
+      // CASO 2: OCTAVOS DE FINAL (9 a 16 parejas)
+      // Los BYEs van DIRECTOS A CUARTOS (4tos)
+      // ==========================================
+      targetFase = '4tos';
+      const fipOptimo = this.calcularDirectosOptimos(n); // 16 - n
+      if (directos < 0) {
+        directos = fipOptimo;
+      } else {
+        directos = Math.max(directos, 16 - n);
+      }
+      directos = Math.min(directos, 7);
+
+      const qOpenSlots = 8 - directos;
+      const octavosCapacity = qOpenSlots * 2;
+
+      const octavosEntries: {
+        id: number | null;
+        seed: number;
+        nombre: string;
+      }[] = [];
+
+      for (let i = 0; i < octavosCapacity; i++) {
+        const team = clasificados[directos + i];
+        if (team) {
+          octavosEntries.push({ id: team.id, seed: team.seed, nombre: team.nombre });
+        }
+      }
+
       const quarterSlotForTop8: { [seedPos: number]: { q: 'Q1' | 'Q2' | 'Q3' | 'Q4'; slot: 1 | 2 } } = {
         1: { q: 'Q1', slot: 1 },
         2: { q: 'Q4', slot: 1 },
@@ -881,7 +1089,6 @@ export class LigaViewComponent implements OnInit {
         Q4: { p1_id: null, p1_nombre: 'Por definir', p1_bye: false, p2_id: null, p2_nombre: 'Por definir', p2_bye: false, next: 'S2' }
       };
 
-      // 1. Asignar los BYEs directos (seeds 1..directos) a su llave de Cuartos
       for (let s = 1; s <= directos; s++) {
         const team = clasificados[s - 1];
         const target = quarterSlotForTop8[s];
@@ -898,24 +1105,14 @@ export class LigaViewComponent implements OnInit {
         }
       }
 
-      // 2. Construir partidos de Octavos / Previa (total = finalQOpenSlots partidos)
       const octavosMatchesTemp: any[] = [];
-      for (let k = 0; k < finalQOpenSlots; k++) {
-        const top8SlotNum = directos + 1 + k; // Va desde (directos+1) hasta 8
-        const entry1 = orderedOctavosSlots[k];
-        const entry2 = orderedOctavosSlots[orderedOctavosSlots.length - 1 - k];
+      for (let k = 0; k < qOpenSlots; k++) {
+        const top8SlotNum = directos + 1 + k;
+        const entry1 = octavosEntries[k];
+        const entry2 = octavosEntries[octavosEntries.length - 1 - k];
         const target = quarterSlotForTop8[top8SlotNum] || { q: 'Q1', slot: 2 };
         const prevNum = k + 1;
         const code = `PREV${prevNum}`;
-
-        if (entry1?.isPlayInWinner && entry1.playInCode) {
-          const pi = playInMatchesCreated.find(x => x.code === entry1.playInCode);
-          if (pi) { pi.targetOctavosCode = code; pi.targetOctavosSlot = 1; }
-        }
-        if (entry2?.isPlayInWinner && entry2.playInCode) {
-          const pi = playInMatchesCreated.find(x => x.code === entry2.playInCode);
-          if (pi) { pi.targetOctavosCode = code; pi.targetOctavosSlot = 2; }
-        }
 
         octavosMatchesTemp.push({
           es_simulacion: true,
@@ -933,10 +1130,7 @@ export class LigaViewComponent implements OnInit {
           }
         });
 
-        const s1Short = entry1?.isPlayInWinner ? `16avos (${entry1.playInLabel})` : `${entry1?.seed}º`;
-        const s2Short = entry2?.isPlayInWinner ? `16avos (${entry2.playInLabel})` : `${entry2?.seed}º`;
-        const winnerLabel = `Ganador Octavos ${prevNum} (${s1Short} vs ${s2Short})`;
-
+        const winnerLabel = `Ganador Octavos ${prevNum} (${entry1?.seed}º vs ${entry2?.seed}º)`;
         if (target.slot === 1) {
           quartersMap[target.q].p1_nombre = winnerLabel;
         } else {
@@ -944,29 +1138,8 @@ export class LigaViewComponent implements OnInit {
         }
       }
 
-      // Insertar primero los partidos de Dieciseisavos de Final con su destino de Octavos ya vinculado
-      playInMatchesCreated.forEach(pi => {
-        simMatches.push({
-          es_simulacion: true,
-          ronda_playoff: 'Dieciseisavos de Final',
-          pareja1_id: pi.p1?.id || null,
-          pareja2_id: pi.p2?.id || null,
-          pareja1_nombre: pi.p1?.nombre || 'Por definir',
-          pareja2_nombre: pi.p2?.nombre || 'Por definir',
-          meta_playoff: {
-            bracket_code: pi.code,
-            next_bracket: pi.targetOctavosCode || 'PREV1',
-            next_slot: pi.targetOctavosSlot,
-            seed1_label: pi.p1?.nombre,
-            seed2_label: pi.p2?.nombre
-          }
-        });
-      });
-
-      // Luego insertar los partidos de Octavos
       simMatches.push(...octavosMatchesTemp);
 
-      // 3. Agregar los 4 partidos de Cuartos de Final (Q1, Q2, Q3, Q4)
       (['Q1', 'Q2', 'Q3', 'Q4'] as const).forEach((qCode) => {
         const q = quartersMap[qCode];
         simMatches.push({
@@ -980,34 +1153,136 @@ export class LigaViewComponent implements OnInit {
             bracket_code: qCode,
             next_bracket: q.next,
             seed1_label: q.p1_bye ? q.p1_nombre : '',
-            seed2_label: q.p2_bye ? q.p2_nombre : ''
+            seed2_label: q.p2_bye ? q.p2_nombre : '',
+            seed1_is_bye: q.p1_bye,
+            seed2_is_bye: q.p2_bye
           }
         });
       });
 
-      // 4. Semifinales y Final
       simMatches.push(
         { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
         { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
         { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
       );
-    } else if (n >= 8) {
-      simMatches.push(
-        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[0]?.id, pareja2_id: clasificados[7]?.id, pareja1_nombre: clasificados[0]?.nombre, pareja2_nombre: clasificados[7]?.nombre },
-        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[3]?.id, pareja2_id: clasificados[4]?.id, pareja1_nombre: clasificados[3]?.nombre, pareja2_nombre: clasificados[4]?.nombre },
-        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[2]?.id, pareja2_id: clasificados[5]?.id, pareja1_nombre: clasificados[2]?.nombre, pareja2_nombre: clasificados[5]?.nombre },
-        { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[1]?.id, pareja2_id: clasificados[6]?.id, pareja1_nombre: clasificados[1]?.nombre, pareja2_nombre: clasificados[6]?.nombre },
-        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
-        { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
-        { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
-      );
+
+    } else if (n > 4) {
+      // ==========================================
+      // CASO 3: CUARTOS DE FINAL (5 a 8 parejas)
+      // Los BYEs van DIRECTOS A SEMIFINALES
+      // ==========================================
+      targetFase = 'Semis';
+      const fipOptimo = this.calcularDirectosOptimos(n); // 8 - n
+      if (directos < 0) {
+        directos = fipOptimo;
+      } else {
+        directos = Math.max(directos, 8 - n);
+      }
+      directos = Math.min(directos, 3);
+
+      if (directos === 0 && n === 8) {
+        simMatches.push(
+          { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[0]?.id, pareja2_id: clasificados[7]?.id, pareja1_nombre: clasificados[0]?.nombre, pareja2_nombre: clasificados[7]?.nombre, meta_playoff: { bracket_code: 'Q1', next_bracket: 'S1', next_slot: 1 } },
+          { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[3]?.id, pareja2_id: clasificados[4]?.id, pareja1_nombre: clasificados[3]?.nombre, pareja2_nombre: clasificados[4]?.nombre, meta_playoff: { bracket_code: 'Q2', next_bracket: 'S1', next_slot: 2 } },
+          { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[2]?.id, pareja2_id: clasificados[5]?.id, pareja1_nombre: clasificados[2]?.nombre, pareja2_nombre: clasificados[5]?.nombre, meta_playoff: { bracket_code: 'Q3', next_bracket: 'S2', next_slot: 1 } },
+          { es_simulacion: true, ronda_playoff: 'Cuartos de Final', pareja1_id: clasificados[1]?.id, pareja2_id: clasificados[6]?.id, pareja1_nombre: clasificados[1]?.nombre, pareja2_nombre: clasificados[6]?.nombre, meta_playoff: { bracket_code: 'Q4', next_bracket: 'S2', next_slot: 2 } },
+          { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 1 (Q1)', pareja2_nombre: 'Ganador Cuartos 2 (Q2)' },
+          { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_nombre: 'Ganador Cuartos 3 (Q3)', pareja2_nombre: 'Ganador Cuartos 4 (Q4)' },
+          { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+        );
+      } else {
+        const semisMap = {
+          S1: { p1_id: null as number | null, p1_nombre: 'Ganador Cuartos 1', p1_bye: false, p2_id: null as number | null, p2_nombre: 'Ganador Cuartos 2', p2_bye: false },
+          S2: { p1_id: null as number | null, p1_nombre: 'Ganador Cuartos 3', p1_bye: false, p2_id: null as number | null, p2_nombre: 'Ganador Cuartos 4', p2_bye: false }
+        };
+
+        const semiSlotForTop4: { [seed: number]: { s: 'S1' | 'S2'; slot: 1 | 2 } } = {
+          1: { s: 'S1', slot: 1 },
+          2: { s: 'S2', slot: 1 },
+          3: { s: 'S2', slot: 2 },
+          4: { s: 'S1', slot: 2 }
+        };
+
+        for (let s = 1; s <= directos; s++) {
+          const team = clasificados[s - 1];
+          const target = semiSlotForTop4[s];
+          if (team && target) {
+            if (target.slot === 1) {
+              semisMap[target.s].p1_id = team.id;
+              semisMap[target.s].p1_nombre = team.nombre;
+              semisMap[target.s].p1_bye = true;
+            } else {
+              semisMap[target.s].p2_id = team.id;
+              semisMap[target.s].p2_nombre = team.nombre;
+              semisMap[target.s].p2_bye = true;
+            }
+          }
+        }
+
+        const qMatchesCount = 4 - directos;
+        const qTeams = clasificados.slice(directos, directos + 2 * qMatchesCount);
+
+        for (let k = 0; k < qMatchesCount; k++) {
+          const t1 = qTeams[k];
+          const t2 = qTeams[qTeams.length - 1 - k];
+          const topSeedSlot = directos + 1 + k;
+          const target = semiSlotForTop4[topSeedSlot] || { s: 'S1', slot: 2 };
+          const qCode = `Q${k + 1}`;
+
+          simMatches.push({
+            es_simulacion: true,
+            ronda_playoff: 'Cuartos de Final',
+            pareja1_id: t1?.id || null,
+            pareja2_id: t2?.id || null,
+            pareja1_nombre: t1?.nombre || 'Por definir',
+            pareja2_nombre: t2?.nombre || 'Por definir',
+            meta_playoff: {
+              bracket_code: qCode,
+              next_bracket: target.s,
+              next_slot: target.slot
+            }
+          });
+
+          const winnerLabel = `Ganador Cuartos ${k + 1} (${t1?.seed}º vs ${t2?.seed}º)`;
+          if (target.slot === 1) {
+            semisMap[target.s].p1_nombre = winnerLabel;
+          } else {
+            semisMap[target.s].p2_nombre = winnerLabel;
+          }
+        }
+
+        simMatches.push(
+          {
+            es_simulacion: true,
+            ronda_playoff: 'Semifinales',
+            pareja1_id: semisMap.S1.p1_id,
+            pareja2_id: semisMap.S1.p2_id,
+            pareja1_nombre: semisMap.S1.p1_nombre,
+            pareja2_nombre: semisMap.S1.p2_nombre,
+            meta_playoff: { bracket_code: 'S1', next_bracket: 'F1', seed1_is_bye: semisMap.S1.p1_bye, seed2_is_bye: semisMap.S1.p2_bye }
+          },
+          {
+            es_simulacion: true,
+            ronda_playoff: 'Semifinales',
+            pareja1_id: semisMap.S2.p1_id,
+            pareja2_id: semisMap.S2.p2_id,
+            pareja1_nombre: semisMap.S2.p1_nombre,
+            pareja2_nombre: semisMap.S2.p2_nombre,
+            meta_playoff: { bracket_code: 'S2', next_bracket: 'F1', seed1_is_bye: semisMap.S2.p1_bye, seed2_is_bye: semisMap.S2.p2_bye }
+          },
+          { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
+        );
+      }
+
     } else if (n >= 4) {
+      targetFase = 'la Final';
       simMatches.push(
         { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_id: clasificados[0]?.id, pareja2_id: clasificados[3]?.id, pareja1_nombre: clasificados[0]?.nombre, pareja2_nombre: clasificados[3]?.nombre },
         { es_simulacion: true, ronda_playoff: 'Semifinales', pareja1_id: clasificados[1]?.id, pareja2_id: clasificados[2]?.id, pareja1_nombre: clasificados[1]?.nombre, pareja2_nombre: clasificados[2]?.nombre },
         { es_simulacion: true, ronda_playoff: 'Final', pareja1_nombre: 'Ganador Semifinal 1', pareja2_nombre: 'Ganador Semifinal 2' }
       );
     } else {
+      targetFase = 'la Final';
       simMatches.push({
         es_simulacion: true,
         ronda_playoff: 'Final',
@@ -1018,7 +1293,7 @@ export class LigaViewComponent implements OnInit {
       });
     }
 
-    return { n, directos, matches: simMatches, eliminadas };
+    return { n, directos, targetFase, matches: simMatches, eliminadas };
   }
 
   recalcularBracketSimulado(): void {
@@ -1213,11 +1488,29 @@ export class LigaViewComponent implements OnInit {
           </div>
         `;
 
+        let badgeDirectos = 'Cuadro Directo';
+        if (est.directos > 0) {
+          const destFase = est.targetFase || 'siguiente fase';
+          if (est.n > 16) {
+            badgeDirectos = `${est.directos} Directos a ${destFase} (BYE) + ${playInMatches.length} en 16avos`;
+          } else if (est.n > 8) {
+            badgeDirectos = `${est.directos} Directos a ${destFase} (BYE) + ${octavosMatches.length} en Octavos`;
+          } else if (est.n > 4) {
+            badgeDirectos = `${est.directos} Directos a ${destFase} (BYE) + ${cuartosMatches.length} en Cuartos`;
+          } else {
+            badgeDirectos = `${est.directos} Directos a ${destFase} (BYE)`;
+          }
+        } else if (playInMatches.length > 0) {
+          badgeDirectos = `${playInMatches.length} llave(s) 16avos + 8 Octavos`;
+        } else if (octavosMatches.length > 0) {
+          badgeDirectos = `${octavosMatches.length} llaves de Octavos`;
+        }
+
         let html = `
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
             <strong style="color:#1e3a8a; font-size:0.82rem;">🔮 Simulación en Vivo con Ranking Actual (${est.n} de ${totalParejas} parejas)</strong>
             <span style="font-size:0.72rem; font-weight:700; color:#1d4ed8; background:#dbeafe; padding:2px 8px; border-radius:99px;">
-              ${est.directos > 0 ? `${est.directos} Directos a 4tos (BYE) + ${octavosMatches.length} llaves Octavos` : (playInMatches.length > 0 ? `${playInMatches.length} llave(s) 16avos + 8 Octavos` : (octavosMatches.length > 0 ? `${octavosMatches.length} llaves de Octavos` : 'Cuadro Directo'))}
+              ${badgeDirectos}
             </span>
           </div>
         `;
@@ -1317,7 +1610,11 @@ export class LigaViewComponent implements OnInit {
           `).join('')
         : `<span style="font-size:0.74rem; color:#64748b;">Se asignarán automáticamente las canchas activas del club.</span>`;
 
-      const fipAutoByes = this.calcularDirectosOptimos(totalParejas);
+      const construirOpcionesDirectosHtml = (reqClasificados: number, selectedVal: number): string => {
+        const tVal = reqClasificados >= 999 || reqClasificados > totalParejas ? totalParejas : reqClasificados;
+        const opts = this.generarOpcionesDirectos(tVal);
+        return opts.map(o => `<option value="${o.value}" ${selectedVal === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+      };
 
       Swal.fire({
         title: '🏆 Configurar y Programar Fase Final',
@@ -1335,10 +1632,14 @@ export class LigaViewComponent implements OnInit {
                 </label>
                 <select id="swal-total-clasifican" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
                   <option value="999" ${defaultClasifican >= 999 ? 'selected' : ''}>Todas las parejas (${totalParejas})</option>
+                  ${totalParejas >= 32 ? `<option value="32" ${defaultClasifican === 32 ? 'selected' : ''}>Top 32 (16avos completos)</option>` : ''}
+                  ${totalParejas >= 24 ? `<option value="24" ${defaultClasifican === 24 ? 'selected' : ''}>Top 24 (8 BYE a Octavos + 8 en 16avos)</option>` : ''}
+                  ${totalParejas >= 20 ? `<option value="20" ${defaultClasifican === 20 ? 'selected' : ''}>Top 20 (12 BYE a Octavos + 4 en 16avos)</option>` : ''}
+                  ${totalParejas >= 18 ? `<option value="18" ${defaultClasifican === 18 ? 'selected' : ''}>Top 18 (14 BYE a Octavos + 2 en 16avos)</option>` : ''}
                   <option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 (Octavos completos)</option>
-                  <option value="14" ${defaultClasifican === 14 ? 'selected' : ''}>Top 14 (2 BYE + 6 Previa)</option>
-                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (4 BYE + 4 Previa)</option>
-                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 BYE + 2 Previa)</option>
+                  <option value="14" ${defaultClasifican === 14 ? 'selected' : ''}>Top 14 (2 BYE a 4tos + 6 Octavos)</option>
+                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (4 BYE a 4tos + 4 Octavos)</option>
+                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 BYE a 4tos + 2 Octavos)</option>
                   <option value="8" ${defaultClasifican === 8 ? 'selected' : ''}>Top 8 (Cuartos directos)</option>
                   <option value="4" ${defaultClasifican === 4 ? 'selected' : ''}>Top 4 (Semifinales directas)</option>
                 </select>
@@ -1349,14 +1650,7 @@ export class LigaViewComponent implements OnInit {
                   2️⃣ Pases Directos (BYE a siguiente fase):
                 </label>
                 <select id="swal-directos-cuartos" class="swal2-input" style="width: 100%; margin: 0; font-weight: 700; font-size: 0.83rem; height: 40px; border-radius: 10px; border-color: #cbd5e1; padding: 0 10px;">
-                  <option value="-1" ${defaultDirectos === -1 ? 'selected' : ''}>⭐ Estándar Oficial FIP (${fipAutoByes > 0 ? fipAutoByes + ' BYE a 4tos' : (totalParejas > 16 ? '16avos + Octavos' : 'Octavos completos')})</option>
-                  <option value="1" ${defaultDirectos === 1 ? 'selected' : ''}>👑 1º lugar directo a 4tos (1 BYE)</option>
-                  <option value="2" ${defaultDirectos === 2 ? 'selected' : ''}>👑 Primeros 2 directo a 4tos (2 BYE)</option>
-                  <option value="3" ${defaultDirectos === 3 ? 'selected' : ''}>👑 Primeros 3 directo a 4tos (3 BYE)</option>
-                  <option value="4" ${defaultDirectos === 4 ? 'selected' : ''}>👑 Primeros 4 directo a 4tos (4 BYE)</option>
-                  <option value="5" ${defaultDirectos === 5 ? 'selected' : ''}>👑 Primeros 5 directo a 4tos (5 BYE)</option>
-                  <option value="6" ${defaultDirectos === 6 ? 'selected' : ''}>👑 Primeros 6 directo a 4tos (6 BYE)</option>
-                  <option value="0" ${defaultDirectos === 0 ? 'selected' : ''}>⚡ Ninguno a 4tos (Octavos completos)</option>
+                  ${construirOpcionesDirectosHtml(defaultClasifican, defaultDirectos)}
                 </select>
               </div>
             </div>
@@ -1417,6 +1711,7 @@ export class LigaViewComponent implements OnInit {
             if (!selTotal || !selDirectos || !previewBox) return;
             const tVal = selTotal.value === '999' ? totalParejas : parseInt(selTotal.value, 10);
             if (autoAdjustDirectos) {
+              selDirectos.innerHTML = construirOpcionesDirectosHtml(tVal, -1);
               selDirectos.value = '-1';
             }
             const dVal = parseInt(selDirectos.value, 10);
