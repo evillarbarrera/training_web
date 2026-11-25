@@ -666,8 +666,8 @@ export class LigaViewComponent implements OnInit {
 
   vistaPlayoffs: 'bracket' | 'lista' = 'bracket';
   modoSimulacionPlayoffs: boolean = false;
-  simTotalClasifican: number = 12;
-  simDirectosCuartos: number = 4;
+  simTotalClasifican: number = 999;
+  simDirectosCuartos: number = -1;
   playoffsSimuladosList: any[] = [];
 
   get playoffsRounds(): { playin: any[], octavos: any[], cuartos: any[], semifinales: any[], final: any[] } {
