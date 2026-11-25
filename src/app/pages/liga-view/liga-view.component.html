@@ -1316,23 +1316,24 @@
             <div>
               <label style="display:block; font-size:0.7rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">Clasifican:</label>
               <select [(ngModel)]="simTotalClasifican" (ngModelChange)="onSimTotalChange()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
-                <option [ngValue]="999">Todas las parejas ({{ categoriaActual?.parejas?.length || 12 }})</option>
-                <option [ngValue]="32" *ngIf="(categoriaActual?.parejas?.length || 0) >= 32">Top 32 (16avos completos)</option>
-                <option [ngValue]="24" *ngIf="(categoriaActual?.parejas?.length || 0) >= 24">Top 24 (8 BYE a Octavos + 8 en 16avos)</option>
-                <option [ngValue]="20" *ngIf="(categoriaActual?.parejas?.length || 0) >= 20">Top 20 (12 BYE a Octavos + 4 en 16avos)</option>
-                <option [ngValue]="18" *ngIf="(categoriaActual?.parejas?.length || 0) >= 18">Top 18 (14 BYE a Octavos + 2 en 16avos)</option>
-                <option [ngValue]="16">Top 16 (Octavos Completos)</option>
-                <option [ngValue]="14">Top 14 (2 BYE a 4tos + 6 Octavos)</option>
-                <option [ngValue]="12">Top 12 (4 BYE a 4tos + 4 Octavos)</option>
-                <option [ngValue]="10">Top 10 (6 BYE a 4tos + 2 Octavos)</option>
-                <option [ngValue]="8">Top 8 (Cuartos Directos)</option>
-                <option [ngValue]="4">Top 4 (Semifinales Directas)</option>
+                <option [ngValue]="999">Todas las parejas ({{ totalParejasCategoria || 15 }})</option>
+                <option [ngValue]="32" *ngIf="totalParejasCategoria >= 32">Top 32 (16avos completos)</option>
+                <option [ngValue]="24" *ngIf="totalParejasCategoria >= 24">Top 24 (8 BYE a Octavos + 8 en 16avos)</option>
+                <option [ngValue]="20" *ngIf="totalParejasCategoria >= 20">Top 20 (12 BYE a Octavos + 4 en 16avos)</option>
+                <option [ngValue]="18" *ngIf="totalParejasCategoria >= 18">Top 18 (14 BYE a Octavos + 2 en 16avos)</option>
+                <option [ngValue]="16" *ngIf="totalParejasCategoria >= 16">Top 16 (Octavos Completos)</option>
+                <option [ngValue]="15" *ngIf="totalParejasCategoria >= 15">Top 15 (1 BYE a 4tos + 7 Octavos)</option>
+                <option [ngValue]="14" *ngIf="totalParejasCategoria >= 14">Top 14 (2 BYE a 4tos + 6 Octavos)</option>
+                <option [ngValue]="12" *ngIf="totalParejasCategoria >= 12">Top 12 (4 BYE a 4tos + 4 Octavos)</option>
+                <option [ngValue]="10" *ngIf="totalParejasCategoria >= 10">Top 10 (6 BYE a 4tos + 2 Octavos)</option>
+                <option [ngValue]="8" *ngIf="totalParejasCategoria >= 8">Top 8 (Cuartos Directos)</option>
+                <option [ngValue]="4" *ngIf="totalParejasCategoria >= 4">Top 4 (Semifinales Directas)</option>
               </select>
             </div>
 
             <div>
               <label style="display:block; font-size:0.7rem; font-weight:800; color:#1e3a8a; margin-bottom:2px;">Pases Directos (BYE a siguiente fase):</label>
-              <select [(ngModel)]="simDirectosCuartos" (ngModelChange)="recalcularBracketSimulado()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
+              <select [(ngModel)]="simDirectosCuartos" (ngModelChange)="onSimDirectosChange()" style="height: 36px; border-radius: 9px; border: 1px solid #93c5fd; padding: 0 10px; font-weight: 700; font-size: 0.8rem; color: #0f172a; background: #fff;">
                 <option *ngFor="let opt of opcionesDirectosSimulacion" [ngValue]="opt.value">{{ opt.label }}</option>
               </select>
             </div>
@@ -1453,14 +1454,14 @@
                   <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja1_id">
                     <div class="team-name-box">
                       <span class="team-label" [title]="m.pareja1_nombre">{{ m.pareja1_nombre || 'Por definir' }}</span>
-                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed1_label?.includes('1º') || m.meta_playoff?.seed1_label?.includes('2º') || m.meta_playoff?.seed1_label?.includes('3º') || m.meta_playoff?.seed1_label?.includes('4º')">BYE DIRECTO</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed1_is_bye">BYE DIRECTO</span>
                     </div>
                     <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set1_p1 }}-{{ m.set1_p2 }}</span>
                   </div>
                   <div class="team-slot" [class.winner]="m.pareja_ganadora_id && m.pareja_ganadora_id === m.pareja2_id">
                     <div class="team-name-box">
                       <span class="team-label" [title]="m.pareja2_nombre">{{ m.pareja2_nombre || 'Por definir' }}</span>
-                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed2_label?.includes('5º') || m.meta_playoff?.seed2_label?.includes('6º')">BYE DIRECTO</span>
+                      <span class="bye-badge" *ngIf="m.meta_playoff?.seed2_is_bye">BYE DIRECTO</span>
                     </div>
                     <span class="slot-score" *ngIf="m.estado === 'Jugado'">{{ m.set2_p1 }}-{{ m.set2_p2 }}</span>
                   </div>
