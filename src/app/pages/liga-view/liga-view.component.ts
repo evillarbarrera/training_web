@@ -707,8 +707,12 @@ export class LigaViewComponent implements OnInit {
     return 0;
   }
 
+  get totalParejasCategoria(): number {
+    return this.posicionesGrupo?.length || this.categoriaActual?.parejas?.length || 0;
+  }
+
   getSimTotalClasificadosEfectivos(): number {
-    const total = this.categoriaActual?.parejas?.length || 12;
+    const total = this.totalParejasCategoria || 15;
     return +this.simTotalClasifican >= 999 || +this.simTotalClasifican > total
       ? total
       : +this.simTotalClasifican;
@@ -1636,10 +1640,11 @@ export class LigaViewComponent implements OnInit {
                   ${totalParejas >= 24 ? `<option value="24" ${defaultClasifican === 24 ? 'selected' : ''}>Top 24 (8 BYE a Octavos + 8 en 16avos)</option>` : ''}
                   ${totalParejas >= 20 ? `<option value="20" ${defaultClasifican === 20 ? 'selected' : ''}>Top 20 (12 BYE a Octavos + 4 en 16avos)</option>` : ''}
                   ${totalParejas >= 18 ? `<option value="18" ${defaultClasifican === 18 ? 'selected' : ''}>Top 18 (14 BYE a Octavos + 2 en 16avos)</option>` : ''}
-                  <option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 (Octavos completos)</option>
-                  <option value="14" ${defaultClasifican === 14 ? 'selected' : ''}>Top 14 (2 BYE a 4tos + 6 Octavos)</option>
-                  <option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (4 BYE a 4tos + 4 Octavos)</option>
-                  <option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 BYE a 4tos + 2 Octavos)</option>
+                  ${totalParejas >= 16 ? `<option value="16" ${defaultClasifican === 16 ? 'selected' : ''}>Top 16 (Octavos completos)</option>` : ''}
+                  ${totalParejas >= 15 ? `<option value="15" ${defaultClasifican === 15 ? 'selected' : ''}>Top 15 (1 BYE a 4tos + 7 Octavos)</option>` : ''}
+                  ${totalParejas >= 14 ? `<option value="14" ${defaultClasifican === 14 ? 'selected' : ''}>Top 14 (2 BYE a 4tos + 6 Octavos)</option>` : ''}
+                  ${totalParejas >= 12 ? `<option value="12" ${defaultClasifican === 12 ? 'selected' : ''}>Top 12 (4 BYE a 4tos + 4 Octavos)</option>` : ''}
+                  ${totalParejas >= 10 ? `<option value="10" ${defaultClasifican === 10 ? 'selected' : ''}>Top 10 (6 BYE a 4tos + 2 Octavos)</option>` : ''}
                   <option value="8" ${defaultClasifican === 8 ? 'selected' : ''}>Top 8 (Cuartos directos)</option>
                   <option value="4" ${defaultClasifican === 4 ? 'selected' : ''}>Top 4 (Semifinales directas)</option>
                 </select>
